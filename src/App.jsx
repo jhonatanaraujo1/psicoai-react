@@ -41,6 +41,20 @@ export default function App() {
   }
   const handleLogout = () => { auth.logout(); setCurrentUser(null) }
 
+  // ── Payment required (conta bloqueada) ───────────────────────────────────
+  const [paymentRequired, setPaymentRequired] = useState(false)
+
+  useEffect(() => {
+    const onSessionExpired = () => { auth.logout(); setCurrentUser(null) }
+    const onPaymentRequired = () => setPaymentRequired(true)
+    window.addEventListener('psicoai:session-expired', onSessionExpired)
+    window.addEventListener('psicoai:payment-required', onPaymentRequired)
+    return () => {
+      window.removeEventListener('psicoai:session-expired', onSessionExpired)
+      window.removeEventListener('psicoai:payment-required', onPaymentRequired)
+    }
+  }, [])
+
   // ── Navigation ───────────────────────────────────────────────────────────
   const [currentView, setCurrentView] = useState('dashboard')
   const [sidebarOpen, setSidebarOpen] = useState(false)
@@ -213,6 +227,44 @@ export default function App() {
 
       {/* Toast notifications */}
       <ToastContainer />
+
+      {/* Bloqueio por inadimplência */}
+      {paymentRequired && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 9999,
+          background: 'rgba(28,28,28,0.85)', backdropFilter: 'blur(6px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px'
+        }}>
+          <div style={{
+            background: 'var(--w)', borderRadius: 'var(--r2)',
+            boxShadow: '0 24px 80px rgba(0,0,0,0.3)',
+            padding: '40px 36px', maxWidth: '420px', width: '100%', textAlign: 'center'
+          }}>
+            <div style={{ fontSize: '40px', marginBottom: '16px' }}>🔒</div>
+            <h2 style={{ fontSize: '20px', fontWeight: 700, color: 'var(--d)', marginBottom: '10px' }}>
+              Conta bloqueada
+            </h2>
+            <p style={{ fontSize: '14px', color: 'var(--gr5)', lineHeight: 1.6, marginBottom: '28px' }}>
+              Houve uma falha no pagamento da sua assinatura. Regularize para continuar acessando o PsicoAI.
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <button
+                className="btn-primary"
+                onClick={() => { setPaymentRequired(false); setCurrentView('configuracoes') }}
+              >
+                Regularizar pagamento
+              </button>
+              <button
+                className="btn-ghost"
+                onClick={handleLogout}
+                style={{ fontSize: '13px', color: 'var(--gr5)' }}
+              >
+                Sair da conta
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   )
 }
