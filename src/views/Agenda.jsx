@@ -1,0 +1,535 @@
+import { useState, useEffect } from 'react'
+import { api } from '../services'
+
+const DAYS = ['SEG', 'TER', 'QUA', 'QUI', 'SEX']
+const HOURS = [8, 9, 10, 11, 12, 13, 14, 15, 16, 17]
+const MONTHS_PT = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro']
+const MONTHS_PT_SHORT = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez']
+
+function getMondayOf(date) {
+  const d = new Date(date)
+  const day = d.getDay()
+  const diff = day === 0 ? -6 : 1 - day
+  d.setDate(d.getDate() + diff)
+  d.setHours(0, 0, 0, 0)
+  return d
+}
+
+const TYPE_STYLES = {
+  session:    { bg: 'var(--g50)',      border: 'var(--g300)', color: 'var(--g700)', cls: 'green' },
+  supervision:{ bg: '#EBF3FD',         border: '#7FB3D3',     color: '#2471A3',     cls: 'blue' },
+  personal:   { bg: 'var(--gr1)',      border: 'var(--gr3)',  color: 'var(--gr5)',  cls: 'gray' },
+  other:      { bg: 'var(--warn-l)',   border: '#F0D08A',     color: 'var(--warn)', cls: 'warn' },
+}
+
+const TYPE_LABELS = {
+  session: 'Sessão',
+  supervision: 'Supervisão',
+  personal: 'Pessoal',
+  other: 'Outro',
+}
+
+function fmtHour(iso) {
+  if (!iso) return ''
+  const d = new Date(iso)
+  return `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`
+}
+
+function fmtShortDate(d) {
+  return `${d.getDate()} ${MONTHS_PT_SHORT[d.getMonth()]}`
+}
+
+const inSt = {
+  border: '1px solid var(--gr2)',
+  borderRadius: 'var(--r)',
+  padding: '9px 12px',
+  fontSize: '13px',
+  color: 'var(--d)',
+  fontFamily: "'DM Sans', sans-serif",
+  outline: 'none',
+  background: 'var(--ow)',
+  width: '100%',
+  boxSizing: 'border-box',
+}
+
+const EMPTY_MODAL = { open: false, mode: 'create', data: null }
+
+export default function Agenda({ currentUser }) {
+  const [weekOffset, setWeekOffset] = useState(0)
+  const [miniCalOffset, setMiniCalOffset] = useState(0)
+  const [events, setEvents] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [eventModal, setEventModal] = useState(EMPTY_MODAL)
+  const [allPatients, setAllPatients] = useState([])
+  const [saving, setSaving] = useState(false)
+  const [form, setForm] = useState({
+    title: '', type: 'session', patientId: '', date: '', startTime: '', endTime: '', meetLink: '', notes: ''
+  })
+
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+
+  const monday = getMondayOf(today)
+  monday.setDate(monday.getDate() + weekOffset * 7)
+
+  const weekDates = Array.from({ length: 5 }, (_, i) => {
+    const d = new Date(monday)
+    d.setDate(d.getDate() + i)
+    return d
+  })
+
+  const isToday = d => d.getTime() === today.getTime()
+
+  function loadEvents() {
+    const from = new Date(monday)
+    from.setDate(from.getDate() - 60)
+    const to = new Date(monday)
+    to.setDate(to.getDate() + 90)
+    return api.getAgendaEvents({ from: from.toISOString(), to: to.toISOString() })
+      .then(setEvents)
+  }
+
+  useEffect(() => {
+    loadEvents().finally(() => setLoading(false))
+  }, [])
+
+  // Load patients when modal opens
+  useEffect(() => {
+    if (eventModal.open) {
+      api.getPatients({ size: 100 }).then(res => setAllPatients(res.content || []))
+    }
+  }, [eventModal.open])
+
+  function openCreate() {
+    const d = new Date()
+    const dateStr = d.toISOString().slice(0, 10)
+    setForm({ title: '', type: 'session', patientId: '', date: dateStr, startTime: '09:00', endTime: '10:00', meetLink: '', notes: '' })
+    setEventModal({ open: true, mode: 'create', data: null })
+  }
+
+  function openEdit(evt) {
+    const start = new Date(evt.startAt)
+    const end = evt.endAt ? new Date(evt.endAt) : new Date(start.getTime() + 3600000)
+    const dateStr = start.toISOString().slice(0, 10)
+    const startTime = `${start.getHours().toString().padStart(2, '0')}:${start.getMinutes().toString().padStart(2, '0')}`
+    const endTime = `${end.getHours().toString().padStart(2, '0')}:${end.getMinutes().toString().padStart(2, '0')}`
+    setForm({
+      title: evt.title || '',
+      type: evt.type || 'session',
+      patientId: evt.patientId || '',
+      date: dateStr,
+      startTime,
+      endTime,
+      meetLink: evt.meetLink || '',
+      notes: evt.notes || '',
+    })
+    setEventModal({ open: true, mode: 'edit', data: evt })
+  }
+
+  function closeModal() {
+    setEventModal(EMPTY_MODAL)
+  }
+
+  function buildPayload() {
+    const [h1, m1] = form.startTime.split(':').map(Number)
+    const [h2, m2] = form.endTime.split(':').map(Number)
+    const startAt = new Date(form.date)
+    startAt.setHours(h1, m1, 0, 0)
+    const endAt = new Date(form.date)
+    endAt.setHours(h2, m2, 0, 0)
+    const patient = allPatients.find(p => String(p.id) === String(form.patientId))
+    return {
+      title: form.title,
+      type: form.type,
+      patientId: form.type === 'session' ? form.patientId || null : null,
+      patientName: form.type === 'session' && patient ? (patient.name || patient.fullName) : null,
+      startAt: startAt.toISOString(),
+      endAt: endAt.toISOString(),
+      meetLink: form.meetLink || null,
+      notes: form.notes || null,
+    }
+  }
+
+  async function handleSave() {
+    if (!form.title.trim() && form.type !== 'session') return
+    setSaving(true)
+    try {
+      const payload = buildPayload()
+      if (eventModal.mode === 'create') {
+        await api.createAgendaEvent(payload)
+      } else {
+        await api.updateAgendaEvent(eventModal.data.id, payload)
+      }
+      await loadEvents()
+      closeModal()
+    } catch (e) {
+      console.error(e)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  async function handleDelete() {
+    if (!eventModal.data) return
+    setSaving(true)
+    try {
+      await api.deleteAgendaEvent(eventModal.data.id)
+      await loadEvents()
+      closeModal()
+    } catch (e) {
+      console.error(e)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  // Match event to day+hour slot
+  function getEventsForSlot(dayIdx, hour) {
+    const slotDate = weekDates[dayIdx]
+    return events.filter(e => {
+      const d = new Date(e.startAt)
+      return (
+        d.getFullYear() === slotDate.getFullYear() &&
+        d.getMonth() === slotDate.getMonth() &&
+        d.getDate() === slotDate.getDate() &&
+        d.getHours() === hour
+      )
+    })
+  }
+
+  // Upcoming sessions — next 7 days sorted
+  const upcoming = events
+    .filter(e => new Date(e.startAt) >= today)
+    .sort((a, b) => new Date(a.startAt) - new Date(b.startAt))
+    .slice(0, 6)
+
+  // Mini cal
+  const miniBase = new Date(today.getFullYear(), today.getMonth() + miniCalOffset, 1)
+  const miniYear = miniBase.getFullYear()
+  const miniMonth = miniBase.getMonth()
+  const firstDay = new Date(miniYear, miniMonth, 1).getDay()
+  const daysInMonth = new Date(miniYear, miniMonth + 1, 0).getDate()
+  const startOffset = firstDay === 0 ? 6 : firstDay - 1
+  const miniDays = []
+  for (let i = 0; i < startOffset; i++) miniDays.push(null)
+  for (let i = 1; i <= daysInMonth; i++) miniDays.push(i)
+
+  // Days with events for mini cal
+  const daysWithEvents = new Set(
+    events.map(e => {
+      const d = new Date(e.startAt)
+      if (d.getMonth() === miniMonth && d.getFullYear() === miniYear) return d.getDate()
+      return null
+    }).filter(Boolean)
+  )
+
+  const weekRange = `${weekDates[0].getDate()} a ${weekDates[4].getDate()} de ${MONTHS_PT[weekDates[0].getMonth()]}`
+  const sessionsThisWeek = events.filter(e => {
+    const d = new Date(e.startAt)
+    return d >= weekDates[0] && d <= weekDates[4] && e.type === 'session'
+  }).length
+
+  return (
+    <div className="view">
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px', gap: '12px', flexWrap: 'wrap' }}>
+        <div>
+          <div style={{ fontFamily: "'Fraunces', serif", fontSize: '22px', fontWeight: 300, color: 'var(--d)' }}>
+            Semana de {weekRange}
+          </div>
+          <div style={{ fontSize: '13px', color: 'var(--gr5)', marginTop: '3px' }}>
+            {loading ? '…' : `${sessionsThisWeek} sessão${sessionsThisWeek !== 1 ? 'ões' : ''} agendada${sessionsThisWeek !== 1 ? 's' : ''} esta semana`}
+          </div>
+        </div>
+        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+          <button className="btn-outline" style={{ padding: '8px 14px', fontSize: '12px' }} onClick={() => setWeekOffset(w => w - 1)}>‹ Semana anterior</button>
+          <button className="btn-outline" style={{ padding: '8px 14px', fontSize: '12px', borderColor: 'var(--g300)', color: 'var(--g600)' }} onClick={() => setWeekOffset(0)}>Hoje</button>
+          <button className="btn-outline" style={{ padding: '8px 14px', fontSize: '12px' }} onClick={() => setWeekOffset(w => w + 1)}>Próxima semana ›</button>
+          <button className="btn-primary" style={{ padding: '8px 16px', fontSize: '12px' }} onClick={openCreate}>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Novo Evento
+          </button>
+        </div>
+      </div>
+
+      <div className="agenda-layout">
+        {/* Week grid */}
+        <div className="agenda-week">
+          <div className="agenda-week-header">
+            <div className="agenda-time-col" style={{ padding: '12px 0' }} />
+            {weekDates.map((d, i) => (
+              <div key={i} className={`agenda-day-label${isToday(d) ? ' today' : ''}`}>
+                <span className={`agenda-day-date${isToday(d) ? ' today-num' : ''}`}>{d.getDate()}</span>
+                {DAYS[i]}
+              </div>
+            ))}
+          </div>
+
+          <div className="agenda-grid">
+            {HOURS.map(hour => (
+              <>
+                <div key={`time-${hour}`} className="agenda-time-slot">
+                  <div className="agenda-time-label">{hour}:00</div>
+                </div>
+                {weekDates.map((_, dayIdx) => {
+                  const slotEvts = loading ? [] : getEventsForSlot(dayIdx, hour)
+                  const ts = slotEvts[0] ? TYPE_STYLES[slotEvts[0].type] || TYPE_STYLES.session : null
+                  return (
+                    <div key={`slot-${hour}-${dayIdx}`} className="agenda-slot">
+                      {slotEvts.map(evt => (
+                        <div
+                          key={evt.id}
+                          className={`agenda-event ${ts?.cls || 'green'}`}
+                          style={{ background: ts?.bg, borderColor: ts?.border, color: ts?.color, cursor: 'pointer' }}
+                          title={`${evt.title} · ${fmtHour(evt.startAt)} – ${fmtHour(evt.endAt)}`}
+                          onClick={() => openEdit(evt)}
+                        >
+                          <div className="agenda-event-name">{evt.patientName || evt.title}</div>
+                          <div className="agenda-event-meta">
+                            {fmtHour(evt.startAt)}
+                            {evt.meetLink && (
+                              <span style={{ marginLeft: '4px', fontSize: '10px' }}>
+                                <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ verticalAlign: 'middle' }}><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )
+                })}
+              </>
+            ))}
+          </div>
+        </div>
+
+        {/* Sidebar */}
+        <div>
+          {/* Mini cal */}
+          <div className="agenda-mini-cal">
+            <div className="mini-cal-header">
+              <span className="mini-cal-title">{MONTHS_PT[miniMonth]} {miniYear}</span>
+              <div style={{ display: 'flex', gap: '4px' }}>
+                <button className="mini-cal-nav" onClick={() => setMiniCalOffset(o => o - 1)}>‹</button>
+                <button className="mini-cal-nav" onClick={() => setMiniCalOffset(o => o + 1)}>›</button>
+              </div>
+            </div>
+            <div className="mini-cal-grid">
+              {['S','T','Q','Q','S','S','D'].map((d, i) => (
+                <div key={i} className="mini-cal-dow">{d}</div>
+              ))}
+              {miniDays.map((day, i) => (
+                <div
+                  key={i}
+                  className={`mini-cal-day${day && day === today.getDate() && miniMonth === today.getMonth() && miniYear === today.getFullYear() ? ' today' : ''}${!day ? ' other-month' : ''}`}
+                  style={day && daysWithEvents.has(day) ? { position: 'relative' } : {}}
+                >
+                  {day || ''}
+                  {day && daysWithEvents.has(day) && (
+                    <span style={{ position: 'absolute', bottom: '1px', left: '50%', transform: 'translateX(-50%)', width: '4px', height: '4px', borderRadius: '50%', background: 'var(--g500)', display: 'block' }} />
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Upcoming */}
+          <div className="agenda-upcoming">
+            <div className="card-header" style={{ padding: '0 0 12px' }}>
+              <div className="card-title">Próximas sessões</div>
+            </div>
+            {loading
+              ? Array.from({ length: 4 }).map((_, i) => (
+                  <div key={i} className="upcoming-item" style={{ opacity: 0.5 }}>
+                    <div className="upcoming-date-box" style={{ background: 'var(--gr2)' }}>
+                      <div className="upcoming-day" style={{ color: 'var(--gr4)' }}>—</div>
+                      <div className="upcoming-mon" style={{ color: 'var(--gr3)' }}>…</div>
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ height: '13px', width: '70%', background: 'var(--gr2)', borderRadius: '4px', marginBottom: '6px' }} className="skel-pulse" />
+                      <div style={{ height: '11px', width: '50%', background: 'var(--gr2)', borderRadius: '4px' }} className="skel-pulse" />
+                    </div>
+                  </div>
+                ))
+              : upcoming.length === 0
+                ? <div style={{ fontSize: '13px', color: 'var(--gr4)', textAlign: 'center', padding: '20px 0' }}>Nenhuma sessão agendada</div>
+                : upcoming.map((evt, i) => {
+                    const d = new Date(evt.startAt)
+                    const ts = TYPE_STYLES[evt.type] || TYPE_STYLES.session
+                    const isSession = evt.type === 'session'
+                    return (
+                      <div key={i} className="upcoming-item" style={{ cursor: 'pointer' }} onClick={() => openEdit(evt)}>
+                        <div className="upcoming-date-box">
+                          <div className="upcoming-day">{d.getDate()}</div>
+                          <div className="upcoming-mon">{MONTHS_PT_SHORT[d.getMonth()].toUpperCase()}</div>
+                        </div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: '13px', fontWeight: 500, color: 'var(--d)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {evt.patientName || evt.title}
+                          </div>
+                          <div style={{ fontSize: '12px', color: 'var(--gr5)', marginTop: '2px' }}>
+                            {fmtHour(evt.startAt)}
+                            {evt.meetLink && ' · 📹 Video'}
+                          </div>
+                        </div>
+                        <span style={{ fontSize: '11px', fontWeight: 600, padding: '3px 9px', borderRadius: '20px', background: ts.bg, color: ts.color, flexShrink: 0, whiteSpace: 'nowrap', border: `1px solid ${ts.border}` }}>
+                          {isSession ? 'Sessão' : evt.type === 'supervision' ? 'Supervisão' : 'Outro'}
+                        </span>
+                      </div>
+                    )
+                  })
+            }
+          </div>
+        </div>
+      </div>
+
+      {/* Event modal */}
+      {eventModal.open && (
+        <div
+          style={{ position: 'fixed', inset: 0, zIndex: 250, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}
+          onClick={e => e.target === e.currentTarget && closeModal()}
+        >
+          <div style={{ background: 'var(--w)', borderRadius: 'var(--r3)', width: '100%', maxWidth: '520px', maxHeight: '90vh', display: 'flex', flexDirection: 'column', boxShadow: '0 24px 64px rgba(0,0,0,0.22)', overflow: 'hidden' }}>
+            {/* Header */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '20px 24px 16px', borderBottom: '1px solid var(--gr2)' }}>
+              <div style={{ fontFamily: "'Fraunces', serif", fontSize: '18px', fontWeight: 400, color: 'var(--d)' }}>
+                {eventModal.mode === 'create' ? 'Novo Evento' : 'Editar Evento'}
+              </div>
+              <button style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '20px', color: 'var(--gr5)', lineHeight: 1 }} onClick={closeModal}>×</button>
+            </div>
+
+            {/* Body */}
+            <div style={{ padding: '20px 24px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              {/* Título */}
+              <div>
+                <label style={{ fontSize: '11px', fontWeight: 600, color: 'var(--gr5)', letterSpacing: '0.05em', display: 'block', marginBottom: '6px' }}>TÍTULO *</label>
+                <input
+                  style={inSt}
+                  placeholder="Título do evento"
+                  value={form.title}
+                  onChange={e => setForm(f => ({ ...f, title: e.target.value }))}
+                />
+              </div>
+
+              {/* Tipo */}
+              <div>
+                <label style={{ fontSize: '11px', fontWeight: 600, color: 'var(--gr5)', letterSpacing: '0.05em', display: 'block', marginBottom: '6px' }}>TIPO</label>
+                <select
+                  style={inSt}
+                  value={form.type}
+                  onChange={e => setForm(f => ({ ...f, type: e.target.value, patientId: '' }))}
+                >
+                  <option value="session">Sessão</option>
+                  <option value="supervision">Supervisão</option>
+                  <option value="personal">Pessoal</option>
+                  <option value="other">Outro</option>
+                </select>
+              </div>
+
+              {/* Paciente — só se tipo === session */}
+              {form.type === 'session' && (
+                <div>
+                  <label style={{ fontSize: '11px', fontWeight: 600, color: 'var(--gr5)', letterSpacing: '0.05em', display: 'block', marginBottom: '6px' }}>PACIENTE</label>
+                  <select
+                    style={inSt}
+                    value={form.patientId}
+                    onChange={e => setForm(f => ({ ...f, patientId: e.target.value }))}
+                  >
+                    <option value="">Selecionar paciente…</option>
+                    {allPatients.map(p => (
+                      <option key={p.id} value={p.id}>{p.name || p.fullName}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {/* Data */}
+              <div>
+                <label style={{ fontSize: '11px', fontWeight: 600, color: 'var(--gr5)', letterSpacing: '0.05em', display: 'block', marginBottom: '6px' }}>DATA</label>
+                <input
+                  style={inSt}
+                  type="date"
+                  value={form.date}
+                  onChange={e => setForm(f => ({ ...f, date: e.target.value }))}
+                />
+              </div>
+
+              {/* Horários */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div>
+                  <label style={{ fontSize: '11px', fontWeight: 600, color: 'var(--gr5)', letterSpacing: '0.05em', display: 'block', marginBottom: '6px' }}>HORA INÍCIO</label>
+                  <input
+                    style={inSt}
+                    type="time"
+                    value={form.startTime}
+                    onChange={e => setForm(f => ({ ...f, startTime: e.target.value }))}
+                  />
+                </div>
+                <div>
+                  <label style={{ fontSize: '11px', fontWeight: 600, color: 'var(--gr5)', letterSpacing: '0.05em', display: 'block', marginBottom: '6px' }}>HORA FIM</label>
+                  <input
+                    style={inSt}
+                    type="time"
+                    value={form.endTime}
+                    onChange={e => setForm(f => ({ ...f, endTime: e.target.value }))}
+                  />
+                </div>
+              </div>
+
+              {/* Link */}
+              <div>
+                <label style={{ fontSize: '11px', fontWeight: 600, color: 'var(--gr5)', letterSpacing: '0.05em', display: 'block', marginBottom: '6px' }}>LINK DE VIDEOCHAMADA</label>
+                <input
+                  style={inSt}
+                  type="text"
+                  placeholder="https://meet.google.com/…"
+                  value={form.meetLink}
+                  onChange={e => setForm(f => ({ ...f, meetLink: e.target.value }))}
+                />
+              </div>
+
+              {/* Notas */}
+              <div>
+                <label style={{ fontSize: '11px', fontWeight: 600, color: 'var(--gr5)', letterSpacing: '0.05em', display: 'block', marginBottom: '6px' }}>NOTAS</label>
+                <textarea
+                  style={{ ...inSt, resize: 'vertical', minHeight: '72px' }}
+                  placeholder="Observações opcionais…"
+                  value={form.notes}
+                  onChange={e => setForm(f => ({ ...f, notes: e.target.value }))}
+                />
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div style={{ padding: '16px 24px', borderTop: '1px solid var(--gr2)', display: 'flex', alignItems: 'center', gap: '10px' }}>
+              {eventModal.mode === 'edit' && (
+                <button
+                  style={{ fontSize: '12px', padding: '8px 14px', border: '1px solid var(--danger)', borderRadius: 'var(--r)', background: 'none', color: 'var(--danger)', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", marginRight: 'auto' }}
+                  onClick={handleDelete}
+                  disabled={saving}
+                >
+                  Excluir evento
+                </button>
+              )}
+              <button
+                className="btn-outline"
+                style={{ padding: '8px 16px', fontSize: '13px', marginLeft: eventModal.mode === 'edit' ? '0' : 'auto' }}
+                onClick={closeModal}
+                disabled={saving}
+              >
+                Cancelar
+              </button>
+              <button
+                className="btn-primary"
+                style={{ padding: '8px 20px', fontSize: '13px', justifyContent: 'center' }}
+                onClick={handleSave}
+                disabled={saving || !form.title.trim()}
+              >
+                {saving ? 'Salvando…' : eventModal.mode === 'create' ? 'Criar evento' : 'Salvar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}

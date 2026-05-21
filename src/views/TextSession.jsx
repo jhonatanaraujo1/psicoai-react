@@ -1,0 +1,249 @@
+import { useState, useEffect, useRef } from 'react'
+
+const TOOLS = [
+  { cmd: 'bold',          icon: <strong>B</strong>,  title: 'Negrito' },
+  { cmd: 'italic',        icon: <em>I</em>,           title: 'Itálico' },
+  { cmd: 'underline',     icon: <u>U</u>,             title: 'Sublinhado' },
+  { cmd: 'separator' },
+  { cmd: 'formatBlock',   arg: 'h3',                  title: 'Título',
+    icon: <span style={{ fontFamily: "'Fraunces',serif", fontSize: '15px' }}>H</span> },
+  { cmd: 'insertUnorderedList', title: 'Lista',
+    icon: <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg> },
+  { cmd: 'separator' },
+  { cmd: 'removeFormat',  title: 'Limpar formatação',
+    icon: <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/><line x1="15" y1="5" x2="19" y2="9"/></svg> },
+]
+
+export default function TextSession({ patient, isOpen, onClose, onAnalyze }) {
+  const [secs, setSecs] = useState(0)
+  const [showEndModal, setShowEndModal] = useState(false)
+  const timerRef = useRef(null)
+  const editorRef = useRef(null)
+
+  useEffect(() => {
+    if (isOpen) {
+      setSecs(0)
+      setShowEndModal(false)
+      timerRef.current = setInterval(() => setSecs(s => s + 1), 1000)
+      setTimeout(() => editorRef.current?.focus(), 100)
+    } else {
+      clearInterval(timerRef.current)
+    }
+    return () => clearInterval(timerRef.current)
+  }, [isOpen])
+
+  const fmt = (s) => {
+    const m = Math.floor(s / 60).toString().padStart(2, '0')
+    const ss = (s % 60).toString().padStart(2, '0')
+    return `${m}:${ss}`
+  }
+
+  const exec = (cmd, arg) => {
+    document.execCommand(cmd, false, arg || null)
+    editorRef.current?.focus()
+  }
+
+  const handleEndWithoutAI = () => {
+    setShowEndModal(false)
+    onClose()
+  }
+
+  const handleEndWithAI = () => {
+    const text = editorRef.current?.innerText || ''
+    const html = editorRef.current?.innerHTML || ''
+    setShowEndModal(false)
+    onAnalyze({ imageBase64: null, textContent: text, htmlContent: html, duration: secs })
+  }
+
+  if (!isOpen) return null
+
+  const patientName = patient?.name || '—'
+  const sessionNum = (patient?.sessions || 0) + 1
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, zIndex: 300, display: 'flex', flexDirection: 'column', background: '#F5F2EC' }}>
+
+      {/* Topbar */}
+      <div className="cs-topbar">
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <div className="cs-logo">Ψ</div>
+          <div className="cs-patient">{patientName} · Sessão {sessionNum}</div>
+          <span style={{
+            fontSize: '10px', fontWeight: 600, padding: '2px 8px', borderRadius: '20px',
+            background: 'rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.6)',
+            letterSpacing: '0.5px', textTransform: 'uppercase',
+          }}>Texto</span>
+        </div>
+        <div className="cs-timer">{fmt(secs)}</div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <button className="cs-end-btn" onClick={() => setShowEndModal(true)}>Encerrar Sessão</button>
+        </div>
+      </div>
+
+      {/* Toolbar de formatação */}
+      <div style={{
+        background: '#fff', borderBottom: '1px solid #E8E5E0',
+        padding: '8px 24px', display: 'flex', alignItems: 'center', gap: '2px',
+        flexShrink: 0,
+      }}>
+        {TOOLS.map((t, i) =>
+          t.cmd === 'separator' ? (
+            <div key={i} style={{ width: '1px', height: '20px', background: '#E8E5E0', margin: '0 6px' }} />
+          ) : (
+            <button
+              key={i}
+              title={t.title}
+              onMouseDown={e => { e.preventDefault(); exec(t.cmd, t.arg) }}
+              style={{
+                width: '32px', height: '32px', border: 'none', borderRadius: '6px',
+                background: 'transparent', cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: '13px', color: '#3D4A3D', transition: 'background 0.12s',
+              }}
+              onMouseOver={e => e.currentTarget.style.background = '#F0EDE8'}
+              onMouseOut={e => e.currentTarget.style.background = 'transparent'}
+            >
+              {t.icon}
+            </button>
+          )
+        )}
+        <div style={{ flex: 1 }} />
+        <span style={{ fontSize: '11px', color: '#A0A0A0' }}>
+          Ctrl+B negrito · Ctrl+I itálico
+        </span>
+      </div>
+
+      {/* Área de escrita */}
+      <div style={{ flex: 1, overflowY: 'auto', display: 'flex', justifyContent: 'center', padding: '40px 24px' }}>
+        <div style={{ width: '100%', maxWidth: '720px' }}>
+          {/* Cabeçalho da nota */}
+          <div style={{ marginBottom: '28px' }}>
+            <div style={{ fontFamily: "'Fraunces', serif", fontSize: '22px', color: '#1C1C1C', fontWeight: 400, marginBottom: '6px' }}>
+              {patientName} · Sessão {sessionNum}
+            </div>
+            <div style={{ fontSize: '12px', color: '#8B8B8B' }}>
+              {new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+            </div>
+            <div style={{ marginTop: '16px', borderBottom: '1px solid #E8E5E0' }} />
+          </div>
+
+          {/* Editor */}
+          <div
+            ref={editorRef}
+            contentEditable
+            suppressContentEditableWarning
+            data-placeholder="Comece a escrever suas anotações..."
+            style={{
+              minHeight: '420px', outline: 'none',
+              fontSize: '15px', lineHeight: '1.8',
+              color: '#1C1C1C', fontFamily: "'DM Sans', sans-serif",
+              caretColor: 'var(--g500)',
+            }}
+            onKeyDown={e => {
+              // Tab insere espaços
+              if (e.key === 'Tab') {
+                e.preventDefault()
+                document.execCommand('insertText', false, '    ')
+              }
+            }}
+          />
+        </div>
+      </div>
+
+      {/* Modal de encerramento */}
+      {showEndModal && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 10,
+          background: 'rgba(0,0,0,0.5)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          padding: '16px',
+        }}>
+          <div style={{
+            background: '#fff', borderRadius: '16px',
+            width: '100%', maxWidth: '440px',
+            boxShadow: '0 24px 64px rgba(0,0,0,0.28)',
+            overflow: 'hidden',
+          }}>
+            <div style={{ padding: '24px 24px 20px' }}>
+              <div style={{ fontFamily: "'Fraunces', serif", fontSize: '20px', fontWeight: 400, color: '#1C1C1C', marginBottom: '8px' }}>
+                Encerrar sessão
+              </div>
+              <div style={{ fontSize: '13px', color: '#8B8B8B', lineHeight: 1.6 }}>
+                Duração: <strong style={{ color: '#1C1C1C' }}>{fmt(secs)}</strong> · {patientName} · Sessão {sessionNum}
+              </div>
+            </div>
+
+            <div style={{ padding: '0 24px 24px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <button
+                onClick={handleEndWithAI}
+                style={{
+                  width: '100%', padding: '16px', border: '2px solid var(--g300)',
+                  borderRadius: '12px', background: 'var(--g50)', cursor: 'pointer',
+                  textAlign: 'left', fontFamily: "'DM Sans', sans-serif", transition: 'all 0.15s',
+                }}
+                onMouseOver={e => { e.currentTarget.style.background = 'var(--g100)'; e.currentTarget.style.borderColor = 'var(--g400)' }}
+                onMouseOut={e => { e.currentTarget.style.background = 'var(--g50)'; e.currentTarget.style.borderColor = 'var(--g300)' }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '6px' }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--g600)" strokeWidth="2" style={{ flexShrink: 0 }}>
+                    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+                  </svg>
+                  <span style={{ fontSize: '14px', fontWeight: 700, color: 'var(--g700)' }}>Encerrar e gerar análise IA</span>
+                </div>
+                <div style={{ fontSize: '12px', color: 'var(--g600)', lineHeight: 1.5, paddingLeft: '26px' }}>
+                  O texto será analisado pelo PsicoAI — hipóteses diagnósticas, padrões e sugestões para a próxima sessão.
+                </div>
+              </button>
+
+              <button
+                onClick={handleEndWithoutAI}
+                style={{
+                  width: '100%', padding: '14px 16px', border: '1px solid var(--gr2)',
+                  borderRadius: '12px', background: 'var(--w)', cursor: 'pointer',
+                  textAlign: 'left', fontFamily: "'DM Sans', sans-serif", transition: 'all 0.15s',
+                }}
+                onMouseOver={e => e.currentTarget.style.background = 'var(--ow)'}
+                onMouseOut={e => e.currentTarget.style.background = 'var(--w)'}
+              >
+                <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--d)', marginBottom: '3px' }}>Encerrar sem análise</div>
+                <div style={{ fontSize: '12px', color: 'var(--gr5)' }}>Salva a sessão. Você pode gerar a análise depois pelo prontuário.</div>
+              </button>
+
+              <button
+                onClick={() => setShowEndModal(false)}
+                style={{ background: 'none', border: 'none', color: 'var(--gr4)', fontSize: '12px', cursor: 'pointer', padding: '4px', fontFamily: "'DM Sans', sans-serif" }}
+              >
+                ← Continuar sessão
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Estilos do placeholder e headings */}
+      <style>{`
+        [contenteditable][data-placeholder]:empty:before {
+          content: attr(data-placeholder);
+          color: #B0ADA8;
+          pointer-events: none;
+        }
+        [contenteditable] h3 {
+          font-family: 'Fraunces', serif;
+          font-size: 18px;
+          font-weight: 500;
+          color: #1C1C1C;
+          margin: 20px 0 8px;
+        }
+        [contenteditable] ul {
+          padding-left: 20px;
+          margin: 8px 0;
+        }
+        [contenteditable] li {
+          margin-bottom: 4px;
+        }
+        [contenteditable] strong { font-weight: 700; }
+        [contenteditable] em { font-style: italic; }
+      `}</style>
+    </div>
+  )
+}
