@@ -14,10 +14,11 @@ const TOOLS = [
     icon: <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/><line x1="15" y1="5" x2="19" y2="9"/></svg> },
 ]
 
-export default function TextSession({ patient, isOpen, onClose, onAnalyze }) {
+export default function TextSession({ patient, isOpen, onClose, onAnalyze, sessionId, onAutosave }) {
   const [secs, setSecs] = useState(0)
   const [showEndModal, setShowEndModal] = useState(false)
   const timerRef = useRef(null)
+  const autosaveRef = useRef(null)
   const editorRef = useRef(null)
 
   useEffect(() => {
@@ -32,6 +33,16 @@ export default function TextSession({ patient, isOpen, onClose, onAnalyze }) {
     return () => clearInterval(timerRef.current)
   }, [isOpen])
 
+  // Autosave every 30s while session is open and we have a real sessionId
+  useEffect(() => {
+    if (!isOpen || !sessionId || !onAutosave) return
+    autosaveRef.current = setInterval(() => {
+      const text = editorRef.current?.innerText || ''
+      if (text.trim()) onAutosave(sessionId, { textContent: text })
+    }, 30000)
+    return () => clearInterval(autosaveRef.current)
+  }, [isOpen, sessionId, onAutosave])
+
   const fmt = (s) => {
     const m = Math.floor(s / 60).toString().padStart(2, '0')
     const ss = (s % 60).toString().padStart(2, '0')
@@ -44,8 +55,10 @@ export default function TextSession({ patient, isOpen, onClose, onAnalyze }) {
   }
 
   const handleEndWithoutAI = () => {
+    const text = editorRef.current?.innerText || ''
+    const html = editorRef.current?.innerHTML || ''
     setShowEndModal(false)
-    onClose()
+    onClose({ textContent: text, htmlContent: html, duration: secs })
   }
 
   const handleEndWithAI = () => {

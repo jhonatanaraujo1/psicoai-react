@@ -23,7 +23,7 @@ async function svgToPngBase64(svgStr, width, height) {
   })
 }
 
-export default function CanvasSession({ patient, isOpen, onClose, onAnalyze }) {
+export default function CanvasSession({ patient, isOpen, onClose, onAnalyze, sessionId }) {
   const [secs, setSecs] = useState(0)
   const [exporting, setExporting] = useState(false)
   const [showEndModal, setShowEndModal] = useState(false)
@@ -74,7 +74,7 @@ export default function CanvasSession({ patient, isOpen, onClose, onAnalyze }) {
 
   const handleEndWithoutAI = () => {
     setShowEndModal(false)
-    onClose()
+    onClose({ duration: secs }) // no image needed when closing without AI analysis
   }
 
   const handleEndWithAI = async () => {

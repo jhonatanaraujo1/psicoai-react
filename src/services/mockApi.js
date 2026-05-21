@@ -588,6 +588,12 @@ export const api = {
     return newSession
   },
 
+  async autosaveSession(sessionId, data) {
+    // No-op in mock — just acknowledge silently
+    await delay(100)
+    return { sessionId, saved: true }
+  },
+
   async finishSession(sessionId, data) {
     await delay(400)
     for (const sessions of Object.values(SESSIONS_BY_PATIENT)) {

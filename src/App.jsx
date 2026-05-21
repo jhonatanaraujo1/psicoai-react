@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import './styles/globals.css'
 
 import { auth, api } from './services'
@@ -56,12 +56,34 @@ export default function App() {
     }
   }, [])
 
+  // ── Stripe return handler (?payment=success) ─────────────────────────────
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const payment = params.get('payment')
+    if (payment === 'success') {
+      // Clean the URL without a full reload
+      window.history.replaceState({}, '', window.location.pathname)
+      setPaymentRequired(false)
+      showToast('✓ Pagamento confirmado! Sua conta está ativa.', 'success')
+      // Refresh user profile so subscription status updates in the UI
+      api.getUserProfile().then(updated => {
+        if (updated) setCurrentUser(prev => ({ ...prev, ...updated }))
+      }).catch(() => {})
+    }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
   // ── Navigation ───────────────────────────────────────────────────────────
   const [currentView, setCurrentView] = useState('dashboard')
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   // ── Patient context ──────────────────────────────────────────────────────
   const [currentPatient, setCurrentPatient] = useState(null)
+
+  // ── Active session tracking ────────────────────────────────────────────────
+  // Ref avoids stale closure issues in async handlers; state propagates the ID as a prop
+  const activeSessionRef = useRef(null)
+  const [activeSessionId, setActiveSessionId] = useState(null)
+  const setSession = (id) => { activeSessionRef.current = id; setActiveSessionId(id) }
 
   // ── Session modals ────────────────────────────────────────────────────────
   const [briefingOpen, setBriefingOpen] = useState(false)
@@ -100,6 +122,14 @@ export default function App() {
 
   const handleBriefingStart = ({ meetLink, type }) => {
     setBriefingOpen(false)
+    activeSessionRef.current = null // clear any stale session from a previous flow
+
+    // Open the session view immediately (no wait) and create the backend record in background.
+    // autosaveSession only fires after 30s, so the ID will be ready well before it's needed.
+    api.createSession({ patientId: currentPatient?.id, type, meetLink })
+      .then(session => setSession(session.id))
+      .catch(e => console.warn('[PsicoAI] createSession failed, session will not be persisted:', e))
+
     if (type === 'text') setTextOpen(true)
     else setCanvasOpen(true)
   }
@@ -111,6 +141,10 @@ export default function App() {
   }
 
   const handleAnalyze = async ({ imageBase64, textContent, htmlContent, duration }) => {
+    // Capture and clear active session ID before any awaits
+    const sid = activeSessionRef.current
+    setSession(null)
+
     setCanvasOpen(false)
     setTextOpen(false)
     setAiDrawerOpen(true)
@@ -118,12 +152,39 @@ export default function App() {
     setAnalysisLoading(true)
 
     try {
-      const data = await api.createAnalysis({ sessionId: 's-mock-' + Date.now(), patientId: currentPatient?.id })
+      // Step 1: finish the session (saves notes + duration to DB)
+      if (sid) {
+        await api.finishSession(sid, {
+          textContent,
+          htmlContent,
+          imageBase64,
+          durationSeconds: duration,
+        })
+      }
+
+      // Step 2: trigger AI analysis
+      const effectiveSessionId = sid || ('s-mock-' + Date.now())
+      const data = await api.createAnalysis({ sessionId: effectiveSessionId, patientId: currentPatient?.id })
       setAnalysisResult(data)
     } catch (e) {
       setAnalysisResult({ error: 'Falha na análise. Tente novamente.' })
     } finally {
       setAnalysisLoading(false)
+    }
+  }
+
+  // Called when the user closes the session without requesting AI analysis
+  const handleSessionClose = async ({ textContent, htmlContent, duration } = {}) => {
+    const sid = activeSessionRef.current
+    setSession(null)
+
+    setTextOpen(false)
+    setCanvasOpen(false)
+    setCurrentView('paciente')
+
+    // Finish session in background so notes are not lost (fire-and-forget)
+    if (sid) {
+      api.finishSession(sid, { textContent, htmlContent, durationSeconds: duration }).catch(() => {})
     }
   }
 
@@ -177,14 +238,17 @@ export default function App() {
       <TextSession
         patient={currentPatient}
         isOpen={textOpen}
-        onClose={() => { setTextOpen(false); setCurrentView('paciente') }}
-        onAnalyze={(data) => { setTextOpen(false); handleAnalyze(data) }}
+        sessionId={activeSessionId}
+        onAutosave={(id, data) => api.autosaveSession?.(id, data)}
+        onClose={handleSessionClose}
+        onAnalyze={handleAnalyze}
       />
 
       <CanvasSession
         patient={currentPatient}
         isOpen={canvasOpen}
-        onClose={() => { setCanvasOpen(false); setCurrentView('paciente') }}
+        sessionId={activeSessionId}
+        onClose={handleSessionClose}
         onAnalyze={handleAnalyze}
       />
 

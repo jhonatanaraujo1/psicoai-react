@@ -111,6 +111,32 @@ function TabPlano({ profile }) {
   const used = profile?.analysesUsedThisMonth || 0
   const remaining = profile?.analysesRemaining || 0
   const total = isClinico ? 20 : used + remaining
+  const [billingLoading, setBillingLoading] = useState(false)
+
+  const handleUpgrade = async () => {
+    setBillingLoading(true)
+    try {
+      const successUrl = window.location.origin + '/?payment=success'
+      const cancelUrl = window.location.href
+      const { url } = await api.createCheckoutSession({ planId: 'clinico', successUrl, cancelUrl })
+      window.location.href = url
+    } catch (e) {
+      alert('Erro ao iniciar checkout. Tente novamente.')
+      setBillingLoading(false)
+    }
+  }
+
+  const handlePortal = async () => {
+    setBillingLoading(true)
+    try {
+      const returnUrl = window.location.href
+      const { url } = await api.createBillingPortalSession({ returnUrl })
+      window.location.href = url
+    } catch (e) {
+      alert('Erro ao abrir portal de cobrança. Tente novamente.')
+      setBillingLoading(false)
+    }
+  }
 
   return (
     <div>
@@ -153,13 +179,13 @@ function TabPlano({ profile }) {
         <div style={{ background: 'var(--ow)', border: '1px solid var(--gr2)', borderRadius: 'var(--r2)', padding: '20px', marginBottom: '16px' }}>
           <div style={{ fontFamily: "'Fraunces', serif", fontSize: '17px', color: 'var(--d)', marginBottom: '5px' }}>Upgrade para Plano Clínico</div>
           <div style={{ fontSize: '13px', color: 'var(--gr5)', marginBottom: '14px', lineHeight: 1.6 }}>Inclui 20 análises IA/mês, relatórios de evolução e exportação PDF de prontuário.</div>
-          <button onClick={() => alert('Em breve: fluxo de upgrade integrado.')} style={{ padding: '10px 20px', background: 'var(--g600)', color: '#fff', border: 'none', borderRadius: 'var(--r)', fontSize: '13px', fontWeight: 600, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>Fazer upgrade → R$299/mês</button>
+          <button onClick={handleUpgrade} disabled={billingLoading} style={{ padding: '10px 20px', background: 'var(--g600)', color: '#fff', border: 'none', borderRadius: 'var(--r)', fontSize: '13px', fontWeight: 600, cursor: billingLoading ? 'default' : 'pointer', opacity: billingLoading ? 0.7 : 1, fontFamily: "'DM Sans', sans-serif" }}>{billingLoading ? 'Redirecionando...' : 'Fazer upgrade → R$299/mês'}</button>
         </div>
       )}
 
       <div style={{ padding: '14px 16px', background: 'var(--w)', border: '1px solid var(--gr2)', borderRadius: 'var(--r)', fontSize: '13px', color: 'var(--gr5)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <span>Sem contrato · Cancele quando quiser</span>
-        <button onClick={() => alert('Para cancelar, entre em contato via suporte@psicoai.com.br')} style={{ background: 'none', border: 'none', color: 'var(--danger)', fontSize: '12px', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", fontWeight: 500 }}>Cancelar assinatura</button>
+        <button onClick={handlePortal} disabled={billingLoading} style={{ background: 'none', border: 'none', color: 'var(--danger)', fontSize: '12px', cursor: billingLoading ? 'default' : 'pointer', opacity: billingLoading ? 0.7 : 1, fontFamily: "'DM Sans', sans-serif", fontWeight: 500 }}>{billingLoading ? 'Abrindo portal...' : 'Cancelar assinatura'}</button>
       </div>
     </div>
   )
