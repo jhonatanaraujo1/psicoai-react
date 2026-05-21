@@ -76,7 +76,7 @@ function TabPerfil({ profile, onSaved }) {
       </div>
 
       <Divider title="Identificação profissional" sub="Exibido nos prontuários e recibos gerados" />
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginBottom: '20px' }}>
+      <div className="cfg-grid-2">
         <Field label="Nome completo *"><input style={st.input} value={form.name} onChange={e => set('name', e.target.value)} onFocus={onFocus} onBlur={onBlur} placeholder="Dra. Nome Sobrenome" /></Field>
         <Field label="CRP"><input style={st.input} value={form.crp} onChange={e => set('crp', e.target.value)} onFocus={onFocus} onBlur={onBlur} placeholder="Ex: 06/89234" /></Field>
         <Field label="Especialidade">
@@ -202,7 +202,7 @@ function TabPreferencias({ profile, onSaved }) {
   return (
     <div>
       <Divider title="Atendimento" sub="Valores padrão ao criar novos pacientes e sessões" />
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '14px', marginBottom: '24px' }}>
+      <div className="cfg-grid-2" style={{ gridTemplateColumns: 'repeat(auto-fit,minmax(160px,1fr))' }}>
         <Field label="Abordagem padrão">
           <select style={selectSt} value={form.defaultApproach} onChange={e => set('defaultApproach', e.target.value)} onFocus={onFocus} onBlur={onBlur}>
             {ABORDAGENS.map(a => <option key={a} value={a}>{a}</option>)}
@@ -347,7 +347,7 @@ function TabAjuda({ onOpenOnboarding }) {
 
       {/* Atalhos rápidos */}
       <Divider title="Atalhos da plataforma" sub="O que você pode fazer em cada seção" />
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '28px' }}>
+      <div className="cfg-grid-2" style={{ gap: '10px', marginBottom: '28px' }}>
         {[
           { icon: '◉', label: 'Dashboard', desc: 'Agenda do dia, alertas e atalhos de sessão' },
           { icon: '◈', label: 'Pacientes', desc: 'Prontuário, histórico e linha do tempo' },
