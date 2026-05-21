@@ -4,6 +4,7 @@ import './styles/globals.css'
 import { auth, api } from './services'
 import { showToast, ToastContainer } from './components/Toast'
 import OnboardingTour from './components/OnboardingTour'
+import PaymentModal from './components/PaymentModal'
 
 import Sidebar from './components/Sidebar'
 import Topbar from './components/Topbar'
@@ -228,43 +229,8 @@ export default function App() {
       {/* Toast notifications */}
       <ToastContainer />
 
-      {/* Bloqueio por inadimplência */}
-      {paymentRequired && (
-        <div style={{
-          position: 'fixed', inset: 0, zIndex: 9999,
-          background: 'rgba(28,28,28,0.85)', backdropFilter: 'blur(6px)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px'
-        }}>
-          <div style={{
-            background: 'var(--w)', borderRadius: 'var(--r2)',
-            boxShadow: '0 24px 80px rgba(0,0,0,0.3)',
-            padding: '40px 36px', maxWidth: '420px', width: '100%', textAlign: 'center'
-          }}>
-            <div style={{ fontSize: '40px', marginBottom: '16px' }}>🔒</div>
-            <h2 style={{ fontSize: '20px', fontWeight: 700, color: 'var(--d)', marginBottom: '10px' }}>
-              Conta bloqueada
-            </h2>
-            <p style={{ fontSize: '14px', color: 'var(--gr5)', lineHeight: 1.6, marginBottom: '28px' }}>
-              Houve uma falha no pagamento da sua assinatura. Regularize para continuar acessando o PsicoAI.
-            </p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              <button
-                className="btn-primary"
-                onClick={() => { setPaymentRequired(false); setCurrentView('configuracoes') }}
-              >
-                Regularizar pagamento
-              </button>
-              <button
-                className="btn-ghost"
-                onClick={handleLogout}
-                style={{ fontSize: '13px', color: 'var(--gr5)' }}
-              >
-                Sair da conta
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Bloqueio por inadimplência — modal de planos com promoção de retomada */}
+      {paymentRequired && <PaymentModal onLogout={handleLogout} />}
     </>
   )
 }

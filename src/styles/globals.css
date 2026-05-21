@@ -566,6 +566,9 @@ body{font-family:'DM Sans',sans-serif;background:var(--ow);color:var(--d);displa
   .tele-actions{width:100%;justify-content:flex-end;margin-top:4px}
   .card-header{flex-wrap:wrap;gap:8px}
 }
+@media(max-width:680px){
+  .payment-modal-grid{grid-template-columns:1fr !important}
+}
 @media(max-width:768px){
   body{overflow-x:hidden}
   .content{padding:12px}

@@ -957,6 +957,18 @@ export const api = {
     localStorage.setItem('psicoai_user', JSON.stringify(DEMO_USER))
     return { ...DEMO_USER }
   },
+
+  // Billing — mock redireciona para simulação local
+  async createCheckoutSession({ planId }) {
+    await delay(400)
+    // Em modo demo não há Stripe — simula retorno de URL
+    return { url: `${window.location.origin}/?payment=demo&plan=${planId}` }
+  },
+
+  async createBillingPortalSession() {
+    await delay(400)
+    return { url: `${window.location.origin}/?billing=demo` }
+  },
 }
 
 export default api
