@@ -13,18 +13,20 @@ const evolutionData = [
   { month: 'Mai', value: 68 },
 ]
 
-const PATTERN_LABELS = {
-  avoidance:       { label: 'Evitação',      bg: '#2D4A38', color: '#fff' },
-  rumination:      { label: 'Ruminação',     bg: '#3D6B4A', color: '#fff' },
-  hypervigilance:  { label: 'Hipervig.',     bg: '#4A7C59', color: '#fff' },
-  catastrophizing: { label: 'Catastrofiz.',  bg: '#5C8F6A', color: '#fff' },
-  isolation:       { label: 'Isolamento',    bg: '#8BB89A', color: '#fff' },
+// Tradução dos padrões para linguagem acessível
+const PATTERN_INFO = {
+  avoidance:       { label: 'Evitação',     desc: 'Paciente desvia de temas ou situações difíceis', bg: '#2D4A38', color: '#fff' },
+  rumination:      { label: 'Ruminação',    desc: 'Pensamentos repetitivos que o paciente não consegue largar', bg: '#3D6B4A', color: '#fff' },
+  hypervigilance:  { label: 'Hipervigilância', desc: 'Estado de alerta constante, dificuldade de relaxar', bg: '#4A7C59', color: '#fff' },
+  catastrophizing: { label: 'Catastrofização', desc: 'Tendência a imaginar sempre o pior cenário', bg: '#5C8F6A', color: '#fff' },
+  isolation:       { label: 'Isolamento',   desc: 'Afastamento de pessoas e situações sociais', bg: '#8BB89A', color: '#fff' },
 }
 
-const SEVERITY_COLOR = {
-  high: 'var(--danger)',
-  medium: 'var(--warn)',
-  low: 'var(--g500)',
+const ALERT_INFO = {
+  critical: { label: 'Atenção imediata', color: 'var(--danger)', bg: 'var(--danger-l)', desc: 'Requer avaliação urgente' },
+  high:     { label: 'Alta prioridade',  color: '#E67E22',        bg: '#FEF3E8',        desc: 'Acompanhar de perto' },
+  medium:   { label: 'Monitorar',        color: 'var(--warn)',    bg: 'var(--warn-l)',  desc: 'Observar na próxima sessão' },
+  low:      { label: 'Atenção leve',     color: 'var(--g600)',    bg: 'var(--g50)',     desc: 'Dentro do esperado' },
 }
 
 function Skeleton({ style }) {
@@ -36,11 +38,37 @@ function fmtDate(iso) {
   return new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })
 }
 
+// Tooltip explicativo simples
+function Tip({ text }) {
+  const [show, setShow] = useState(false)
+  return (
+    <span style={{ position: 'relative', display: 'inline-flex' }}>
+      <svg
+        width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--gr4)" strokeWidth="2"
+        style={{ cursor: 'help', flexShrink: 0 }}
+        onMouseEnter={() => setShow(true)}
+        onMouseLeave={() => setShow(false)}
+      >
+        <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+      </svg>
+      {show && (
+        <div style={{
+          position: 'absolute', bottom: '20px', left: '50%', transform: 'translateX(-50%)',
+          background: '#1C1C1C', color: '#fff', fontSize: '11px', lineHeight: 1.5,
+          padding: '7px 10px', borderRadius: '7px', whiteSpace: 'nowrap', maxWidth: '220px',
+          whiteSpace: 'normal', zIndex: 100, boxShadow: '0 4px 16px rgba(0,0,0,0.3)',
+          pointerEvents: 'none',
+        }}>
+          {text}
+        </div>
+      )}
+    </span>
+  )
+}
+
 export default function Insights() {
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
-
-  // AI Drawer for patient report
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [drawerResult, setDrawerResult] = useState(null)
   const [drawerLoading, setDrawerLoading] = useState(false)
@@ -74,49 +102,71 @@ export default function Insights() {
   const coveragePct = data?.coveragePercent ?? 0
   const analyzedCount = data?.analyzedPatients ?? 0
   const totalCount = data?.totalPatients ?? 0
+  const unanalyzedCount = totalCount - analyzedCount
+
+  const totalAlerts = Object.values(data?.alertCount || {}).reduce((a, b) => a + b, 0)
+
+  // Tendência do gráfico em linguagem simples
+  const firstVal = evolutionData[0]?.value || 0
+  const lastVal = evolutionData[evolutionData.length - 1]?.value || 0
+  const trend = lastVal > firstVal + 3 ? 'subindo' : lastVal < firstVal - 3 ? 'caindo' : 'estável'
+  const trendText = { subindo: '↑ Tendência de melhora', caindo: '↓ Tendência de queda', estável: '→ Situação estável' }[trend]
+  const trendColor = { subindo: 'var(--g600)', caindo: 'var(--danger)', estável: 'var(--warn)' }[trend]
 
   return (
     <div className="view">
-      {/* Header */}
+
+      {/* Header simplificado */}
       <div style={{ marginBottom: '24px' }}>
-        <div style={{ fontFamily: "'Fraunces', serif", fontSize: '22px', fontWeight: 400, color: 'var(--d)' }}>Inteligência Clínica</div>
+        <div style={{ fontFamily: "'Fraunces', serif", fontSize: '22px', fontWeight: 400, color: 'var(--d)' }}>
+          Resumo da Carteira
+        </div>
         <div style={{ fontSize: '13px', color: 'var(--gr5)', marginTop: '4px' }}>
-          Baseada em análises IA geradas por demanda · apenas pacientes com análise ativa são incluídos
+          Uma visão geral de como seus pacientes estão — baseada nas análises IA que você gerou
         </div>
       </div>
 
-      {/* Cobertura */}
+      {/* Banner orientador para quem não tem análises ainda */}
+      {!loading && analyzedCount === 0 && (
+        <div style={{ background: 'var(--g50)', border: '1px solid var(--g100)', borderRadius: '12px', padding: '20px 24px', marginBottom: '24px', display: 'flex', gap: '16px', alignItems: 'flex-start' }}>
+          <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'var(--g700)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.9)" strokeWidth="1.8"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+          </div>
+          <div>
+            <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--g700)', marginBottom: '4px' }}>
+              Esta tela fica mais rica à medida que você usa a IA
+            </div>
+            <div style={{ fontSize: '13px', color: 'var(--g600)', lineHeight: 1.6 }}>
+              Vá até um paciente, anote uma sessão e clique em <strong>"Analisar com IA"</strong>. Os padrões, alertas e hipóteses vão aparecer aqui automaticamente.
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Seus pacientes — lista principal */}
       <div className="card" style={{ marginBottom: '0' }}>
         <div className="card-header">
           <div>
-            <div className="card-title">Cobertura de Análise IA</div>
+            <div className="card-title">Seus Pacientes</div>
             <div className="card-sub">
-              {loading ? '…' : `${analyzedCount} de ${totalCount} pacientes · ${(data?.recentAnalyses || []).length} análises recentes`}
+              {loading ? '…' : (
+                analyzedCount === 0
+                  ? `${totalCount} pacientes · nenhuma análise IA gerada ainda`
+                  : `${analyzedCount} com análise IA · ${unanalyzedCount > 0 ? `${unanalyzedCount} ainda sem análise` : 'todos analisados'}`
+              )}
             </div>
           </div>
-          {loading
-            ? <Skeleton style={{ width: 60, height: 32 }} />
-            : (
-              <span style={{ fontFamily: "'Fraunces', serif", fontSize: '28px', fontWeight: 400, color: coveragePct >= 60 ? 'var(--g600)' : 'var(--warn)' }}>
-                {coveragePct}%
-              </span>
-            )
-          }
+          {!loading && totalCount > 0 && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <div style={{ height: '6px', width: '80px', background: 'var(--gr2)', borderRadius: '4px', overflow: 'hidden' }}>
+                <div style={{ height: '100%', width: `${coveragePct}%`, background: 'var(--g500)', borderRadius: '4px', transition: 'width 0.6s ease' }} />
+              </div>
+              <span style={{ fontSize: '12px', fontWeight: 600, color: coveragePct >= 60 ? 'var(--g600)' : 'var(--warn)' }}>{coveragePct}% analisados</span>
+            </div>
+          )}
         </div>
 
         <div style={{ padding: '0 20px 16px' }}>
-          {/* Barra segmentada */}
-          {loading ? (
-            <Skeleton style={{ height: 8, marginBottom: 16 }} />
-          ) : (
-            <div style={{ display: 'flex', gap: '3px', height: '8px', borderRadius: '8px', overflow: 'hidden', marginBottom: '16px' }}>
-              {Array.from({ length: totalCount }).map((_, i) => (
-                <div key={i} style={{ flex: 1, background: i < analyzedCount ? 'var(--g500)' : 'var(--gr2)', borderRadius: '2px' }} />
-              ))}
-            </div>
-          )}
-
-          {/* Lista de pacientes */}
           {loading
             ? Array.from({ length: 4 }).map((_, i) => (
                 <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 12px', borderRadius: 'var(--r)', border: '1px solid var(--gr2)', marginBottom: '8px' }}>
@@ -160,20 +210,17 @@ export default function Insights() {
                   <div style={{ fontSize: '11px', color: 'var(--gr5)', marginTop: '1px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {item.analyzed
                       ? item.summary || `Última análise: ${item.lastAnalysis}`
-                      : `${item.sessionCount} sessões · nenhuma análise IA gerada`}
+                      : `${item.sessionCount} sessões · ainda sem análise IA`}
                   </div>
                 </div>
                 {item.analyzed ? (
                   <span style={{ fontSize: '11px', fontWeight: 600, padding: '3px 10px', borderRadius: '20px', background: 'var(--g100)', color: 'var(--g700)', border: '1px solid var(--g300)', flexShrink: 0, whiteSpace: 'nowrap' }}>
-                    Ver relatório →
+                    Ver análise →
                   </span>
                 ) : (
-                  <button style={{ fontSize: '11px', fontWeight: 600, padding: '5px 11px', borderRadius: 'var(--r)', border: '1px solid var(--gr2)', background: 'var(--w)', color: 'var(--gr5)', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", whiteSpace: 'nowrap', flexShrink: 0, transition: 'all 0.12s' }}
-                    onMouseOver={e => { e.currentTarget.style.borderColor = 'var(--g300)'; e.currentTarget.style.color = 'var(--g600)'; e.currentTarget.style.background = 'var(--g50)' }}
-                    onMouseOut={e => { e.currentTarget.style.borderColor = 'var(--gr2)'; e.currentTarget.style.color = 'var(--gr5)'; e.currentTarget.style.background = 'var(--w)' }}
-                  >
-                    Gerar análise
-                  </button>
+                  <span style={{ fontSize: '11px', color: 'var(--gr4)', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                    Sem análise ainda
+                  </span>
                 )}
               </div>
             ))
@@ -181,150 +228,167 @@ export default function Insights() {
         </div>
       </div>
 
-      {/* Info bar */}
+      {/* Só mostra os cards de insights se houver dados */}
       {!loading && analyzedCount > 0 && (
-        <div style={{ background: 'var(--g50)', border: '1px solid var(--g100)', borderRadius: 'var(--r)', padding: '10px 14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--g600)" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-          <span style={{ fontSize: '12px', color: 'var(--g700)' }}>
-            Os dados abaixo são gerados exclusivamente a partir dos{' '}
-            <strong>{analyzedCount} pacientes com análise IA ativa</strong>.
-            Quanto mais pacientes forem analisados, mais precisos serão os insights.
-          </span>
-        </div>
-      )}
-
-      <div className="insights-grid">
-
-        {/* Alertas */}
-        <div className="card">
-          <div className="card-header">
-            <div className="card-title">Alertas Ativos</div>
-            <span className={`card-badge ${(data?.alertCount?.high || 0) > 0 ? 'badge-danger' : 'badge-gray'}`}>
-              {(data?.alertCount?.high || 0) + (data?.alertCount?.critical || 0)} críticos
+        <>
+          <div style={{ background: 'var(--g50)', border: '1px solid var(--g100)', borderRadius: 'var(--r)', padding: '10px 14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--g600)" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            <span style={{ fontSize: '12px', color: 'var(--g700)' }}>
+              Os dados abaixo vêm dos <strong>{analyzedCount} pacientes que você já analisou com IA</strong>.
+              {unanalyzedCount > 0 && ` Os outros ${unanalyzedCount} ainda não entram nesta visão.`}
             </span>
           </div>
-          <div className="card-body">
-            {loading ? (
-              Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} style={{ height: 14, marginBottom: 10 }} />)
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+
+          <div className="insights-grid">
+
+            {/* Alertas — linguagem de ação */}
+            <div className="card">
+              <div className="card-header">
+                <div>
+                  <div className="card-title">Quem precisa de atenção</div>
+                  <div className="card-sub">Baseado nos padrões detectados pela IA</div>
+                </div>
+                {totalAlerts > 0 && (
+                  <span className={`card-badge ${(data?.alertCount?.critical || 0) + (data?.alertCount?.high || 0) > 0 ? 'badge-danger' : 'badge-warn'}`}>
+                    {totalAlerts} {totalAlerts === 1 ? 'alerta' : 'alertas'}
+                  </span>
+                )}
+              </div>
+              <div className="card-body">
                 {['critical', 'high', 'medium', 'low'].map(level => {
                   const count = data?.alertCount?.[level] || 0
                   if (count === 0) return null
-                  const labels = { critical: 'Crítico', high: 'Alto', medium: 'Médio', low: 'Baixo' }
+                  const info = ALERT_INFO[level]
                   return (
-                    <div key={level} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 10px', borderRadius: 'var(--r)', background: 'var(--ow)', border: '1px solid var(--gr2)' }}>
-                      <span style={{ fontSize: '12px', color: 'var(--d)', fontWeight: 500 }}>{labels[level]}</span>
-                      <span style={{ fontSize: '16px', fontFamily: "'Fraunces', serif", color: SEVERITY_COLOR[level] || 'var(--gr5)', fontWeight: 400 }}>{count}</span>
+                    <div key={level} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 12px', borderRadius: 'var(--r)', background: info.bg, border: `1px solid ${info.color}33`, marginBottom: '8px' }}>
+                      <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: info.color, flexShrink: 0 }} />
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: '12px', fontWeight: 600, color: info.color }}>{info.label}</div>
+                        <div style={{ fontSize: '11px', color: 'var(--gr5)', marginTop: '1px' }}>{info.desc}</div>
+                      </div>
+                      <span style={{ fontSize: '18px', fontFamily: "'Fraunces', serif", color: info.color, fontWeight: 400 }}>{count}</span>
                     </div>
                   )
                 })}
-                {Object.values(data?.alertCount || {}).every(v => v === 0) && (
-                  <div style={{ textAlign: 'center', padding: '16px 0', fontSize: '13px', color: 'var(--gr4)' }}>Nenhum alerta ativo</div>
+                {totalAlerts === 0 && (
+                  <div style={{ textAlign: 'center', padding: '20px 0' }}>
+                    <div style={{ fontSize: '24px', marginBottom: '6px' }}>✓</div>
+                    <div style={{ fontSize: '13px', color: 'var(--g600)', fontWeight: 500 }}>Nenhum alerta ativo</div>
+                    <div style={{ fontSize: '11px', color: 'var(--gr4)', marginTop: '3px' }}>Seus pacientes analisados estão dentro do esperado</div>
+                  </div>
                 )}
               </div>
-            )}
-          </div>
-        </div>
+            </div>
 
-        {/* Padrões */}
-        <div className="card">
-          <div className="card-header">
-            <div className="card-title">Mapa de Padrões</div>
-            {!loading && <span className="card-badge badge-green">{analyzedCount} pacientes</span>}
-          </div>
-          <div className="card-body">
-            {loading ? (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '6px' }}>
-                {Array.from({ length: 8 }).map((_, i) => <Skeleton key={i} style={{ height: 52 }} />)}
-              </div>
-            ) : (
-              <>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '6px', marginBottom: '10px' }}>
-                  {(data?.patternSummary || []).map((p, i) => {
-                    const info = PATTERN_LABELS[p.type] || { label: p.type, bg: 'var(--gr2)', color: 'var(--d)' }
-                    const intensity = { high: 85, medium: 60, low: 35 }[p.severity] || 50
-                    return (
-                      <div key={i} style={{ background: info.bg, color: info.color, borderRadius: '6px', padding: '8px 6px', textAlign: 'center', fontSize: '10px', fontWeight: 600, display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                        <div style={{ fontSize: '14px', fontWeight: 700 }}>{p.count}</div>
-                        <div style={{ opacity: 0.9 }}>{info.label}</div>
-                      </div>
-                    )
-                  })}
-                </div>
-                <div style={{ fontSize: '11px', color: 'var(--gr4)' }}>
-                  Frequência de padrão detectado nas análises geradas
-                </div>
-              </>
-            )}
-          </div>
-        </div>
-
-        {/* Hipóteses */}
-        <div className="card">
-          <div className="card-header">
-            <div className="card-title">Hipóteses Diagnósticas</div>
-            <span className="card-badge badge-gray">CID-11 · DSM-5</span>
-          </div>
-          <div className="card-body">
-            {loading ? (
-              Array.from({ length: 3 }).map((_, i) => (
-                <div key={i} style={{ marginBottom: '12px' }}>
-                  <Skeleton style={{ height: 12, width: '70%', marginBottom: 6 }} />
-                  <Skeleton style={{ height: 7 }} />
-                </div>
-              ))
-            ) : (
-              <>
-                {(data?.topHypotheses || []).map(({ code, label, occurrences, avgProbability }) => (
-                  <div key={code} style={{ marginBottom: '12px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '5px' }}>
-                      <span style={{ fontSize: '12px', color: 'var(--d)', fontWeight: 500 }}>{code} — {label}</span>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <span style={{ fontSize: '10px', color: 'var(--gr5)' }}>{occurrences}x</span>
-                        <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--d)', minWidth: '36px', textAlign: 'right' }}>{avgProbability}%</span>
-                      </div>
-                    </div>
-                    <div style={{ height: '7px', background: 'var(--gr2)', borderRadius: '4px', overflow: 'hidden' }}>
-                      <div style={{ width: `${avgProbability}%`, height: '100%', background: 'var(--g500)', borderRadius: '4px' }} />
-                    </div>
+            {/* Padrões — com descrição acessível */}
+            <div className="card">
+              <div className="card-header">
+                <div>
+                  <div className="card-title" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    Padrões mais frequentes
+                    <Tip text="Comportamentos que a IA detectou repetidamente nas sessões analisadas. Útil para perceber o que aparece mais na sua carteira." />
                   </div>
-                ))}
-                <div style={{ padding: '10px 12px', background: 'var(--warn-l)', borderRadius: '8px', fontSize: '11px', color: 'var(--warn)', lineHeight: 1.5, marginTop: '4px' }}>
-                  ⚠ Hipóteses de suporte clínico. Diagnóstico é responsabilidade exclusiva do psicólogo.
+                  <div className="card-sub">O que aparece mais nos seus pacientes</div>
                 </div>
-              </>
-            )}
-          </div>
-        </div>
-
-        {/* Evolução geral */}
-        <div className="card">
-          <div className="card-header">
-            <div className="card-title">Evolução Geral</div>
-            <span className="card-badge badge-green">Últimos 6 meses</span>
-          </div>
-          <div className="card-body">
-            <div style={{ height: '160px' }}>
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={evolutionData} margin={{ top: 4, right: 4, bottom: 0, left: -20 }}>
-                  <XAxis dataKey="month" tick={{ fontSize: 11, fill: '#8B8B8B' }} axisLine={false} tickLine={false} />
-                  <YAxis tick={{ fontSize: 10, fill: '#8B8B8B' }} axisLine={false} tickLine={false} domain={[50, 75]} />
-                  <Tooltip
-                    contentStyle={{ background: '#1C1C1C', border: 'none', borderRadius: '8px', fontSize: '12px', color: '#fff' }}
-                    formatter={(v) => [`${v}%`, 'Índice de evolução']}
-                  />
-                  <Line type="monotone" dataKey="value" stroke="var(--g500)" strokeWidth={2.5} dot={{ fill: 'var(--g500)', r: 4 }} activeDot={{ r: 6 }} />
-                </LineChart>
-              </ResponsiveContainer>
+              </div>
+              <div className="card-body">
+                {(data?.patternSummary || []).length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: '20px 0', fontSize: '12px', color: 'var(--gr4)' }}>Nenhum padrão detectado ainda</div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    {(data?.patternSummary || []).map((p, i) => {
+                      const info = PATTERN_INFO[p.type] || { label: p.type, desc: '', bg: 'var(--gr2)', color: 'var(--d)' }
+                      return (
+                        <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', padding: '10px 12px', borderRadius: 'var(--r)', background: 'var(--ow)', border: '1px solid var(--gr2)' }}>
+                          <div style={{ width: '28px', height: '28px', borderRadius: '6px', background: info.bg, color: info.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Fraunces', serif", fontSize: '14px', fontWeight: 400, flexShrink: 0 }}>
+                            {p.count}
+                          </div>
+                          <div>
+                            <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--d)' }}>{info.label}</div>
+                            <div style={{ fontSize: '11px', color: 'var(--gr5)', marginTop: '2px', lineHeight: 1.4 }}>{info.desc}</div>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
             </div>
-            <div style={{ fontSize: '11px', color: 'var(--gr4)', marginTop: '8px' }}>
-              Baseado em {analyzedCount} pacientes analisados · escala 0–100%
-            </div>
-          </div>
-        </div>
 
-      </div>
+            {/* Hipóteses — com contexto claro */}
+            <div className="card">
+              <div className="card-header">
+                <div>
+                  <div className="card-title" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    Hipóteses da IA
+                    <Tip text="O que a IA levantou como hipótese nos pacientes analisados. Use como referência de estudo — o diagnóstico é sempre seu." />
+                  </div>
+                  <div className="card-sub">O que apareceu mais nas análises geradas</div>
+                </div>
+              </div>
+              <div className="card-body">
+                {(data?.topHypotheses || []).length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: '20px 0', fontSize: '12px', color: 'var(--gr4)' }}>Nenhuma hipótese disponível ainda</div>
+                ) : (
+                  <>
+                    {(data?.topHypotheses || []).map(({ code, label, occurrences, avgProbability }) => (
+                      <div key={code} style={{ marginBottom: '14px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '5px', gap: '8px' }}>
+                          <div>
+                            <div style={{ fontSize: '12px', color: 'var(--d)', fontWeight: 600 }}>{label}</div>
+                            <div style={{ fontSize: '10px', color: 'var(--gr4)', marginTop: '1px' }}>{code} · apareceu em {occurrences} análise{occurrences > 1 ? 's' : ''}</div>
+                          </div>
+                          <span style={{ fontSize: '14px', fontWeight: 700, color: 'var(--g600)', flexShrink: 0 }}>{avgProbability}%</span>
+                        </div>
+                        <div style={{ height: '6px', background: 'var(--gr2)', borderRadius: '4px', overflow: 'hidden' }}>
+                          <div style={{ width: `${avgProbability}%`, height: '100%', background: 'var(--g500)', borderRadius: '4px' }} />
+                        </div>
+                      </div>
+                    ))}
+                    <div style={{ padding: '10px 12px', background: 'var(--warn-l)', borderRadius: '8px', fontSize: '11px', color: 'var(--warn)', lineHeight: 1.5 }}>
+                      ⚠ São hipóteses de apoio — o diagnóstico é sempre responsabilidade do psicólogo.
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+
+            {/* Evolução — com interpretação em palavras */}
+            <div className="card">
+              <div className="card-header">
+                <div>
+                  <div className="card-title">Como a carteira evoluiu</div>
+                  <div className="card-sub">Últimos 6 meses · pacientes analisados</div>
+                </div>
+                <span style={{ fontSize: '12px', fontWeight: 600, color: trendColor, background: `${trendColor}18`, padding: '3px 10px', borderRadius: '20px', border: `1px solid ${trendColor}33`, whiteSpace: 'nowrap' }}>
+                  {trendText}
+                </span>
+              </div>
+              <div className="card-body">
+                <div style={{ height: '140px' }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={evolutionData} margin={{ top: 4, right: 4, bottom: 0, left: -20 }}>
+                      <XAxis dataKey="month" tick={{ fontSize: 11, fill: '#8B8B8B' }} axisLine={false} tickLine={false} />
+                      <YAxis tick={{ fontSize: 10, fill: '#8B8B8B' }} axisLine={false} tickLine={false} domain={[50, 75]} />
+                      <Tooltip
+                        contentStyle={{ background: '#1C1C1C', border: 'none', borderRadius: '8px', fontSize: '12px', color: '#fff' }}
+                        formatter={(v) => [`${v}%`, 'Índice de evolução']}
+                      />
+                      <Line type="monotone" dataKey="value" stroke="var(--g500)" strokeWidth={2.5} dot={{ fill: 'var(--g500)', r: 4 }} activeDot={{ r: 6 }} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+                <div style={{ marginTop: '10px', padding: '8px 12px', background: 'var(--ow)', borderRadius: 'var(--r)', border: '1px solid var(--gr2)' }}>
+                  <div style={{ fontSize: '11px', color: 'var(--gr5)', lineHeight: 1.5 }}>
+                    <strong style={{ color: 'var(--d)' }}>Como ler:</strong> 100% = evolução máxima registrada. O gráfico mostra a média dos pacientes analisados. Quedas pontuais são normais — o que importa é a tendência geral.
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </>
+      )}
 
       <AiDrawer
         isOpen={drawerOpen}
