@@ -1,0 +1,396 @@
+import { useState, useEffect } from 'react'
+import { api } from '../services'
+
+function fmtDate(iso) {
+  if (!iso) return '—'
+  return new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })
+}
+
+function fmtDuration(secs) {
+  if (!secs) return null
+  const m = Math.round(secs / 60)
+  return `${m} min`
+}
+
+const TEMPLATES = [
+  {
+    id: 'reflexao_clinica',
+    icon: '✦',
+    label: 'Reflexão clínica',
+    desc: 'Hipóteses DSM-5/CID-11, padrões e sugestões para próxima sessão',
+    color: 'var(--g500)',
+    bg: 'var(--g50)',
+    border: 'var(--g300)',
+  },
+  {
+    id: 'foco_risco',
+    icon: '⚠',
+    label: 'Foco em risco',
+    desc: 'Prioriza sinais de risco e segurança do paciente',
+    color: 'var(--danger)',
+    bg: 'var(--danger-l)',
+    border: '#F4C5C5',
+  },
+  {
+    id: 'evolucao_longitudinal',
+    icon: '↑',
+    label: 'Evolução',
+    desc: 'O que mudou entre as sessões — requer análise multi-sessão',
+    color: 'var(--g600)',
+    bg: 'var(--g50)',
+    border: 'var(--g200)',
+  },
+  {
+    id: 'supervisao_clinica',
+    icon: '◉',
+    label: 'Supervisão',
+    desc: 'Perspectiva de supervisor — pontos cegos e perguntas não feitas',
+    color: '#7B5EA7',
+    bg: '#F5F0FF',
+    border: '#D9C9F0',
+  },
+  {
+    id: 'psicodinamica',
+    icon: 'Ψ',
+    label: 'Psicodinâmica',
+    desc: 'Defesas, transferência, repetições e conflitos internos',
+    color: '#4A7C9E',
+    bg: '#EEF5FA',
+    border: '#C2DAEA',
+  },
+]
+
+/**
+ * Exibido logo após o usuário clicar "Gerar reflexão clínica" no encerramento da sessão.
+ * Permite ao psicólogo incluir sessões anteriores e escolher o template de análise.
+ *
+ * Props:
+ *   pendingData         – { textContent, htmlContent, imageBase64, duration } da sessão atual
+ *   patient             – objeto paciente { id, name, sessions }
+ *   currentSessionId    – ID da sessão atual já criada no backend (pode ser null em mock)
+ *   onConfirm           – ({ textContent, htmlContent, imageBase64, duration, additionalSessionIds, template }) => void
+ *   onCancel            – () => void
+ */
+export default function AnalyzeSessionsModal({ pendingData, patient, currentSessionId, onConfirm, onCancel }) {
+  const [pastSessions, setPastSessions] = useState([])
+  const [selected, setSelected] = useState(new Set())
+  const [loading, setLoading] = useState(true)
+  const [expanded, setExpanded] = useState(false)
+  const [selectedTemplate, setSelectedTemplate] = useState('reflexao_clinica')
+
+  const patientName = patient?.name || '—'
+
+  useEffect(() => {
+    if (!patient?.id) { setLoading(false); return }
+    api.getPatientSessions(patient.id, { page: 0, size: 20 }).then(res => {
+      const finished = (res.content || []).filter(s =>
+        s.status === 'finished' && s.id !== currentSessionId
+      )
+      setPastSessions(finished)
+      setLoading(false)
+    }).catch(() => setLoading(false))
+  }, [patient?.id, currentSessionId])
+
+  const toggle = (id) => setSelected(prev => {
+    const next = new Set(prev)
+    if (next.has(id)) next.delete(id)
+    else next.add(id)
+    return next
+  })
+
+  const totalSelected = 1 + selected.size
+  const wordCount = pendingData?.textContent
+    ? pendingData.textContent.trim().split(/\s+/).filter(Boolean).length
+    : null
+  const currentPreview = pendingData?.textContent?.slice(0, 100) || null
+
+  const handleConfirm = () => {
+    onConfirm({
+      ...pendingData,
+      additionalSessionIds: [...selected],
+      template: selectedTemplate,
+    })
+  }
+
+  const currentTpl = TEMPLATES.find(t => t.id === selectedTemplate) || TEMPLATES[0]
+
+  return (
+    <div style={{
+      position: 'fixed', inset: 0, zIndex: 400,
+      background: 'rgba(0,0,0,0.5)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      padding: '16px',
+    }}>
+      <div style={{
+        background: 'var(--w)', borderRadius: '16px',
+        width: '100%', maxWidth: '500px',
+        boxShadow: '0 24px 64px rgba(0,0,0,0.28)',
+        overflow: 'hidden', maxHeight: '92vh',
+        display: 'flex', flexDirection: 'column',
+      }}>
+
+        {/* Header */}
+        <div style={{ background: 'var(--g700)', padding: '20px 24px', flexShrink: 0 }}>
+          <div style={{ fontFamily: "'Fraunces', serif", fontSize: '18px', color: '#fff', fontWeight: 400, marginBottom: '3px' }}>
+            Gerar reflexão clínica
+          </div>
+          <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.55)' }}>
+            {patientName} · A IA organiza o que você já observou — a inteligência é sua
+          </div>
+        </div>
+
+        {/* Body scrollável */}
+        <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px' }}>
+
+          {/* ── Template selector ─────────────────────────────────────────── */}
+          <div style={{ marginBottom: '18px' }}>
+            <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.8px', textTransform: 'uppercase', color: 'var(--gr4)', marginBottom: '8px' }}>
+              Tipo de análise
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              {TEMPLATES.map(tpl => {
+                const isActive = selectedTemplate === tpl.id
+                return (
+                  <button
+                    key={tpl.id}
+                    onClick={() => setSelectedTemplate(tpl.id)}
+                    style={{
+                      width: '100%', border: `1.5px solid ${isActive ? tpl.border : 'var(--gr2)'}`,
+                      borderRadius: 'var(--r)', padding: '10px 12px',
+                      background: isActive ? tpl.bg : 'var(--w)',
+                      cursor: 'pointer', fontFamily: "'DM Sans', sans-serif",
+                      display: 'flex', alignItems: 'center', gap: '10px',
+                      textAlign: 'left', transition: 'all 0.12s',
+                    }}
+                  >
+                    {/* Radio indicator */}
+                    <div style={{
+                      width: '16px', height: '16px', borderRadius: '50%', flexShrink: 0,
+                      border: `2px solid ${isActive ? tpl.color : 'var(--gr2)'}`,
+                      background: isActive ? tpl.color : 'transparent',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      transition: 'all 0.12s',
+                    }}>
+                      {isActive && <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#fff' }} />}
+                    </div>
+
+                    {/* Icon + Labels */}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '2px' }}>
+                        <span style={{ fontSize: '12px', color: isActive ? tpl.color : 'var(--gr4)', fontWeight: 700 }}>{tpl.icon}</span>
+                        <span style={{ fontSize: '13px', fontWeight: 600, color: isActive ? 'var(--d)' : 'var(--gr5)' }}>{tpl.label}</span>
+                      </div>
+                      <div style={{ fontSize: '11px', color: 'var(--gr5)', lineHeight: 1.4 }}>{tpl.desc}</div>
+                    </div>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+
+          {/* ── Sessão atual — sempre incluída ───────────────────────────── */}
+          <div style={{ marginBottom: '16px' }}>
+            <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.8px', textTransform: 'uppercase', color: 'var(--gr4)', marginBottom: '8px' }}>
+              Sessão atual — incluída
+            </div>
+            <div style={{
+              border: '2px solid var(--g400)', borderRadius: 'var(--r2)',
+              padding: '12px 14px', background: 'var(--g50)',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: currentPreview ? '6px' : 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <div style={{ width: '18px', height: '18px', borderRadius: '50%', background: 'var(--g500)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>
+                  </div>
+                  <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--g700)' }}>
+                    {pendingData?.imageBase64 && !pendingData?.textContent ? 'Canvas de hoje' : 'Notas de hoje'}
+                  </span>
+                </div>
+                <div style={{ display: 'flex', gap: '6px', flexShrink: 0 }}>
+                  {fmtDuration(pendingData?.duration) && (
+                    <span style={{ fontSize: '10px', color: 'var(--g600)', background: 'var(--g100)', padding: '2px 8px', borderRadius: '20px', fontWeight: 500 }}>
+                      {fmtDuration(pendingData?.duration)}
+                    </span>
+                  )}
+                  {wordCount > 0 && (
+                    <span style={{ fontSize: '10px', color: 'var(--g600)', background: 'var(--g100)', padding: '2px 8px', borderRadius: '20px', fontWeight: 500 }}>
+                      {wordCount} palavras
+                    </span>
+                  )}
+                </div>
+              </div>
+              {currentPreview && (
+                <div style={{ fontSize: '11px', color: 'var(--gr5)', lineHeight: 1.5, fontStyle: 'italic', paddingLeft: '26px' }}>
+                  "{currentPreview}{pendingData.textContent.length > 100 ? '…' : ''}"
+                </div>
+              )}
+              {!currentPreview && pendingData?.imageBase64 && (
+                <div style={{ fontSize: '11px', color: 'var(--gr5)', paddingLeft: '26px' }}>
+                  Canvas com anotações manuscritas
+                </div>
+              )}
+              {!currentPreview && !pendingData?.imageBase64 && (
+                <div style={{ fontSize: '11px', color: 'var(--warn)', paddingLeft: '26px' }}>
+                  ⚠ Sessão sem anotações — adicione conteúdo para uma análise mais rica
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* ── Sessões anteriores ───────────────────────────────────────── */}
+          {!loading && pastSessions.length > 0 && (
+            <div>
+              <button
+                onClick={() => setExpanded(e => !e)}
+                style={{
+                  width: '100%', background: 'none', border: '1px solid var(--gr2)',
+                  borderRadius: 'var(--r)', padding: '10px 14px',
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  cursor: 'pointer', fontFamily: "'DM Sans', sans-serif",
+                  marginBottom: expanded ? '10px' : 0,
+                  transition: 'all 0.15s',
+                }}
+                onMouseOver={e => e.currentTarget.style.background = 'var(--ow)'}
+                onMouseOut={e => e.currentTarget.style.background = 'none'}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--g600)" strokeWidth="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+                  <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--d)' }}>
+                    Incluir sessões anteriores
+                  </span>
+                  <span style={{ fontSize: '10px', color: 'var(--g600)', background: 'var(--g50)', padding: '1px 7px', borderRadius: '20px', fontWeight: 600 }}>
+                    opcional · análise longitudinal
+                  </span>
+                </div>
+                <svg
+                  width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--gr4)" strokeWidth="2"
+                  style={{ transform: expanded ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s', flexShrink: 0 }}
+                >
+                  <polyline points="6 9 12 15 18 9"/>
+                </svg>
+              </button>
+
+              {expanded && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  {pastSessions.slice(0, 5).map(s => {
+                    const isSelected = selected.has(s.id)
+                    return (
+                      <button
+                        key={s.id}
+                        onClick={() => toggle(s.id)}
+                        style={{
+                          width: '100%', border: `1.5px solid ${isSelected ? 'var(--g400)' : 'var(--gr2)'}`,
+                          borderRadius: 'var(--r)', padding: '10px 12px',
+                          background: isSelected ? 'var(--g50)' : 'var(--w)',
+                          cursor: 'pointer', fontFamily: "'DM Sans', sans-serif",
+                          display: 'flex', alignItems: 'center', gap: '10px',
+                          textAlign: 'left', transition: 'all 0.12s',
+                        }}
+                      >
+                        {/* checkbox */}
+                        <div style={{
+                          width: '16px', height: '16px', borderRadius: '4px', flexShrink: 0,
+                          border: `2px solid ${isSelected ? 'var(--g500)' : 'var(--gr2)'}`,
+                          background: isSelected ? 'var(--g500)' : 'transparent',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          transition: 'all 0.12s',
+                        }}>
+                          {isSelected && <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>}
+                        </div>
+
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '2px', flexWrap: 'wrap' }}>
+                            <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--d)' }}>
+                              {fmtDate(s.finishedAt || s.createdAt)}
+                            </span>
+                            <span style={{ fontSize: '10px', color: 'var(--gr5)', background: 'var(--gr1)', padding: '1px 6px', borderRadius: '20px' }}>
+                              {s.type === 'canvas' ? 'Canvas' : 'Texto'}
+                            </span>
+                            {fmtDuration(s.durationSeconds) && (
+                              <span style={{ fontSize: '10px', color: 'var(--gr5)' }}>
+                                {fmtDuration(s.durationSeconds)}
+                              </span>
+                            )}
+                            {s.wordCount > 0 && (
+                              <span style={{ fontSize: '10px', color: 'var(--gr5)' }}>
+                                · {s.wordCount} palavras
+                              </span>
+                            )}
+                            {s.hasAnalysis && (
+                              <span style={{ fontSize: '10px', color: 'var(--g600)', background: 'var(--g50)', padding: '1px 6px', borderRadius: '20px', fontWeight: 600 }}>
+                                ✓ analisada
+                              </span>
+                            )}
+                          </div>
+                          {s.notePreview && (
+                            <div style={{ fontSize: '11px', color: 'var(--gr5)', lineHeight: 1.4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              {s.notePreview}
+                            </div>
+                          )}
+                        </div>
+                      </button>
+                    )
+                  })}
+
+                  {pastSessions.length > 5 && (
+                    <div style={{ fontSize: '11px', color: 'var(--gr4)', textAlign: 'center', padding: '4px' }}>
+                      + {pastSessions.length - 5} sessões mais antigas não exibidas (máx 5 por análise)
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {!loading && pastSessions.length === 0 && (
+            <div style={{ fontSize: '12px', color: 'var(--gr5)', textAlign: 'center', padding: '8px', background: 'var(--ow)', borderRadius: 'var(--r)' }}>
+              Sem sessões anteriores registradas para este paciente
+            </div>
+          )}
+
+          {loading && (
+            <div style={{ fontSize: '12px', color: 'var(--gr4)', padding: '8px', textAlign: 'center' }}>
+              Carregando sessões anteriores…
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div style={{ padding: '16px 24px', borderTop: '1px solid var(--gr1)', background: 'var(--w)', flexShrink: 0 }}>
+          {/* hint longitudinal */}
+          {selected.size > 0 && (
+            <div style={{ fontSize: '11px', color: 'var(--g700)', background: 'var(--g50)', border: '1px solid var(--g100)', borderRadius: '6px', padding: '8px 12px', marginBottom: '12px', lineHeight: 1.5 }}>
+              ✦ Análise longitudinal: a IA vai identificar padrões <strong>entre {totalSelected} sessões</strong> e como o paciente evoluiu ao longo do tempo.
+            </div>
+          )}
+
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <button
+              onClick={onCancel}
+              style={{ padding: '11px 20px', border: '1px solid var(--gr2)', borderRadius: 'var(--r)', background: 'var(--w)', fontSize: '13px', fontWeight: 500, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", color: 'var(--gr5)', flexShrink: 0 }}
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={handleConfirm}
+              style={{
+                flex: 1, padding: '11px', border: 'none', borderRadius: 'var(--r)',
+                background: currentTpl.color === 'var(--danger)' ? 'var(--danger)' : 'var(--g500)',
+                color: '#fff',
+                fontSize: '13px', fontWeight: 700, cursor: 'pointer',
+                fontFamily: "'DM Sans', sans-serif",
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                transition: 'opacity 0.15s',
+              }}
+              onMouseOver={e => e.currentTarget.style.opacity = '0.88'}
+              onMouseOut={e => e.currentTarget.style.opacity = '1'}
+            >
+              <span style={{ fontSize: '13px' }}>{currentTpl.icon}</span>
+              {currentTpl.label} · {totalSelected} {totalSelected === 1 ? 'sessão' : 'sessões'}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}

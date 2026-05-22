@@ -201,10 +201,10 @@ export default function TextSession({ patient, isOpen, onClose, onAnalyze, sessi
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--g600)" strokeWidth="2" style={{ flexShrink: 0 }}>
                     <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
                   </svg>
-                  <span style={{ fontSize: '14px', fontWeight: 700, color: 'var(--g700)' }}>Encerrar e gerar análise IA</span>
+                  <span style={{ fontSize: '14px', fontWeight: 700, color: 'var(--g700)' }}>Gerar reflexão clínica das minhas anotações</span>
                 </div>
                 <div style={{ fontSize: '12px', color: 'var(--g600)', lineHeight: 1.5, paddingLeft: '26px' }}>
-                  O texto será analisado pelo PsicoAI — hipóteses diagnósticas, padrões e sugestões para a próxima sessão.
+                  A IA lê o que você escreveu e devolve hipóteses, padrões e conexões com o histórico — a inteligência é sua, a organização é da IA.
                 </div>
               </button>
 
@@ -218,8 +218,8 @@ export default function TextSession({ patient, isOpen, onClose, onAnalyze, sessi
                 onMouseOver={e => e.currentTarget.style.background = 'var(--ow)'}
                 onMouseOut={e => e.currentTarget.style.background = 'var(--w)'}
               >
-                <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--d)', marginBottom: '3px' }}>Encerrar sem análise</div>
-                <div style={{ fontSize: '12px', color: 'var(--gr5)' }}>Salva a sessão. Você pode gerar a análise depois pelo prontuário.</div>
+                <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--d)', marginBottom: '3px' }}>Encerrar e salvar anotações</div>
+                <div style={{ fontSize: '12px', color: 'var(--gr5)' }}>Salva suas notas. Você pode gerar a reflexão clínica depois pelo prontuário do paciente.</div>
               </button>
 
               <button

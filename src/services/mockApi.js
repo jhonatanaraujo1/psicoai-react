@@ -616,16 +616,21 @@ export const api = {
     }
   },
 
-  async createAnalysis({ sessionId, patientId }) {
+  async createAnalysis({ sessionId, patientId, additionalSessionIds = [], template = null }) {
     await delay(2800) // simula chamada à IA
     // Usa análise de Lucas como template realista
-    const template = ANALYSES['p-001'][0]
+    const baseTemplate = ANALYSES['p-001'][0]
+    const sessionCount = 1 + (additionalSessionIds?.length || 0)
     const analysis = {
-      ...template,
+      ...baseTemplate,
       id: 'a-' + Date.now(),
       sessionId,
+      sessionCount,
+      template: template || 'reflexao_clinica',
+      refineCount: 0,
       patientId: patientId || 'p-001',
       createdAt: new Date().toISOString(),
+      clinicalBasis: 'Baseado nas menções de pesadelos recorrentes (3ª sessão consecutiva), no relato de evitação de situações sociais e no padrão de hipervigilância descrito pelo psicólogo nas anotações.',
     }
     // Persiste no registro do paciente correto
     if (patientId && patientId !== 'p-001') {
@@ -633,6 +638,22 @@ export const api = {
       ANALYSES[patientId].unshift(analysis)
     }
     return analysis
+  },
+
+  async refineAnalysis(analysisId, feedback = null) {
+    await delay(2200) // Haiku é mais rápido
+    // Simula uma análise levemente modificada (sem alterar estrutura)
+    const baseTemplate = ANALYSES['p-001'][0]
+    return {
+      ...baseTemplate,
+      id: analysisId,
+      template: baseTemplate.template || 'reflexao_clinica',
+      refineCount: 1,
+      summary: feedback
+        ? `[Análise refinada com base no feedback: "${feedback.slice(0, 60)}${feedback.length > 60 ? '...' : ''}"]\n\n${baseTemplate.summary}`
+        : `[Análise revisada — maior especificidade e foco nas anotações]\n\n${baseTemplate.summary}`,
+      createdAt: new Date().toISOString(),
+    }
   },
 
   // Agenda
@@ -965,15 +986,29 @@ export const api = {
   },
 
   // Billing — mock redireciona para simulação local
-  async createCheckoutSession({ planId }) {
+  async createCheckoutSession({ planId, couponCode }) {
     await delay(400)
-    // Em modo demo não há Stripe — simula retorno de URL
-    return { url: `${window.location.origin}/?payment=demo&plan=${planId}` }
+    const qs = couponCode ? `&coupon=${couponCode}` : ''
+    return { url: `${window.location.origin}/?payment=demo&plan=${planId}${qs}` }
   },
 
   async createBillingPortalSession() {
     await delay(400)
     return { url: `${window.location.origin}/?billing=demo` }
+  },
+
+  // Cupons — mock com códigos de teste
+  async validateCoupon(code, planId) {
+    await delay(600)
+    const MOCK_COUPONS = {
+      'LANCAMENTO':  { discountType: 'percentage', discountValue: 30, message: '30% de desconto aplicado!' },
+      'YOUTUBE30':   { discountType: 'percentage', discountValue: 30, message: '30% de desconto — parceria YouTube!' },
+      'PSICOAI14':   { discountType: 'percentage', discountValue: 0,  message: 'Trial de 14 dias ativo!' },
+      'DEMO50':      { discountType: 'percentage', discountValue: 50, message: '50% de desconto aplicado!' },
+    }
+    const c = MOCK_COUPONS[code.toUpperCase()]
+    if (!c) return { code, valid: false, discountType: 'percentage', discountValue: 0, planRestriction: null, message: 'Cupom não encontrado ou inválido.' }
+    return { code: code.toUpperCase(), valid: true, planRestriction: null, ...c }
   },
 }
 

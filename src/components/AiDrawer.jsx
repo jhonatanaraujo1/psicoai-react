@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react'
 
 const STEP_LABELS = [
-  'Lendo anotações da sessão…',
-  'Cruzando com histórico do paciente…',
-  'Mapeando padrões emocionais…',
-  'Gerando hipóteses diagnósticas…',
+  'Lendo suas anotações clínicas…',
+  'Identificando padrões nas suas observações…',
+  'Formulando hipóteses baseadas no seu relato…',
+  'Preparando sugestões para a próxima sessão…',
 ]
 
 const SEVERITY_STYLES = {
@@ -53,16 +53,45 @@ function LoadingState() {
         ))}
       </div>
       <div style={{ marginTop: '24px', fontSize: '11px', color: 'var(--gr4)', textAlign: 'center', lineHeight: 1.6 }}>
-        Processando com Claude claude-3-5-sonnet<br/>
-        <span style={{ color: 'var(--g500)', fontWeight: 600 }}>Tempo médio: ~30 segundos</span>
+        A IA organiza o que você já observou — não substitui seu julgamento.<br/>
+        <span style={{ color: 'var(--g500)', fontWeight: 600 }}>Baseado nas suas anotações · ~30 segundos</span>
       </div>
     </div>
   )
 }
 
-export default function AiDrawer({ isOpen, onClose, onSave, patient, result, loading }) {
+const TEMPLATE_LABELS = {
+  reflexao_clinica:      '✦ Reflexão clínica',
+  foco_risco:            '⚠ Foco em risco',
+  evolucao_longitudinal: '↑ Evolução longitudinal',
+  supervisao_clinica:    '◉ Supervisão clínica',
+  psicodinamica:         'Ψ Psicodinâmica',
+}
+
+export default function AiDrawer({ isOpen, onClose, onSave, patient, result, loading, onRefine }) {
+  const [refineOpen, setRefineOpen] = useState(false)
+  const [refineFeedback, setRefineFeedback] = useState('')
+  const [refining, setRefining] = useState(false)
+
   const patientName = patient?.name || 'Paciente'
   const today = new Date().toLocaleDateString('pt-BR', { day: 'numeric', month: 'short', year: 'numeric' })
+
+  // Reset refine panel when a new result arrives
+  useEffect(() => {
+    setRefineOpen(false)
+    setRefineFeedback('')
+    setRefining(false)
+  }, [result?.id])
+
+  const handleRefine = async () => {
+    if (refining) return
+    setRefining(true)
+    try {
+      await onRefine?.(result.id, refineFeedback.trim() || null)
+    } finally {
+      setRefining(false)
+    }
+  }
 
   // Parse JSON strings from analysis (backend stores as TEXT)
   const hypotheses = parseJson(result?.hypotheses)
@@ -83,9 +112,9 @@ export default function AiDrawer({ isOpen, onClose, onSave, patient, result, loa
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ display: 'inline', verticalAlign: 'middle', marginRight: '6px' }}>
                 <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
               </svg>
-              Análise da IA
+              Reflexão Clínica
             </div>
-            <div className="ai-drawer-sub">{patientName} · {today}</div>
+            <div className="ai-drawer-sub">{patientName} · Baseado nas suas anotações · {today}</div>
           </div>
           <button className="ai-close" onClick={onClose}>✕</button>
         </div>
@@ -132,6 +161,13 @@ export default function AiDrawer({ isOpen, onClose, onSave, patient, result, loa
                 </div>
               )}
 
+              {/* Template badge */}
+              {result.template && result.template !== 'reflexao_clinica' && (
+                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', fontSize: '11px', fontWeight: 600, padding: '4px 10px', borderRadius: '20px', background: 'var(--gr1)', color: 'var(--gr5)', marginBottom: '12px' }}>
+                  {TEMPLATE_LABELS[result.template] || result.template}
+                </div>
+              )}
+
               {/* Resumo da sessão */}
               {result.summary && (
                 <div className="ai-section">
@@ -141,6 +177,33 @@ export default function AiDrawer({ isOpen, onClose, onSave, patient, result, loa
                   </div>
                   <div className="ai-sec-body">
                     <p style={{ fontSize: '13px', color: 'var(--d)', lineHeight: 1.65 }}>{result.summary}</p>
+                  </div>
+                </div>
+              )}
+
+              {/* Base clínica — "com base em quê?" */}
+              {result.clinicalBasis && (
+                <div style={{
+                  background: 'linear-gradient(135deg, #F0F7F3 0%, #E8F4EC 100%)',
+                  border: '1px solid var(--g100)',
+                  borderLeft: '3px solid var(--g400)',
+                  borderRadius: 'var(--r)',
+                  padding: '10px 12px',
+                  marginBottom: '8px',
+                  display: 'flex',
+                  gap: '8px',
+                  alignItems: 'flex-start',
+                }}>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--g500)" strokeWidth="2" style={{ flexShrink: 0, marginTop: '1px' }}>
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                  </svg>
+                  <div>
+                    <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--g600)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '3px' }}>
+                      Com base em quê
+                    </div>
+                    <div style={{ fontSize: '12px', color: 'var(--g700)', lineHeight: 1.55 }}>
+                      {result.clinicalBasis}
+                    </div>
                   </div>
                 </div>
               )}
@@ -249,7 +312,15 @@ export default function AiDrawer({ isOpen, onClose, onSave, patient, result, loa
                 </div>
               )}
 
-              {/* CTA */}
+              {/* Quantas sessões foram analisadas */}
+              {result.sessionCount > 1 && (
+                <div style={{ background: 'var(--g50)', border: '1px solid var(--g100)', borderRadius: 'var(--r)', padding: '8px 12px', marginBottom: '8px', fontSize: '11px', color: 'var(--g700)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                  Reflexão baseada em <strong>{result.sessionCount} sessões</strong> — análise longitudinal
+                </div>
+              )}
+
+              {/* CTA principal */}
               <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
                 <button
                   onClick={() => { onSave?.(result); onClose() }}
@@ -257,7 +328,7 @@ export default function AiDrawer({ isOpen, onClose, onSave, patient, result, loa
                   onMouseOver={e => e.currentTarget.style.background = 'var(--g600)'}
                   onMouseOut={e => e.currentTarget.style.background = 'var(--g500)'}
                 >
-                  Salvar análise no prontuário
+                  Ver no prontuário
                 </button>
                 <button
                   onClick={onClose}
@@ -266,6 +337,89 @@ export default function AiDrawer({ isOpen, onClose, onSave, patient, result, loa
                   Fechar
                 </button>
               </div>
+
+              {/* Refazer análise (collapsible) */}
+              {onRefine && (result.refineCount ?? 0) < 3 && (
+                <div style={{ marginTop: '12px', borderTop: '1px solid var(--gr1)', paddingTop: '12px' }}>
+                  {!refineOpen ? (
+                    <button
+                      onClick={() => setRefineOpen(true)}
+                      style={{ background: 'none', border: 'none', color: 'var(--gr4)', fontSize: '12px', cursor: 'pointer', padding: '4px 0', fontFamily: "'DM Sans', sans-serif", display: 'flex', alignItems: 'center', gap: '5px', width: '100%' }}
+                    >
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.49"/></svg>
+                      A análise não ficou satisfatória? Refazer
+                      {(result.refineCount ?? 0) > 0 && (
+                        <span style={{ fontSize: '10px', color: 'var(--gr3)', marginLeft: 'auto' }}>
+                          {result.refineCount}/3 refinamentos
+                        </span>
+                      )}
+                    </button>
+                  ) : (
+                    <div>
+                      <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--d)', marginBottom: '8px' }}>
+                        O que ficou impreciso?
+                        <span style={{ fontWeight: 400, color: 'var(--gr4)', marginLeft: '4px' }}>(opcional)</span>
+                      </div>
+                      <textarea
+                        value={refineFeedback}
+                        onChange={e => setRefineFeedback(e.target.value)}
+                        placeholder="Ex: As hipóteses não refletem o que escrevi. A análise foi genérica. Foco mais nos padrões de evitação que mencionei..."
+                        disabled={refining}
+                        style={{
+                          width: '100%', minHeight: '72px', padding: '10px 12px',
+                          border: '1px solid var(--gr2)', borderRadius: 'var(--r)',
+                          fontSize: '12px', lineHeight: 1.6, color: 'var(--d)',
+                          fontFamily: "'DM Sans', sans-serif", resize: 'vertical',
+                          background: refining ? 'var(--gr1)' : 'var(--w)',
+                          outline: 'none', boxSizing: 'border-box',
+                        }}
+                        onFocus={e => e.currentTarget.style.borderColor = 'var(--g400)'}
+                        onBlur={e => e.currentTarget.style.borderColor = 'var(--gr2)'}
+                      />
+                      <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+                        <button
+                          onClick={handleRefine}
+                          disabled={refining}
+                          style={{
+                            flex: 1, background: refining ? 'var(--gr2)' : 'var(--d)', color: refining ? 'var(--gr4)' : '#fff',
+                            border: 'none', padding: '10px', borderRadius: 'var(--r)',
+                            fontSize: '12px', fontWeight: 600, cursor: refining ? 'wait' : 'pointer',
+                            fontFamily: "'DM Sans', sans-serif",
+                            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
+                          }}
+                        >
+                          {refining ? (
+                            <>
+                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ animation: 'spin 0.8s linear infinite' }}><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
+                              Refinando…
+                            </>
+                          ) : (
+                            <>
+                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.49"/></svg>
+                              Refazer análise
+                            </>
+                          )}
+                        </button>
+                        <button
+                          onClick={() => { setRefineOpen(false); setRefineFeedback('') }}
+                          disabled={refining}
+                          style={{ background: 'none', border: '1px solid var(--gr2)', color: 'var(--gr5)', padding: '10px 14px', borderRadius: 'var(--r)', fontSize: '12px', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}
+                        >
+                          Cancelar
+                        </button>
+                      </div>
+                      <div style={{ fontSize: '10px', color: 'var(--gr4)', marginTop: '6px', textAlign: 'center' }}>
+                        Refinamento não consome crédito · {3 - (result.refineCount ?? 0)} restante(s)
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+              {(result.refineCount ?? 0) >= 3 && (
+                <div style={{ marginTop: '8px', fontSize: '11px', color: 'var(--gr4)', textAlign: 'center', padding: '6px' }}>
+                  Limite de 3 refinamentos atingido para esta sessão.
+                </div>
+              )}
             </div>
           )}
         </div>

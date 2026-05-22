@@ -12,6 +12,7 @@ import AiDrawer from './components/AiDrawer'
 import PreSessionBriefing from './components/PreSessionBriefing'
 import PatientPicker from './components/PatientPicker'
 import CadastroModal from './components/CadastroModal'
+import AnalyzeSessionsModal from './components/AnalyzeSessionsModal'
 
 import Login from './views/Login'
 import Dashboard from './views/Dashboard'
@@ -97,6 +98,10 @@ export default function App() {
   const [analysisResult, setAnalysisResult] = useState(null)
   const [analysisLoading, setAnalysisLoading] = useState(false)
 
+  // ── Analyze Sessions Modal ────────────────────────────────────────────────
+  // Holds { imageBase64, textContent, htmlContent, duration, sessionId } while user picks sessions
+  const [pendingAnalysis, setPendingAnalysis] = useState(null)
+
   // ── Handlers ──────────────────────────────────────────────────────────────
 
   const handleSetView = (view, patient = null) => {
@@ -140,21 +145,28 @@ export default function App() {
     showToast(`Análise salva no prontuário de ${name}`, 'success')
   }
 
-  const handleAnalyze = async ({ imageBase64, textContent, htmlContent, duration }) => {
-    // Capture and clear active session ID before any awaits
+  // Step 1 of the analyze flow: close the session view and open the session-picker modal.
+  // The actual API calls happen only after the psychologist confirms in the modal.
+  const handleAnalyze = ({ imageBase64, textContent, htmlContent, duration }) => {
     const sid = activeSessionRef.current
     setSession(null)
-
     setCanvasOpen(false)
     setTextOpen(false)
+    // Store pending data — AnalyzeSessionsModal will collect additionalSessionIds, then call handleAnalysisConfirm
+    setPendingAnalysis({ imageBase64, textContent, htmlContent, duration, sessionId: sid })
+  }
+
+  // Step 2: called by AnalyzeSessionsModal after the psychologist selects sessions and clicks confirm.
+  const handleAnalysisConfirm = async ({ imageBase64, textContent, htmlContent, duration, sessionId, additionalSessionIds = [], template = null }) => {
+    setPendingAnalysis(null)
     setAiDrawerOpen(true)
     setAnalysisResult(null)
     setAnalysisLoading(true)
 
     try {
-      // Step 1: finish the session (saves notes + duration to DB)
-      if (sid) {
-        await api.finishSession(sid, {
+      // Finish the session (saves notes + duration to DB)
+      if (sessionId) {
+        await api.finishSession(sessionId, {
           textContent,
           htmlContent,
           imageBase64,
@@ -162,12 +174,31 @@ export default function App() {
         })
       }
 
-      // Step 2: trigger AI analysis
-      const effectiveSessionId = sid || ('s-mock-' + Date.now())
-      const data = await api.createAnalysis({ sessionId: effectiveSessionId, patientId: currentPatient?.id })
+      // Trigger AI analysis (with optional extra sessions for longitudinal analysis)
+      const effectiveSessionId = sessionId || ('s-mock-' + Date.now())
+      const data = await api.createAnalysis({
+        sessionId: effectiveSessionId,
+        additionalSessionIds,
+        template,
+        patientId: currentPatient?.id,
+      })
       setAnalysisResult(data)
     } catch (e) {
       setAnalysisResult({ error: 'Falha na análise. Tente novamente.' })
+    } finally {
+      setAnalysisLoading(false)
+    }
+  }
+
+  // Re-análise com feedback — não consome crédito, usa Haiku
+  const handleRefine = async (analysisId, feedback) => {
+    setAnalysisLoading(true)
+    setAnalysisResult(null)
+    try {
+      const data = await api.refineAnalysis(analysisId, feedback)
+      setAnalysisResult(data)
+    } catch (e) {
+      setAnalysisResult({ error: 'Falha no refinamento. Tente novamente.' })
     } finally {
       setAnalysisLoading(false)
     }
@@ -277,11 +308,27 @@ export default function App() {
         }}
       />
 
+      {/* Multi-session selector — shown between session close and AI Drawer open */}
+      {pendingAnalysis && (
+        <AnalyzeSessionsModal
+          pendingData={pendingAnalysis}
+          patient={currentPatient}
+          currentSessionId={pendingAnalysis.sessionId}
+          onConfirm={handleAnalysisConfirm}
+          onCancel={() => {
+            setPendingAnalysis(null)
+            // Navigate to patient view so notes aren't silently discarded
+            setCurrentView('paciente')
+          }}
+        />
+      )}
+
       {/* AI Drawer */}
       <AiDrawer
         isOpen={aiDrawerOpen}
         onClose={() => setAiDrawerOpen(false)}
         onSave={handleSaveAnalysis}
+        onRefine={handleRefine}
         patient={currentPatient}
         result={analysisResult}
         loading={analysisLoading}

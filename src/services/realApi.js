@@ -160,7 +160,20 @@ export const auth = {
   },
 
   async register({ name, email, password, crp }) {
-    const data = await post('/api/v1/auth/register', { name, email, password, crp })
+    // Captura UTM params do localStorage (gravados pelo script de tracking da landing page)
+    const tracking = {}
+    try {
+      const stored = JSON.parse(localStorage.getItem('psicoai_tracking') || '{}')
+      if (stored.utmSource)    tracking.utmSource    = stored.utmSource
+      if (stored.utmMedium)    tracking.utmMedium    = stored.utmMedium
+      if (stored.utmCampaign)  tracking.utmCampaign  = stored.utmCampaign
+      if (stored.utmContent)   tracking.utmContent   = stored.utmContent
+      if (stored.utmTerm)      tracking.utmTerm      = stored.utmTerm
+      if (stored.fbclid)       tracking.fbclid       = stored.fbclid
+      if (stored.referralCode) tracking.referralCode = stored.referralCode
+    } catch { /* silently ignore */ }
+
+    const data = await post('/api/v1/auth/register', { name, email, password, crp, ...tracking })
     setTokens(data.accessToken, data.refreshToken)
     const user = normalizeUser(data.user)
     localStorage.setItem('psicoai_user', JSON.stringify(user))
@@ -247,8 +260,12 @@ export const api = {
     return get(`/api/v1/patients/${patientId}/analyses`, { page, size })
   },
 
-  async createAnalysis({ sessionId }) {
-    return post('/api/v1/analyses', { sessionId })
+  async createAnalysis({ sessionId, additionalSessionIds = [], template = null }) {
+    return post('/api/v1/analyses', { sessionId, additionalSessionIds, template })
+  },
+
+  async refineAnalysis(analysisId, feedback = null) {
+    return post(`/api/v1/analyses/${analysisId}/refine`, { feedback })
   },
 
   // Agenda
@@ -347,12 +364,16 @@ export const api = {
   },
 
   // Billing
-  async createCheckoutSession({ planId, successUrl, cancelUrl }) {
-    return post('/api/v1/billing/checkout', { planId, successUrl, cancelUrl })
+  async createCheckoutSession({ planId, successUrl, cancelUrl, couponCode = null }) {
+    return post('/api/v1/billing/checkout', { planId, successUrl, cancelUrl, couponCode })
   },
 
   async createBillingPortalSession({ returnUrl }) {
     return post('/api/v1/billing/portal', { returnUrl })
+  },
+
+  async validateCoupon(code, planId) {
+    return post('/api/v1/billing/coupon/validate', { code: code.trim().toUpperCase(), planId })
   },
 
   // ── Mock-only features (sem endpoint backend ainda) ─────────────────────────

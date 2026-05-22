@@ -112,13 +112,31 @@ function TabPlano({ profile }) {
   const remaining = profile?.analysesRemaining || 0
   const total = isClinico ? 20 : used + remaining
   const [billingLoading, setBillingLoading] = useState(false)
+  const [coupon, setCoupon] = useState('')
+  const [couponState, setCouponState] = useState(null)
+  const [couponChecking, setCouponChecking] = useState(false)
+
+  const checkCoupon = async () => {
+    const code = coupon.trim()
+    if (!code) return
+    setCouponChecking(true)
+    try {
+      const res = await api.validateCoupon(code, 'clinico')
+      setCouponState(res)
+    } catch {
+      setCouponState({ valid: false, message: 'Erro ao validar cupom.' })
+    } finally {
+      setCouponChecking(false)
+    }
+  }
 
   const handleUpgrade = async () => {
     setBillingLoading(true)
     try {
       const successUrl = window.location.origin + '/?payment=success'
       const cancelUrl = window.location.href
-      const { url } = await api.createCheckoutSession({ planId: 'clinico', successUrl, cancelUrl })
+      const appliedCoupon = couponState?.valid ? coupon.trim() : null
+      const { url } = await api.createCheckoutSession({ planId: 'clinico', successUrl, cancelUrl, couponCode: appliedCoupon })
       window.location.href = url
     } catch (e) {
       alert('Erro ao iniciar checkout. Tente novamente.')
@@ -179,6 +197,46 @@ function TabPlano({ profile }) {
         <div style={{ background: 'var(--ow)', border: '1px solid var(--gr2)', borderRadius: 'var(--r2)', padding: '20px', marginBottom: '16px' }}>
           <div style={{ fontFamily: "'Fraunces', serif", fontSize: '17px', color: 'var(--d)', marginBottom: '5px' }}>Upgrade para Plano Clínico</div>
           <div style={{ fontSize: '13px', color: 'var(--gr5)', marginBottom: '14px', lineHeight: 1.6 }}>Inclui 20 análises IA/mês, relatórios de evolução e exportação PDF de prontuário.</div>
+
+          {/* Coupon */}
+          <div style={{ marginBottom: '14px' }}>
+            <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--gr5)', letterSpacing: '0.4px', textTransform: 'uppercase', marginBottom: '6px' }}>Cupom de desconto</div>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <input
+                value={coupon}
+                onChange={e => { setCoupon(e.target.value.toUpperCase()); setCouponState(null) }}
+                onKeyDown={e => e.key === 'Enter' && checkCoupon()}
+                placeholder="EX: YOUTUBE30"
+                style={{
+                  flex: 1, border: `1px solid ${couponState ? (couponState.valid ? '#27AE60' : '#E74C3C') : 'var(--gr2)'}`,
+                  borderRadius: 'var(--r)', padding: '8px 12px', fontSize: '13px',
+                  fontFamily: "'DM Sans', sans-serif", outline: 'none',
+                  background: 'var(--w)', color: 'var(--d)',
+                  letterSpacing: '0.5px', fontWeight: 600, maxWidth: '200px',
+                }}
+              />
+              <button
+                onClick={checkCoupon}
+                disabled={!coupon.trim() || couponChecking}
+                style={{
+                  padding: '8px 12px', background: 'none',
+                  border: '1px solid var(--gr2)', borderRadius: 'var(--r)',
+                  fontSize: '12px', fontWeight: 600, color: 'var(--gr5)',
+                  cursor: (!coupon.trim() || couponChecking) ? 'not-allowed' : 'pointer',
+                  opacity: (!coupon.trim() || couponChecking) ? 0.5 : 1,
+                  fontFamily: "'DM Sans', sans-serif",
+                }}
+              >
+                {couponChecking ? '...' : 'Aplicar'}
+              </button>
+            </div>
+            {couponState && (
+              <div style={{ marginTop: '6px', fontSize: '12px', fontWeight: 500, color: couponState.valid ? '#27AE60' : '#E74C3C' }}>
+                {couponState.valid ? '✓' : '✕'} {couponState.message}
+              </div>
+            )}
+          </div>
+
           <button onClick={handleUpgrade} disabled={billingLoading} style={{ padding: '10px 20px', background: 'var(--g600)', color: '#fff', border: 'none', borderRadius: 'var(--r)', fontSize: '13px', fontWeight: 600, cursor: billingLoading ? 'default' : 'pointer', opacity: billingLoading ? 0.7 : 1, fontFamily: "'DM Sans', sans-serif" }}>{billingLoading ? 'Redirecionando...' : 'Fazer upgrade → R$299/mês'}</button>
         </div>
       )}

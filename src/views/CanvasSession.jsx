@@ -157,11 +157,11 @@ export default function CanvasSession({ patient, isOpen, onClose, onAnalyze, ses
                     </svg>
                   )}
                   <span style={{ fontSize: '14px', fontWeight: 700, color: 'var(--g700)' }}>
-                    {exporting ? 'Exportando canvas...' : 'Encerrar e gerar análise IA'}
+                    {exporting ? 'Preparando canvas...' : 'Gerar reflexão clínica do canvas'}
                   </span>
                 </div>
                 <div style={{ fontSize: '12px', color: 'var(--g600)', lineHeight: 1.5, paddingLeft: '26px' }}>
-                  O canvas será analisado pelo PsicoAI — hipóteses diagnósticas, padrões e sugestões para a próxima sessão.
+                  A IA lê o que você desenhou e escreveu e devolve hipóteses, padrões e conexões — a inteligência é sua, a organização é da IA.
                 </div>
               </button>
 
@@ -178,8 +178,8 @@ export default function CanvasSession({ patient, isOpen, onClose, onAnalyze, ses
                 onMouseOver={e => e.currentTarget.style.background = 'var(--ow)'}
                 onMouseOut={e => e.currentTarget.style.background = 'var(--w)'}
               >
-                <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--d)', marginBottom: '3px' }}>Encerrar sem análise</div>
-                <div style={{ fontSize: '12px', color: 'var(--gr5)' }}>Salva a sessão. Você pode gerar a análise depois pelo prontuário.</div>
+                <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--d)', marginBottom: '3px' }}>Encerrar e salvar canvas</div>
+                <div style={{ fontSize: '12px', color: 'var(--gr5)' }}>Salva o canvas. Você pode gerar a reflexão clínica depois pelo prontuário do paciente.</div>
               </button>
 
               <button

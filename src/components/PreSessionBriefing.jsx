@@ -111,7 +111,7 @@ export default function PreSessionBriefing({ patient, onStart, onCancel, isOpen 
                       )}
                     </div>
                     <button
-                      onClick={() => onStart({ meetLink, requestAi: true })}
+                      onClick={() => setStep(2)}
                       style={{
                         padding: '7px 13px', border: '1px solid var(--g300)',
                         borderRadius: 'var(--r)', background: 'var(--g50)',
@@ -134,7 +134,7 @@ export default function PreSessionBriefing({ patient, onStart, onCancel, isOpen 
                       <br />Gere o primeiro relatório após a sessão.
                     </div>
                     <button
-                      onClick={() => onStart({ meetLink, requestAi: true })}
+                      onClick={() => setStep(2)}
                       style={{
                         padding: '7px 13px', border: '1px solid var(--g300)',
                         borderRadius: 'var(--r)', background: 'var(--g50)',

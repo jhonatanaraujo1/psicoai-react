@@ -53,15 +53,34 @@ const CHECK = () => (
 
 export default function PaymentModal({ onLogout }) {
   const [loading, setLoading] = useState(null) // 'base' | 'clinico' | 'portal'
+  const [coupon, setCoupon] = useState('')
+  const [couponState, setCouponState] = useState(null) // null | { valid, message, discountType, discountValue }
+  const [couponChecking, setCouponChecking] = useState(false)
+
+  const checkCoupon = async () => {
+    const code = coupon.trim()
+    if (!code) return
+    setCouponChecking(true)
+    try {
+      const res = await api.validateCoupon(code, 'base')
+      setCouponState(res)
+    } catch {
+      setCouponState({ valid: false, message: 'Erro ao validar cupom.' })
+    } finally {
+      setCouponChecking(false)
+    }
+  }
 
   const handleCheckout = async (planId) => {
     setLoading(planId)
     try {
       const origin = window.location.origin
+      const appliedCoupon = couponState?.valid ? coupon.trim() : null
       const { url } = await api.createCheckoutSession({
         planId,
         successUrl: `${origin}/?payment=success`,
         cancelUrl:  `${origin}/?payment=canceled`,
+        couponCode: appliedCoupon,
       })
       window.location.href = url
     } catch (e) {
@@ -239,6 +258,55 @@ export default function PaymentModal({ onLogout }) {
               </button>
             </div>
           ))}
+        </div>
+
+        {/* Coupon input */}
+        <div style={{ padding: '0 28px 20px' }}>
+          <div style={{
+            background: 'var(--ow)', border: '1px solid var(--gr2)',
+            borderRadius: '10px', padding: '14px 16px',
+          }}>
+            <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--gr5)', marginBottom: '8px' }}>
+              Tem um cupom de desconto?
+            </div>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <input
+                value={coupon}
+                onChange={e => { setCoupon(e.target.value.toUpperCase()); setCouponState(null) }}
+                onKeyDown={e => e.key === 'Enter' && checkCoupon()}
+                placeholder="EX: YOUTUBE30"
+                style={{
+                  flex: 1, border: `1px solid ${couponState ? (couponState.valid ? '#27AE60' : '#E74C3C') : 'var(--gr2)'}`,
+                  borderRadius: '7px', padding: '8px 12px', fontSize: '13px',
+                  fontFamily: "'DM Sans', sans-serif", outline: 'none',
+                  background: 'var(--w)', color: 'var(--d)',
+                  letterSpacing: '0.5px', fontWeight: 600,
+                }}
+              />
+              <button
+                onClick={checkCoupon}
+                disabled={!coupon.trim() || couponChecking}
+                style={{
+                  padding: '8px 14px', background: 'var(--g600)', color: '#fff',
+                  border: 'none', borderRadius: '7px', fontSize: '12.5px', fontWeight: 600,
+                  cursor: (!coupon.trim() || couponChecking) ? 'not-allowed' : 'pointer',
+                  opacity: (!coupon.trim() || couponChecking) ? 0.5 : 1,
+                  fontFamily: "'DM Sans', sans-serif", whiteSpace: 'nowrap',
+                }}
+              >
+                {couponChecking ? '...' : 'Aplicar'}
+              </button>
+            </div>
+            {couponState && (
+              <div style={{
+                marginTop: '8px', fontSize: '12px', fontWeight: 500,
+                color: couponState.valid ? '#27AE60' : '#E74C3C',
+                display: 'flex', alignItems: 'center', gap: '5px',
+              }}>
+                {couponState.valid ? '✓' : '✕'} {couponState.message}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Footer actions */}
