@@ -14,9 +14,18 @@ const TOOLS = [
     icon: <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/><line x1="15" y1="5" x2="19" y2="9"/></svg> },
 ]
 
+const GUIDE_ITEMS = [
+  { icon: '💬', label: 'O que o paciente trouxe', hint: 'Queixa do dia, como chegou, humor' },
+  { icon: '👁', label: 'O que você observou', hint: 'Postura, tom de voz, pausas, emoções visíveis' },
+  { icon: '🔁', label: 'Padrões que apareceram', hint: 'Evitação, ruminação, contradições no discurso' },
+  { icon: '💡', label: 'O que emergiu ou surpreendeu', hint: 'Insights, associações, temas novos' },
+  { icon: '📌', label: 'O que ficou para a próxima', hint: 'Temas em aberto, tarefas, observações' },
+]
+
 export default function TextSession({ patient, isOpen, onClose, onAnalyze, sessionId, onAutosave }) {
   const [secs, setSecs] = useState(0)
   const [showEndModal, setShowEndModal] = useState(false)
+  const [showGuide, setShowGuide] = useState(true)
   const timerRef = useRef(null)
   const autosaveRef = useRef(null)
   const editorRef = useRef(null)
@@ -127,10 +136,11 @@ export default function TextSession({ patient, isOpen, onClose, onAnalyze, sessi
       </div>
 
       {/* Área de escrita */}
-      <div style={{ flex: 1, overflowY: 'auto', display: 'flex', justifyContent: 'center', padding: '40px 24px' }}>
+      <div style={{ flex: 1, overflowY: 'auto', display: 'flex', justifyContent: 'center', padding: '32px 24px' }}>
         <div style={{ width: '100%', maxWidth: '720px' }}>
+
           {/* Cabeçalho da nota */}
-          <div style={{ marginBottom: '28px' }}>
+          <div style={{ marginBottom: '24px' }}>
             <div style={{ fontFamily: "'Fraunces', serif", fontSize: '22px', color: '#1C1C1C', fontWeight: 400, marginBottom: '6px' }}>
               {patientName} · Sessão {sessionNum}
             </div>
@@ -140,12 +150,80 @@ export default function TextSession({ patient, isOpen, onClose, onAnalyze, sessi
             <div style={{ marginTop: '16px', borderBottom: '1px solid #E8E5E0' }} />
           </div>
 
+          {/* Guia de anotação */}
+          {showGuide && (
+            <div style={{
+              background: 'linear-gradient(135deg, #F0F7F3 0%, #EAF2EE 100%)',
+              border: '1px solid #C8DDD0',
+              borderLeft: '3px solid #4A7C59',
+              borderRadius: '10px',
+              padding: '16px 18px',
+              marginBottom: '28px',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '12px' }}>
+                <div>
+                  <div style={{ fontSize: '12px', fontWeight: 700, color: '#2D4A38', marginBottom: '2px' }}>
+                    📝 O que anotar aqui é a base da análise IA
+                  </div>
+                  <div style={{ fontSize: '11.5px', color: '#4A7C59', lineHeight: 1.5 }}>
+                    Quanto mais você escrever sobre o que aconteceu na sessão, mais precisa será a análise. Escreva do seu jeito — sem formato certo.
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowGuide(false)}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#4A7C59', padding: '0 0 0 12px', fontSize: '16px', lineHeight: 1, flexShrink: 0 }}
+                  title="Fechar guia"
+                >×</button>
+              </div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                {GUIDE_ITEMS.map(item => (
+                  <button
+                    key={item.label}
+                    title={item.hint}
+                    onClick={() => {
+                      const editor = editorRef.current
+                      if (!editor) return
+                      editor.focus()
+                      const text = `${item.label}: `
+                      document.execCommand('insertText', false, (editor.innerText.trim() ? '\n\n' : '') + text)
+                    }}
+                    style={{
+                      background: 'rgba(255,255,255,0.7)', border: '1px solid #C8DDD0',
+                      borderRadius: '20px', padding: '4px 10px',
+                      fontSize: '11.5px', color: '#2D4A38', cursor: 'pointer',
+                      fontFamily: "'DM Sans', sans-serif", display: 'flex', alignItems: 'center', gap: '5px',
+                      transition: 'background 0.15s',
+                    }}
+                    onMouseOver={e => e.currentTarget.style.background = 'rgba(255,255,255,0.95)'}
+                    onMouseOut={e => e.currentTarget.style.background = 'rgba(255,255,255,0.7)'}
+                  >
+                    {item.icon} {item.label}
+                  </button>
+                ))}
+              </div>
+              <div style={{ marginTop: '10px', fontSize: '10.5px', color: '#6A9A7A', fontStyle: 'italic' }}>
+                Clique em qualquer tópico para inserir no texto · Passe o mouse para ver sugestões
+              </div>
+            </div>
+          )}
+
+          {/* Botão para reabrir guia */}
+          {!showGuide && (
+            <button
+              onClick={() => setShowGuide(true)}
+              style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'none', border: '1px dashed #C8DDD0', borderRadius: '6px', padding: '5px 10px', fontSize: '11px', color: '#6A9A7A', cursor: 'pointer', marginBottom: '20px', fontFamily: "'DM Sans', sans-serif' " }}
+            >
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+              O que anotar?
+            </button>
+          )}
+
           {/* Editor */}
           <div
             ref={editorRef}
             contentEditable
             suppressContentEditableWarning
-            data-placeholder="Comece a escrever suas anotações..."
+            data-placeholder="Escreva o que aconteceu na sessão — o que o paciente trouxe, o que você observou, o que emergiu..."
             style={{
               minHeight: '420px', outline: 'none',
               fontSize: '15px', lineHeight: '1.8',
@@ -177,16 +255,31 @@ export default function TextSession({ patient, isOpen, onClose, onAnalyze, sessi
             boxShadow: '0 24px 64px rgba(0,0,0,0.28)',
             overflow: 'hidden',
           }}>
-            <div style={{ padding: '24px 24px 20px' }}>
-              <div style={{ fontFamily: "'Fraunces', serif", fontSize: '20px', fontWeight: 400, color: '#1C1C1C', marginBottom: '8px' }}>
+            <div style={{ padding: '24px 24px 16px' }}>
+              <div style={{ fontFamily: "'Fraunces', serif", fontSize: '20px', fontWeight: 400, color: '#1C1C1C', marginBottom: '6px' }}>
                 Encerrar sessão
               </div>
-              <div style={{ fontSize: '13px', color: '#8B8B8B', lineHeight: 1.6 }}>
-                Duração: <strong style={{ color: '#1C1C1C' }}>{fmt(secs)}</strong> · {patientName} · Sessão {sessionNum}
+              <div style={{ fontSize: '13px', color: '#8B8B8B', lineHeight: 1.6, marginBottom: '12px' }}>
+                <strong style={{ color: '#1C1C1C' }}>{fmt(secs)}</strong> · {patientName} · Sessão {sessionNum}
               </div>
+              {/* word count hint */}
+              {(() => {
+                const wc = editorRef.current?.innerText?.trim().split(/\s+/).filter(Boolean).length || 0
+                const color = wc < 30 ? '#E74C3C' : wc < 80 ? '#F39C12' : '#27AE60'
+                const msg = wc < 30
+                  ? `Só ${wc} palavras — anotações curtas limitam a precisão da IA. Considere detalhar mais antes de encerrar.`
+                  : wc < 80
+                  ? `${wc} palavras — bom começo. Quanto mais detalhes, mais rica a análise.`
+                  : `${wc} palavras — ótimo nível de detalhe para a IA trabalhar.`
+                return (
+                  <div style={{ fontSize: '12px', color, background: `${color}18`, border: `1px solid ${color}44`, borderRadius: '7px', padding: '8px 12px', lineHeight: 1.5 }}>
+                    {msg}
+                  </div>
+                )
+              })()}
             </div>
 
-            <div style={{ padding: '0 24px 24px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            <div style={{ padding: '0 24px 24px', display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '8px' }}>
               <button
                 onClick={handleEndWithAI}
                 style={{
@@ -201,10 +294,10 @@ export default function TextSession({ patient, isOpen, onClose, onAnalyze, sessi
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--g600)" strokeWidth="2" style={{ flexShrink: 0 }}>
                     <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
                   </svg>
-                  <span style={{ fontSize: '14px', fontWeight: 700, color: 'var(--g700)' }}>Gerar reflexão clínica das minhas anotações</span>
+                  <span style={{ fontSize: '14px', fontWeight: 700, color: 'var(--g700)' }}>Analisar minhas anotações com IA</span>
                 </div>
                 <div style={{ fontSize: '12px', color: 'var(--g600)', lineHeight: 1.5, paddingLeft: '26px' }}>
-                  A IA lê o que você escreveu e devolve hipóteses, padrões e conexões com o histórico — a inteligência é sua, a organização é da IA.
+                  A IA lê exatamente o que você escreveu e devolve hipóteses diagnósticas, padrões comportamentais e sugestões para a próxima sessão — tudo baseado nas suas anotações.
                 </div>
               </button>
 
@@ -218,15 +311,15 @@ export default function TextSession({ patient, isOpen, onClose, onAnalyze, sessi
                 onMouseOver={e => e.currentTarget.style.background = 'var(--ow)'}
                 onMouseOut={e => e.currentTarget.style.background = 'var(--w)'}
               >
-                <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--d)', marginBottom: '3px' }}>Encerrar e salvar anotações</div>
-                <div style={{ fontSize: '12px', color: 'var(--gr5)' }}>Salva suas notas. Você pode gerar a reflexão clínica depois pelo prontuário do paciente.</div>
+                <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--d)', marginBottom: '3px' }}>Só salvar as anotações</div>
+                <div style={{ fontSize: '12px', color: 'var(--gr5)' }}>Suas notas ficam salvas no prontuário. Você pode pedir a análise depois, direto pelo perfil do paciente.</div>
               </button>
 
               <button
                 onClick={() => setShowEndModal(false)}
                 style={{ background: 'none', border: 'none', color: 'var(--gr4)', fontSize: '12px', cursor: 'pointer', padding: '4px', fontFamily: "'DM Sans', sans-serif" }}
               >
-                ← Continuar sessão
+                ← Continuar escrevendo
               </button>
             </div>
           </div>

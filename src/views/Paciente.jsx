@@ -55,6 +55,7 @@ export default function Paciente({ patient: propPatient, setCurrentView, onSessa
   const [notesSaving, setNotesSaving] = useState(false)
   const [notesSaved, setNotesSaved] = useState(false)
   const [reportOpen, setReportOpen] = useState(false)
+  const [expandedSessionId, setExpandedSessionId] = useState(null)
 
   const patientId = propPatient?.id
 
@@ -400,18 +401,21 @@ export default function Paciente({ patient: propPatient, setCurrentView, onSessa
               const evColor = { green: '#27AE60', yellow: '#F39C12', red: '#E74C3C' }[s.evolution] || null
               const bs = badgeStyle(s.statusLabel)
               const isConfirmingDelete = sessionDeleteId === s.id
+              const isExpanded = expandedSessionId === s.id
               return (
-                <div key={s.id}>
+                <div key={s.id} style={{ borderBottom: i < sessions.length - 1 ? '1px solid var(--gr1)' : 'none' }}>
+                  {/* Row */}
                   <div
-                    style={{ display: 'grid', gridTemplateColumns: '52px 1fr 88px 80px 110px 28px 28px', padding: '12px 20px', borderBottom: (!isConfirmingDelete && i < sessions.length - 1) ? '1px solid var(--gr1)' : 'none', alignItems: 'center', cursor: 'pointer', transition: 'background 0.12s' }}
-                    onMouseEnter={e => e.currentTarget.style.background = 'var(--ow)'}
-                    onMouseLeave={e => e.currentTarget.style.background = ''}
+                    onClick={() => setExpandedSessionId(isExpanded ? null : s.id)}
+                    style={{ display: 'grid', gridTemplateColumns: '52px 1fr 88px 80px 110px 28px 28px', padding: '12px 20px', alignItems: 'center', cursor: 'pointer', transition: 'background 0.12s', background: isExpanded ? 'var(--g50)' : '' }}
+                    onMouseEnter={e => { if (!isExpanded) e.currentTarget.style.background = 'var(--ow)' }}
+                    onMouseLeave={e => { if (!isExpanded) e.currentTarget.style.background = '' }}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
                       {evColor && <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: evColor, flexShrink: 0, display: 'inline-block' }} />}
                       <span style={{ fontFamily: "'Fraunces', serif", fontSize: '14px', color: 'var(--d)' }}>{s.num}</span>
                     </div>
-                    <div style={{ fontSize: '12px', color: 'var(--gr5)', lineHeight: 1.4, paddingRight: '16px', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
+                    <div style={{ fontSize: '12px', color: 'var(--gr5)', lineHeight: 1.4, paddingRight: '16px', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: isExpanded ? 'unset' : 2, WebkitBoxOrient: 'vertical' }}>
                       {s.hasAnalysis && (
                         <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', fontSize: '10px', fontWeight: 600, color: 'var(--g600)', background: 'var(--g50)', border: '1px solid var(--g100)', padding: '1px 6px', borderRadius: '20px', marginRight: '6px', verticalAlign: 'middle' }}>
                           <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
@@ -427,7 +431,7 @@ export default function Paciente({ patient: propPatient, setCurrentView, onSessa
                         {s.statusLabel}
                       </span>
                     </div>
-                    <div style={{ color: 'var(--gr3)' }}>
+                    <div style={{ color: isExpanded ? 'var(--g500)' : 'var(--gr3)', transition: 'transform 0.2s', transform: isExpanded ? 'rotate(90deg)' : 'none' }}>
                       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="9 18 15 12 9 6"/></svg>
                     </div>
                     <div>
@@ -440,6 +444,41 @@ export default function Paciente({ patient: propPatient, setCurrentView, onSessa
                       </button>
                     </div>
                   </div>
+
+                  {/* Expanded notes panel */}
+                  {isExpanded && (
+                    <div style={{ background: 'var(--ow)', borderTop: '1px solid var(--g100)', padding: '20px 24px' }}>
+                      {s.textContent ? (
+                        <div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px' }}>
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--g600)" strokeWidth="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+                            <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--g700)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Anotações desta sessão</span>
+                            <span style={{ fontSize: '10px', color: 'var(--gr4)', marginLeft: 'auto' }}>{fmtDate(s.finishedAt || s.createdAt)} · {fmtDuration(s.durationSeconds)}</span>
+                          </div>
+                          <div style={{
+                            fontSize: '13.5px', lineHeight: '1.8', color: 'var(--d)',
+                            fontFamily: "'DM Sans', sans-serif",
+                            whiteSpace: 'pre-wrap', wordBreak: 'break-word',
+                            background: 'var(--w)', border: '1px solid var(--gr2)',
+                            borderRadius: 'var(--r)', padding: '16px 20px',
+                            maxHeight: '320px', overflowY: 'auto',
+                          }}>
+                            {s.textContent}
+                          </div>
+                        </div>
+                      ) : s.type === 'canvas' ? (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '16px', background: 'var(--w)', borderRadius: 'var(--r)', border: '1px solid var(--gr2)' }}>
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--gr4)" strokeWidth="1.8"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/><path d="M2 2l7.586 7.586"/><circle cx="11" cy="11" r="2"/></svg>
+                          <span style={{ fontSize: '13px', color: 'var(--gr5)' }}>Esta sessão foi feita no Canvas — visualização das anotações desenhadas não disponível aqui.</span>
+                        </div>
+                      ) : (
+                        <div style={{ fontSize: '13px', color: 'var(--gr4)', textAlign: 'center', padding: '16px' }}>
+                          Nenhuma anotação registrada nesta sessão.
+                        </div>
+                      )}
+                    </div>
+                  )}
+
                   {isConfirmingDelete && (
                     <div style={{ background: 'var(--danger-l)', border: '1px solid #E8B4B0', borderRadius: 'var(--r)', margin: '0 20px 8px', padding: '10px 14px', display: 'flex', alignItems: 'center', gap: '10px' }}>
                       <span style={{ fontSize: '12px', color: 'var(--danger)', flex: 1 }}>Excluir sessão {s.num}? Esta ação não pode ser desfeita.</span>
