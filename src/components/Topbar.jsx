@@ -6,7 +6,7 @@ const viewTitles = {
   pacientes: 'Pacientes',
   paciente: 'Paciente',
   insights: 'Insights IA',
-  sessao: 'Nova Sessão',
+  sessao: 'Anotar Sessão',
   agenda: 'Agenda',
   financeiro: 'Financeiro',
   lembretes: 'Lembretes',

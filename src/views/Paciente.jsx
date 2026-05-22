@@ -183,7 +183,7 @@ export default function Paciente({ patient: propPatient, setCurrentView, onSessa
                 </button>
                 <button className="btn-primary" onClick={onSessao}>
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                  Nova Sessão
+                  Anotar Sessão
                 </button>
               </div>
             </div>
@@ -371,7 +371,7 @@ export default function Paciente({ patient: propPatient, setCurrentView, onSessa
           </div>
           <button className="btn-primary" onClick={onSessao} style={{ fontSize: '12px', padding: '7px 14px' }}>
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-            Nova Sessão
+            Anotar Sessão
           </button>
         </div>
 

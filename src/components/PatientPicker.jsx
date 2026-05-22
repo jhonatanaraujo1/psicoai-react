@@ -46,10 +46,10 @@ export default function PatientPicker({ isOpen, onSelect, onCancel }) {
         }}>
           <div>
             <div style={{ fontFamily: "'Fraunces', serif", fontSize: '18px', color: '#fff', fontWeight: 400 }}>
-              Nova Sessão
+              Anotar Sessão
             </div>
             <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.5)', marginTop: '3px' }}>
-              Selecione o paciente para iniciar
+              Para qual paciente você vai escrever suas anotações?
             </div>
           </div>
           <button

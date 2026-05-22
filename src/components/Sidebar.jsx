@@ -103,8 +103,8 @@ export default function Sidebar({ currentView, setCurrentView, isOpen, onClose, 
         {navItem('pacientes',   'Pacientes')}
         {navItem('insights',    'Insights IA')}
 
-        <div className="nav-section">Sessões</div>
-        {navItem('sessao',      'Nova Sessão')}
+        <div className="nav-section">Anotações</div>
+        {navItem('sessao',      'Anotar Sessão')}
         {navItem('agenda',      'Agenda')}
 
         <div className="nav-section">Gestão</div>
