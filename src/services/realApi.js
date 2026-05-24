@@ -264,7 +264,15 @@ export const api = {
 
   // Sessions
   async getPatientSessions(patientId, { page = 0, size = 20 } = {}) {
-    return get(`/api/v1/patients/${patientId}/sessions`, { page, size })
+    const res = await get(`/api/v1/patients/${patientId}/sessions`, { page, size })
+    // Normalize: backend uses `canvasData`, frontend (Anotacoes) checks `canvasDataJson`
+    if (res?.content) {
+      res.content = res.content.map(s => ({
+        ...s,
+        canvasDataJson: s.type === 'canvas' ? (s.canvasData ?? true) : null,
+      }))
+    }
+    return res
   },
 
   async getTodaySessions() {
@@ -488,9 +496,12 @@ export const api = {
   // Anotações — listagem global (backend endpoint a ser implementado)
   async getRecentAnnotations({ search = '', patientId = '' } = {}) {
     if (patientId) {
-      // Se tem paciente, usa endpoint existente
       const res = await get(`/api/v1/patients/${patientId}/sessions`, { page: 0, size: 50 })
-      return (res.content || []).map(s => ({ ...s, patientId }))
+      return (res.content || []).map(s => ({
+        ...s,
+        patientId,
+        canvasDataJson: s.type === 'canvas' ? (s.canvasData ?? true) : null,
+      }))
     }
     return [] // listagem global requer endpoint futuro
   },
