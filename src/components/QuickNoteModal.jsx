@@ -29,6 +29,7 @@ export default function QuickNoteModal({ isOpen, patient, onClose, onSave, onAna
   const [noteType, setNoteType]   = useState('post')
   const [saving, setSaving]       = useState(false)
   const [wordCount, setWordCount] = useState(0)
+  const [fullscreen, setFullscreen] = useState(false)
   const editorRef = useRef(null)
   const key = patient?.id ? draftKey(patient.id) : null
 
@@ -108,24 +109,24 @@ export default function QuickNoteModal({ isOpen, patient, onClose, onSave, onAna
   return (
     <div style={{
       position: 'fixed', inset: 0,
-      // zIndex 600 — acima do sidebar (200) e do AiDrawer (201) em qualquer estado
       zIndex: 600,
-      background: 'rgba(28,28,28,0.5)',
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      padding: '20px',
-      // Impede que o scroll por baixo do modal "transpasse" (overscroll bounce no Android)
+      background: fullscreen ? 'var(--ow)' : 'rgba(28,28,28,0.5)',
+      display: 'flex', alignItems: fullscreen ? 'stretch' : 'center', justifyContent: 'center',
+      padding: fullscreen ? '0' : '20px',
       touchAction: 'none',
       overscrollBehavior: 'none',
     }}>
       <div style={{
-        background: 'var(--ow)', borderRadius: '20px',
-        width: '100%', maxWidth: '640px',
-        // dvh = dynamic viewport height: atualiza quando o teclado virtual abre/fecha.
-        // Fallback para svh (small) e vh em browsers mais antigos.
-        maxHeight: 'min(90dvh, 90svh, 90vh)',
+        background: 'var(--ow)',
+        borderRadius: fullscreen ? '0' : '20px',
+        width: '100%',
+        maxWidth: fullscreen ? '100%' : '640px',
+        maxHeight: fullscreen ? '100%' : 'min(90dvh, 90svh, 90vh)',
+        height: fullscreen ? '100%' : undefined,
         display: 'flex', flexDirection: 'column',
-        boxShadow: '0 28px 80px rgba(0,0,0,0.22)',
+        boxShadow: fullscreen ? 'none' : '0 28px 80px rgba(0,0,0,0.22)',
         overflow: 'hidden',
+        transition: 'border-radius 0.2s, box-shadow 0.2s',
       }}>
 
         {/* ── Header ── */}
@@ -140,6 +141,34 @@ export default function QuickNoteModal({ isOpen, patient, onClose, onSave, onAna
               </div>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              {/* Fullscreen toggle */}
+              <button
+                onClick={() => setFullscreen(v => !v)}
+                title={fullscreen ? 'Sair do fullscreen' : 'Expandir para fullscreen'}
+                style={{
+                  background: 'none', border: 'none', cursor: 'pointer',
+                  color: 'var(--gr4)', padding: '4px 6px', borderRadius: '6px',
+                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                  transition: 'color 0.15s, background 0.15s',
+                }}
+                onMouseEnter={e => { e.currentTarget.style.color = 'var(--d)'; e.currentTarget.style.background = 'var(--gr1)' }}
+                onMouseLeave={e => { e.currentTarget.style.color = 'var(--gr4)'; e.currentTarget.style.background = 'none' }}
+              >
+                {fullscreen ? (
+                  /* ícone "sair fullscreen" — setas para dentro */
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M8 3v3a2 2 0 0 1-2 2H3"/><path d="M21 8h-3a2 2 0 0 1-2-2V3"/>
+                    <path d="M3 16h3a2 2 0 0 1 2 2v3"/><path d="M16 21v-3a2 2 0 0 1 2-2h3"/>
+                  </svg>
+                ) : (
+                  /* ícone "entrar fullscreen" — setas para fora */
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/>
+                    <path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/>
+                  </svg>
+                )}
+              </button>
+
               {/* Canvas button */}
               {onOpenCanvas && (
                 <button
@@ -237,7 +266,7 @@ export default function QuickNoteModal({ isOpen, patient, onClose, onSave, onAna
             data-placeholder="Escreva livremente — o que trouxe, o que observou, o que ficou em aberto. Sem formato obrigatório."
             onInput={handleInput}
             style={{
-              minHeight: '200px', outline: 'none',
+              minHeight: fullscreen ? '400px' : '200px', outline: 'none',
               // font-size declarado aqui como referência de design; o globals.css
               // sobrescreve para 16px via [contenteditable]{font-size:16px !important}
               // garantindo que o Android não auto-zoom ao focar.
