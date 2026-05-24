@@ -1,24 +1,33 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 
 const NOTE_TYPES = [
-  { id: 'post',  label: 'Pós-atendimento',  hint: 'Reflexões após a sessão' },
-  { id: 'pre',   label: 'Pré-atendimento',  hint: 'Preparação para a próxima' },
-  { id: 'obs',   label: 'Observação livre', hint: 'Registro entre sessões' },
+  { id: 'post', label: 'Pós-atendimento', hint: 'Reflexões após a sessão' },
+  { id: 'pre',  label: 'Pré-atendimento', hint: 'Preparação para a próxima' },
+  { id: 'obs',  label: 'Observação livre', hint: 'Registro entre sessões' },
 ]
 
+// SVG icons — sem emojis, renderiza igual em todo lugar
+const CHIP_ICONS = {
+  trouxe:   <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>,
+  observou: <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><circle cx="12" cy="12" r="3"/><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/></svg>,
+  padroes:  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>,
+  emergiu:  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>,
+  proxima:  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M3 12h18"/><path d="M13 5l7 7-7 7"/></svg>,
+}
+
 const GUIDE_CHIPS = [
-  { icon: '💬', label: 'O que o paciente trouxe' },
-  { icon: '👁',  label: 'O que você observou' },
-  { icon: '🔁', label: 'Padrões que apareceram' },
-  { icon: '💡', label: 'O que emergiu' },
-  { icon: '📌', label: 'Para a próxima sessão' },
+  { icon: CHIP_ICONS.trouxe,   label: 'O que o paciente trouxe' },
+  { icon: CHIP_ICONS.observou, label: 'O que você observou' },
+  { icon: CHIP_ICONS.padroes,  label: 'Padrões que apareceram' },
+  { icon: CHIP_ICONS.emergiu,  label: 'O que emergiu' },
+  { icon: CHIP_ICONS.proxima,  label: 'Para a próxima sessão' },
 ]
 
 const draftKey = (patientId) => `psicoai_quicknote_${patientId}`
 
-export default function QuickNoteModal({ isOpen, patient, onClose, onSave, onAnalyze }) {
-  const [noteType, setNoteType] = useState('post')
-  const [saving, setSaving]     = useState(false)
+export default function QuickNoteModal({ isOpen, patient, onClose, onSave, onAnalyze, onOpenCanvas }) {
+  const [noteType, setNoteType]   = useState('post')
+  const [saving, setSaving]       = useState(false)
   const [wordCount, setWordCount] = useState(0)
   const editorRef = useRef(null)
   const key = patient?.id ? draftKey(patient.id) : null
@@ -75,9 +84,19 @@ export default function QuickNoteModal({ isOpen, patient, onClose, onSave, onAna
     }
   }
 
+  const handleOpenCanvas = () => {
+    clearDraft()
+    onClose()
+    onOpenCanvas?.()
+  }
+
   if (!isOpen) return null
 
-  const warnColor = wordCount === 0 ? 'var(--gr4)' : wordCount < 30 ? 'var(--warn)' : 'var(--g600)'
+  const warnColor = wordCount === 0
+    ? 'var(--gr4)'
+    : wordCount < 30
+    ? 'var(--warn)'
+    : 'var(--g600)'
 
   return (
     <div style={{
@@ -88,7 +107,7 @@ export default function QuickNoteModal({ isOpen, patient, onClose, onSave, onAna
     }}>
       <div style={{
         background: 'var(--ow)', borderRadius: '20px',
-        width: '100%', maxWidth: '620px',
+        width: '100%', maxWidth: '640px',
         maxHeight: '90vh', display: 'flex', flexDirection: 'column',
         boxShadow: '0 28px 80px rgba(0,0,0,0.22)',
         overflow: 'hidden',
@@ -105,12 +124,39 @@ export default function QuickNoteModal({ isOpen, patient, onClose, onSave, onAna
                 {new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}
               </div>
             </div>
-            <button
-              onClick={onClose}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--gr4)', padding: '4px', borderRadius: '6px', fontSize: '22px', lineHeight: 1, marginTop: '-2px' }}
-            >
-              ×
-            </button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              {/* Canvas button */}
+              {onOpenCanvas && (
+                <button
+                  onClick={handleOpenCanvas}
+                  title="Abrir canvas de desenho"
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', gap: '6px',
+                    padding: '6px 12px', borderRadius: '8px',
+                    border: '1.5px solid var(--gr2)', background: 'var(--w)',
+                    color: 'var(--d2)', fontSize: '12px', fontWeight: 500,
+                    cursor: 'pointer', fontFamily: "'DM Sans', sans-serif",
+                    transition: 'all 0.15s',
+                  }}
+                  onMouseEnter={e => { e.currentTarget.style.background = 'var(--g50)'; e.currentTarget.style.borderColor = 'var(--g300)'; e.currentTarget.style.color = 'var(--g700)' }}
+                  onMouseLeave={e => { e.currentTarget.style.background = 'var(--w)'; e.currentTarget.style.borderColor = 'var(--gr2)'; e.currentTarget.style.color = 'var(--d2)' }}
+                >
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M12 19l7-7 3 3-7 7-3-3z"/>
+                    <path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/>
+                    <path d="M2 2l7.586 7.586"/>
+                    <circle cx="11" cy="11" r="2"/>
+                  </svg>
+                  Usar canvas
+                </button>
+              )}
+              <button
+                onClick={onClose}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--gr4)', padding: '4px', borderRadius: '6px', fontSize: '22px', lineHeight: 1, marginTop: '-2px' }}
+              >
+                ×
+              </button>
+            </div>
           </div>
 
           {/* Tipo da anotação */}
@@ -157,13 +203,14 @@ export default function QuickNoteModal({ isOpen, patient, onClose, onSave, onAna
                   borderRadius: '20px', padding: '4px 11px',
                   fontSize: '11.5px', color: 'var(--d2)',
                   cursor: 'pointer', fontFamily: "'DM Sans', sans-serif",
-                  display: 'inline-flex', alignItems: 'center', gap: '4px',
+                  display: 'inline-flex', alignItems: 'center', gap: '5px',
                   transition: 'background 0.12s',
                 }}
                 onMouseEnter={e => e.currentTarget.style.background = 'var(--g50)'}
                 onMouseLeave={e => e.currentTarget.style.background = 'var(--w)'}
               >
-                {chip.icon} {chip.label}
+                <span style={{ color: 'var(--g600)', display: 'flex', alignItems: 'center' }}>{chip.icon}</span>
+                {chip.label}
               </button>
             ))}
           </div>

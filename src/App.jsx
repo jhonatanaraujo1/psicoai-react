@@ -248,6 +248,24 @@ export default function App() {
     }
   }
 
+  // QuickNote → canvas: pula o briefing, abre canvas direto (sem timer)
+  const handleQuickNoteCanvas = () => {
+    setQuickNoteOpen(false)
+    activeSessionRef.current = null
+    setActiveSessionType('canvas')
+    if (currentPatient) {
+      localStorage.setItem('psicoai_active_session', JSON.stringify({
+        sessionId: null, sessionType: 'canvas',
+        patient: { id: currentPatient.id, name: currentPatient.name },
+        startedAt: Date.now(),
+      }))
+    }
+    api.createSession({ patientId: currentPatient?.id, type: 'canvas' })
+      .then(s => setSession(s.id))
+      .catch(e => console.warn('[PsicoAI] createSession (canvas) failed:', e))
+    setCanvasOpen(true)
+  }
+
   const handleBriefingStart = ({ meetLink, type }) => {
     setBriefingOpen(false)
     activeSessionRef.current = null
@@ -540,6 +558,7 @@ export default function App() {
         onClose={() => setQuickNoteOpen(false)}
         onSave={handleQuickNoteSave}
         onAnalyze={handleQuickNoteAnalyze}
+        onOpenCanvas={handleQuickNoteCanvas}
       />
 
       {/* Onboarding */}
