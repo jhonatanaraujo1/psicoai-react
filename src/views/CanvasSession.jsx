@@ -117,10 +117,9 @@ async function blobToBase64(blob) {
 let _excalidrawPromise = null
 function loadExcalidraw() {
   if (!_excalidrawPromise) {
-    _excalidrawPromise = Promise.all([
-      import('@excalidraw/excalidraw'),
-      import('@excalidraw/excalidraw/index.css'),
-    ]).then(([mod]) => mod).catch(e => {
+    // @excalidraw/excalidraw v0.17+ embutes o CSS — import separado não é necessário
+    // e causa Rolldown resolution error no Vite 8+
+    _excalidrawPromise = import('@excalidraw/excalidraw').then(mod => mod).catch(e => {
       _excalidrawPromise = null
       throw e
     })
@@ -386,7 +385,7 @@ export default function CanvasSession({
       <div className="cs-topbar">
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <div className="cs-logo">Ψ</div>
-          <div className="cs-patient">{patientName} · Sessão {sessionNum}</div>
+          <div className="cs-patient" title={patientName}>{patientName} · Sessão {sessionNum}</div>
           <span style={{
             fontSize: '10px', fontWeight: 600, padding: '2px 8px', borderRadius: '20px',
             background: 'rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.6)',
@@ -467,7 +466,7 @@ export default function CanvasSession({
           position: 'absolute', inset: 0, zIndex: 10,
           background: 'rgba(0,0,0,0.5)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          padding: '16px',
+          padding: '16px', touchAction: 'none', overscrollBehavior: 'none',
         }}>
           <div style={{
             background: '#fff', borderRadius: '16px',

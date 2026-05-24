@@ -105,15 +105,20 @@ export default function PaymentModal({ onLogout }) {
   return (
     <div style={{
       position: 'fixed', inset: 0, zIndex: 9999,
-      background: 'rgba(18,24,20,0.88)', backdropFilter: 'blur(8px)',
+      // backdrop-filter removido: causa artefato de composição GPU no Android Chrome.
+      // O overlay escuro (0.88 opacity) já cria a separação visual necessária.
+      background: 'rgba(18,24,20,0.88)',
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       padding: '20px', overflowY: 'auto',
+      touchAction: 'none',
+      overscrollBehavior: 'none',
     }}>
       <div style={{
         background: 'var(--ow)', borderRadius: '20px',
         boxShadow: '0 32px 100px rgba(0,0,0,0.4)',
         width: '100%', maxWidth: '740px',
-        padding: '0 0 32px 0', overflow: 'hidden',
+        maxHeight: 'min(92dvh,92svh,92vh)', overflowY: 'auto',
+        padding: '0 0 32px 0',
       }}>
 
         {/* Header */}

@@ -704,7 +704,7 @@ export default function Configuracoes({ currentUser, onProfileUpdate, onOpenOnbo
 
   return (
     <div className="view">
-      <div style={{ display: 'grid', gridTemplateColumns: '210px 1fr', gap: '20px', alignItems: 'start' }}>
+      <div className="cfg-layout">
         {/* Left nav */}
         <div style={{ background: 'var(--w)', borderRadius: 'var(--r2)', border: '1px solid var(--gr2)', overflow: 'hidden', position: 'sticky', top: '80px' }}>
           {TABS.map((t, i) => (

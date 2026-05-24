@@ -20,6 +20,7 @@ const TYPE_STYLES = {
   supervision:{ bg: '#EBF3FD',         border: '#7FB3D3',     color: '#2471A3',     cls: 'blue' },
   personal:   { bg: 'var(--gr1)',      border: 'var(--gr3)',  color: 'var(--gr5)',  cls: 'gray' },
   other:      { bg: 'var(--warn-l)',   border: '#F0D08A',     color: 'var(--warn)', cls: 'warn' },
+  google:     { bg: '#E8F0FE',         border: '#4285F4',     color: '#1A56C4',     cls: 'google' },
 }
 
 const TYPE_LABELS = {
@@ -27,6 +28,7 @@ const TYPE_LABELS = {
   supervision: 'Supervisão',
   personal: 'Pessoal',
   other: 'Outro',
+  google: 'Google',
 }
 
 function fmtHour(iso) {
@@ -58,6 +60,7 @@ export default function Agenda({ currentUser }) {
   const [weekOffset, setWeekOffset] = useState(0)
   const [miniCalOffset, setMiniCalOffset] = useState(0)
   const [events, setEvents] = useState([])
+  const [googleEvents, setGoogleEvents] = useState([])
   const [loading, setLoading] = useState(true)
   const [eventModal, setEventModal] = useState(EMPTY_MODAL)
   const [allPatients, setAllPatients] = useState([])
@@ -91,7 +94,17 @@ export default function Agenda({ currentUser }) {
 
   useEffect(() => {
     loadEvents().finally(() => setLoading(false))
-  }, [])
+    // Load Google Calendar events if connected
+    api.getGoogleStatus().then(s => {
+      if (s.connected && s.calendarSync) {
+        const from = new Date(); from.setDate(from.getDate() - 7)
+        const to   = new Date(); to.setDate(to.getDate() + 60)
+        api.getGoogleCalendarEvents(from.toISOString(), to.toISOString())
+          .then(evs => setGoogleEvents(evs || []))
+          .catch(() => {})
+      }
+    }).catch(() => {})
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Load patients when modal opens
   useEffect(() => {
@@ -183,10 +196,24 @@ export default function Agenda({ currentUser }) {
     }
   }
 
+  // Merge PsicoAI + Google events into unified list
+  const allEvents = [
+    ...events,
+    ...googleEvents.map(g => ({
+      id: g.id,
+      title: g.summary,
+      type: 'google',
+      startAt: g.start,
+      endAt: g.end,
+      meetLink: g.meetLink,
+      _google: true,
+    })),
+  ]
+
   // Match event to day+hour slot
   function getEventsForSlot(dayIdx, hour) {
     const slotDate = weekDates[dayIdx]
-    return events.filter(e => {
+    return allEvents.filter(e => {
       const d = new Date(e.startAt)
       return (
         d.getFullYear() === slotDate.getFullYear() &&
@@ -198,7 +225,7 @@ export default function Agenda({ currentUser }) {
   }
 
   // Upcoming sessions — next 7 days sorted
-  const upcoming = events
+  const upcoming = allEvents
     .filter(e => new Date(e.startAt) >= today)
     .sort((a, b) => new Date(a.startAt) - new Date(b.startAt))
     .slice(0, 6)
@@ -385,10 +412,10 @@ export default function Agenda({ currentUser }) {
       {/* Event modal */}
       {eventModal.open && (
         <div
-          style={{ position: 'fixed', inset: 0, zIndex: 250, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}
+          style={{ position: 'fixed', inset: 0, zIndex: 250, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px', touchAction: 'none', overscrollBehavior: 'none' }}
           onClick={e => e.target === e.currentTarget && closeModal()}
         >
-          <div style={{ background: 'var(--w)', borderRadius: 'var(--r3)', width: '100%', maxWidth: '520px', maxHeight: '90vh', display: 'flex', flexDirection: 'column', boxShadow: '0 24px 64px rgba(0,0,0,0.22)', overflow: 'hidden' }}>
+          <div style={{ background: 'var(--w)', borderRadius: 'var(--r3)', width: '100%', maxWidth: '520px', maxHeight: 'min(90dvh,90svh,90vh)', display: 'flex', flexDirection: 'column', boxShadow: '0 24px 64px rgba(0,0,0,0.22)', overflow: 'hidden' }}>
             {/* Header */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '20px 24px 16px', borderBottom: '1px solid var(--gr2)' }}>
               <div style={{ fontFamily: "'Fraunces', serif", fontSize: '18px', fontWeight: 400, color: 'var(--d)' }}>

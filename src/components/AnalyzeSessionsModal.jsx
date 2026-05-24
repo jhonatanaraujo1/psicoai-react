@@ -72,7 +72,7 @@ const TEMPLATES = [
     desc: 'O que mudou entre as sessões — requer análise multi-sessão',
     color: 'var(--g600)',
     bg: 'var(--g50)',
-    border: 'var(--g200)',
+    border: 'var(--g300)',
   },
   {
     id: 'supervisao_clinica',
@@ -161,16 +161,18 @@ export default function AnalyzeSessionsModal({ pendingData, patient, currentSess
 
   return (
     <div style={{
-      position: 'fixed', inset: 0, zIndex: 400,
+      position: 'fixed', inset: 0, zIndex: 600,
       background: 'rgba(0,0,0,0.5)',
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       padding: '16px',
+      touchAction: 'none',
+      overscrollBehavior: 'none',
     }}>
       <div style={{
         background: 'var(--w)', borderRadius: '16px',
         width: '100%', maxWidth: '500px',
         boxShadow: '0 24px 64px rgba(0,0,0,0.28)',
-        overflow: 'hidden', maxHeight: '92vh',
+        overflow: 'hidden', maxHeight: 'min(92dvh, 92svh, 92vh)',
         display: 'flex', flexDirection: 'column',
       }}>
 
@@ -442,7 +444,7 @@ export default function AnalyzeSessionsModal({ pendingData, patient, currentSess
                 background: pricing.tier === 'muito-alto' ? 'var(--danger-l)' : pricing.tier === 'alto' ? '#FEF0E7' : 'var(--warn-l)',
                 border: `1px solid ${pricing.tier === 'muito-alto' ? '#F4C5C5' : pricing.tier === 'alto' ? '#FAD7A0' : '#F0D08A'}`,
                 borderRadius: '6px', padding: '8px 12px', lineHeight: 1.5,
-                display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px',
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', flexWrap: 'wrap',
               }}>
                 <span>
                   {pricing.tier === 'muito-alto'

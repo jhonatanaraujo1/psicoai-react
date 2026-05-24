@@ -32,6 +32,10 @@ export default function QuickNoteModal({ isOpen, patient, onClose, onSave, onAna
   const editorRef = useRef(null)
   const key = patient?.id ? draftKey(patient.id) : null
 
+  // Detecta se é dispositivo touch (pointer:coarse) — usado para não
+  // auto-focar no editor em tablets/phones e evitar o auto-zoom do Android.
+  const isTouchDevice = typeof window !== 'undefined' && window.matchMedia('(pointer:coarse)').matches
+
   // Reset & load draft when modal opens
   useEffect(() => {
     if (!isOpen) return
@@ -42,7 +46,10 @@ export default function QuickNoteModal({ isOpen, patient, onClose, onSave, onAna
       const draft = key ? localStorage.getItem(key) : null
       editorRef.current.innerHTML = draft || ''
       setWordCount(editorRef.current.innerText.trim().split(/\s+/).filter(Boolean).length || 0)
-      editorRef.current.focus()
+      // Em touch devices NÃO auto-focamos: isso abre o teclado virtual imediatamente,
+      // encolhe o viewport e causa o "zoom" visual no Android.
+      // O usuário toca no editor quando quiser escrever.
+      if (!isTouchDevice) editorRef.current.focus()
     }, 60)
   }, [isOpen, patient?.id]) // eslint-disable-line
 
@@ -100,15 +107,23 @@ export default function QuickNoteModal({ isOpen, patient, onClose, onSave, onAna
 
   return (
     <div style={{
-      position: 'fixed', inset: 0, zIndex: 200,
+      position: 'fixed', inset: 0,
+      // zIndex 600 — acima do sidebar (200) e do AiDrawer (201) em qualquer estado
+      zIndex: 600,
       background: 'rgba(28,28,28,0.5)',
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       padding: '20px',
+      // Impede que o scroll por baixo do modal "transpasse" (overscroll bounce no Android)
+      touchAction: 'none',
+      overscrollBehavior: 'none',
     }}>
       <div style={{
         background: 'var(--ow)', borderRadius: '20px',
         width: '100%', maxWidth: '640px',
-        maxHeight: '90vh', display: 'flex', flexDirection: 'column',
+        // dvh = dynamic viewport height: atualiza quando o teclado virtual abre/fecha.
+        // Fallback para svh (small) e vh em browsers mais antigos.
+        maxHeight: 'min(90dvh, 90svh, 90vh)',
+        display: 'flex', flexDirection: 'column',
         boxShadow: '0 28px 80px rgba(0,0,0,0.22)',
         overflow: 'hidden',
       }}>
@@ -160,7 +175,7 @@ export default function QuickNoteModal({ isOpen, patient, onClose, onSave, onAna
           </div>
 
           {/* Tipo da anotação */}
-          <div style={{ display: 'flex', gap: '6px' }}>
+          <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
             {NOTE_TYPES.map(t => (
               <button
                 key={t.id}
@@ -223,7 +238,10 @@ export default function QuickNoteModal({ isOpen, patient, onClose, onSave, onAna
             onInput={handleInput}
             style={{
               minHeight: '200px', outline: 'none',
-              fontSize: '14.5px', lineHeight: '1.85',
+              // font-size declarado aqui como referência de design; o globals.css
+              // sobrescreve para 16px via [contenteditable]{font-size:16px !important}
+              // garantindo que o Android não auto-zoom ao focar.
+              fontSize: '15px', lineHeight: '1.75',
               color: 'var(--d)', fontFamily: "'DM Sans', sans-serif",
               caretColor: 'var(--g500)',
             }}

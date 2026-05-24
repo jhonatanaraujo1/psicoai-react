@@ -244,7 +244,7 @@ export default function Dashboard({ setCurrentView, currentUser }) {
             </button>
           </div>
           <div className="card-body">
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginBottom: 0 }}>
+            <div className="dash-fin-snap" style={{ marginBottom: 0 }}>
               {[
                 { label: 'Recebido', value: fmtCurrency(financialSnapshot?.receivedThisMonth), color: 'var(--g600)', bg: 'var(--g50)' },
                 { label: 'Pendente', value: fmtCurrency(financialSnapshot?.pendingReceivables), color: 'var(--warn)', bg: 'var(--warn-l)' },

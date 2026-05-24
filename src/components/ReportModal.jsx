@@ -274,8 +274,8 @@ export default function ReportModal({ isOpen, onClose, patient }) {
   const selectedType = REPORT_TYPES.find(t => t.id === reportType)
 
   return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 400, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px', fontFamily: "'DM Sans', sans-serif" }}>
-      <div style={{ width: '100%', maxWidth: '900px', maxHeight: '92vh', background: 'var(--w)', borderRadius: '16px', boxShadow: '0 24px 72px rgba(0,0,0,0.22)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+    <div style={{ position: 'fixed', inset: 0, zIndex: 600, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px', fontFamily: "'DM Sans', sans-serif", touchAction: 'none', overscrollBehavior: 'none' }}>
+      <div style={{ width: '100%', maxWidth: '900px', maxHeight: 'min(92dvh, 92svh, 92vh)', background: 'var(--w)', borderRadius: '16px', boxShadow: '0 24px 72px rgba(0,0,0,0.22)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
 
         {/* Header */}
         <div style={{ padding: '18px 24px', borderBottom: '1px solid var(--gr2)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0, background: 'var(--g700)' }}>
@@ -293,10 +293,10 @@ export default function ReportModal({ isOpen, onClose, patient }) {
         </div>
 
         {/* Body — two panels */}
-        <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+        <div className="report-modal-body">
 
           {/* ── Left panel: Config ───────────────────────────────────────── */}
-          <div style={{ width: '300px', flexShrink: 0, borderRight: '1px solid var(--gr2)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+          <div className="report-modal-left">
             <div style={{ flex: 1, overflowY: 'auto', padding: '20px', scrollbarWidth: 'thin', scrollbarColor: 'var(--gr2) transparent' }}>
 
               {/* Type selector */}

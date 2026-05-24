@@ -89,9 +89,11 @@ export default function Sidebar({ currentView, setCurrentView, isOpen, onClose, 
       key={id}
       className={`nav-item${currentView === id ? ' active' : ''}`}
       onClick={() => nav(id)}
+      title={label}
+      aria-label={label}
     >
       {ICONS[id]}
-      {label}
+      <span className="nav-label">{label}</span>
     </button>
   )
 
@@ -137,7 +139,7 @@ export default function Sidebar({ currentView, setCurrentView, isOpen, onClose, 
           <button
             title="Sair"
             onClick={onLogout}
-            style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.35)', padding: '4px', borderRadius: '6px', display: 'flex', alignItems: 'center', flexShrink: 0, transition: 'all 0.15s' }}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.35)', padding: '10px', minWidth: '40px', minHeight: '40px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, transition: 'all 0.15s' }}
             onMouseEnter={e => e.currentTarget.style.color = 'rgba(255,255,255,0.7)'}
             onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,255,255,0.35)'}
           >
@@ -150,7 +152,7 @@ export default function Sidebar({ currentView, setCurrentView, isOpen, onClose, 
         </div>
 
         {currentUser?.plan && (
-          <div style={{ marginTop: '8px', padding: '6px 8px', background: 'rgba(255,255,255,0.06)', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div className="sb-plan-info" style={{ marginTop: '8px', padding: '6px 8px', background: 'rgba(255,255,255,0.06)', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.45)' }}>
               {currentUser.plan === 'clinico' ? 'Plano Clínico' : 'Plano Base'}
             </span>

@@ -28,7 +28,9 @@ export default defineConfig({
     })
   ],
   optimizeDeps: {
-    include: ['@tldraw/tldraw'],
+    // @excalidraw/excalidraw: força pré-bundle via esbuild (CJS/ESM compat com Rolldown/Vite 8)
+    // @tldraw/tldraw: pacote pesado, melhor pré-bundled
+    include: ['@excalidraw/excalidraw', '@tldraw/tldraw'],
   },
   server: {
     proxy: {

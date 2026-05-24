@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 
 const TOOLS = [
   { cmd: 'bold',          icon: <strong>B</strong>,  title: 'Negrito' },
@@ -22,25 +22,72 @@ const GUIDE_ITEMS = [
   { icon: '📌', label: 'O que ficou para a próxima', hint: 'Temas em aberto, tarefas, observações' },
 ]
 
-export default function TextSession({ patient, isOpen, onClose, onAnalyze, sessionId, onAutosave }) {
+// ── LocalStorage key for text draft ──────────────────────────────────────────
+const textDraftKey = (patientId) => `psicoai_text_draft_p${patientId}`
+
+export default function TextSession({ patient, isOpen, onClose, onAnalyze, sessionId, onAutosave, initialHtml = '' }) {
   const [secs, setSecs] = useState(0)
   const [showEndModal, setShowEndModal] = useState(false)
   const [showGuide, setShowGuide] = useState(true)
-  const timerRef = useRef(null)
-  const autosaveRef = useRef(null)
-  const editorRef = useRef(null)
+  const [savedIndicator, setSavedIndicator] = useState(false)
+  const timerRef      = useRef(null)
+  const autosaveRef   = useRef(null)
+  const localSaveRef  = useRef(null)
+  const editorRef     = useRef(null)
+  const patientIdRef  = useRef(patient?.id)
+
+  useEffect(() => { patientIdRef.current = patient?.id }, [patient?.id])
+
+  // Força save imediato — usado em visibilitychange / pagehide
+  const saveNow = useCallback(() => {
+    clearTimeout(localSaveRef.current)
+    if (patientIdRef.current && editorRef.current) {
+      localStorage.setItem(textDraftKey(patientIdRef.current), editorRef.current.innerHTML)
+    }
+  }, [])
+
+  // Salva ao trocar de aba, minimizar, Ctrl+R, fechar janela
+  useEffect(() => {
+    if (!isOpen) return
+    const onHide = () => { if (document.visibilityState === 'hidden') saveNow() }
+    document.addEventListener('visibilitychange', onHide)
+    window.addEventListener('pagehide', saveNow)
+    return () => {
+      document.removeEventListener('visibilitychange', onHide)
+      window.removeEventListener('pagehide', saveNow)
+    }
+  }, [isOpen, saveNow])
 
   useEffect(() => {
     if (isOpen) {
-      setSecs(0)
+      // Restaura tempo real desde o início da sessão (sobrevive ao refresh)
+      const stored = (() => { try { return JSON.parse(localStorage.getItem('psicoai_active_session') || 'null') } catch { return null } })()
+      const elapsed = stored?.startedAt ? Math.max(0, Math.floor((Date.now() - stored.startedAt) / 1000)) : 0
+      setSecs(elapsed)
       setShowEndModal(false)
       timerRef.current = setInterval(() => setSecs(s => s + 1), 1000)
-      setTimeout(() => editorRef.current?.focus(), 100)
+      // Load draft from localStorage or initialHtml
+      setTimeout(() => {
+        if (!editorRef.current) return
+        const draft = patient?.id ? localStorage.getItem(textDraftKey(patient.id)) : null
+        if (draft) {
+          editorRef.current.innerHTML = draft
+        } else if (initialHtml) {
+          editorRef.current.innerHTML = initialHtml
+        } else {
+          editorRef.current.innerHTML = ''
+        }
+        // Não auto-focar em touch devices: abre o teclado imediatamente,
+        // encolhe o viewport e causa o "zoom" visual no Android.
+        const isTouchDevice = window.matchMedia('(pointer:coarse)').matches
+        if (!isTouchDevice) editorRef.current.focus()
+      }, 80)
     } else {
       clearInterval(timerRef.current)
+      clearTimeout(localSaveRef.current)
     }
     return () => clearInterval(timerRef.current)
-  }, [isOpen])
+  }, [isOpen]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Autosave every 30s while session is open and we have a real sessionId
   useEffect(() => {
@@ -63,10 +110,27 @@ export default function TextSession({ patient, isOpen, onClose, onAnalyze, sessi
     editorRef.current?.focus()
   }
 
+  // Save to localStorage on every input (debounced 400ms)
+  const handleInput = () => {
+    clearTimeout(localSaveRef.current)
+    localSaveRef.current = setTimeout(() => {
+      if (patient?.id && editorRef.current) {
+        localStorage.setItem(textDraftKey(patient.id), editorRef.current.innerHTML)
+        setSavedIndicator(true)
+        setTimeout(() => setSavedIndicator(false), 1500)
+      }
+    }, 400)
+  }
+
+  const clearDraft = () => {
+    if (patient?.id) localStorage.removeItem(textDraftKey(patient.id))
+  }
+
   const handleEndWithoutAI = () => {
     const text = editorRef.current?.innerText || ''
     const html = editorRef.current?.innerHTML || ''
     setShowEndModal(false)
+    clearDraft()
     onClose({ textContent: text, htmlContent: html, duration: secs })
   }
 
@@ -74,6 +138,7 @@ export default function TextSession({ patient, isOpen, onClose, onAnalyze, sessi
     const text = editorRef.current?.innerText || ''
     const html = editorRef.current?.innerHTML || ''
     setShowEndModal(false)
+    clearDraft()
     onAnalyze({ imageBase64: null, textContent: text, htmlContent: html, duration: secs })
   }
 
@@ -83,7 +148,7 @@ export default function TextSession({ patient, isOpen, onClose, onAnalyze, sessi
   const sessionNum = (patient?.sessions || 0) + 1
 
   return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 300, display: 'flex', flexDirection: 'column', background: '#F5F2EC' }}>
+    <div style={{ position: 'fixed', inset: 0, zIndex: 700, display: 'flex', flexDirection: 'column', background: '#F5F2EC' }}>
 
       {/* Topbar */}
       <div className="cs-topbar">
@@ -130,8 +195,10 @@ export default function TextSession({ patient, isOpen, onClose, onAnalyze, sessi
           )
         )}
         <div style={{ flex: 1 }} />
-        <span style={{ fontSize: '11px', color: '#A0A0A0' }}>
-          Ctrl+B negrito · Ctrl+I itálico
+        {/* Offline / local save indicator */}
+        <span style={{ fontSize: '10px', color: savedIndicator ? '#27AE60' : (!navigator.onLine ? '#F39C12' : '#A0A0A0'), display: 'flex', alignItems: 'center', gap: '4px', transition: 'color 0.3s', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0, flexShrink: 1 }}>
+          <span style={{ width: 5, height: 5, borderRadius: '50%', background: 'currentColor', display: 'inline-block' }} />
+          {!navigator.onLine ? 'Offline — salvo localmente' : savedIndicator ? 'Salvo localmente' : 'Ctrl+B negrito · Ctrl+I itálico'}
         </span>
       </div>
 
@@ -230,6 +297,7 @@ export default function TextSession({ patient, isOpen, onClose, onAnalyze, sessi
               color: '#1C1C1C', fontFamily: "'DM Sans', sans-serif",
               caretColor: 'var(--g500)',
             }}
+            onInput={handleInput}
             onKeyDown={e => {
               // Tab insere espaços
               if (e.key === 'Tab') {
@@ -247,13 +315,13 @@ export default function TextSession({ patient, isOpen, onClose, onAnalyze, sessi
           position: 'fixed', inset: 0, zIndex: 10,
           background: 'rgba(0,0,0,0.5)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          padding: '16px',
+          padding: '16px', touchAction: 'none', overscrollBehavior: 'none',
         }}>
           <div style={{
             background: '#fff', borderRadius: '16px',
             width: '100%', maxWidth: '440px',
+            maxHeight: 'min(90dvh,90svh,90vh)', overflowY: 'auto',
             boxShadow: '0 24px 64px rgba(0,0,0,0.28)',
-            overflow: 'hidden',
           }}>
             <div style={{ padding: '24px 24px 16px' }}>
               <div style={{ fontFamily: "'Fraunces', serif", fontSize: '20px', fontWeight: 400, color: '#1C1C1C', marginBottom: '6px' }}>
