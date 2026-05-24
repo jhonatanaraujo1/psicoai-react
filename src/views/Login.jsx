@@ -16,7 +16,7 @@ export default function Login({ onLogin }) {
 
   const handleDemo = () => {
     setEmail('demo@psicoai.com.br')
-    setPassword('demo123')
+    setPassword('demo1234')
     setError('')
   }
 
