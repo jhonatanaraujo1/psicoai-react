@@ -143,7 +143,8 @@ export default function CanvasSession({
   const [secs, setSecs]               = useState(0)
   const [exporting, setExporting]     = useState(false)
   const [showEndModal, setShowEndModal] = useState(false)
-  const [syncStatus, setSyncStatus]   = useState('idle') // 'idle' | 'saving' | 'saved' | 'error'
+  // syncStatus via DOM ref — sem useState para não re-renderizar o canvas a cada sync
+  const syncLabelRef = useRef(null)
 
   // Excalidraw lazy load
   const [ExcalidrawComp, setExcalidrawComp]   = useState(null)
@@ -221,42 +222,77 @@ export default function CanvasSession({
   // ── Backend autosave — sync periódico a cada 30s ──────────────────────────
   // Redundância crítica: se o localStorage for limpo (Safari ITP, cache clear),
   // o backend tem a última versão conhecida.
-  const syncToBackend = useCallback(async () => {
+  //
+  // PERFORMANCE: usa requestIdleCallback para rodar APENAS quando o browser está
+  // ocioso entre frames. Nunca bloqueia input do usuário ou animação do canvas.
+  // O status de sync vai pro DOM direto via ref — sem setState, sem re-render.
+  const lastElementCountRef = useRef(0)
+
+  const setSyncLabel = useCallback((text, color = 'rgba(255,255,255,0.45)') => {
+    if (syncLabelRef.current) {
+      syncLabelRef.current.textContent = text
+      syncLabelRef.current.style.color = color
+    }
+  }, [])
+
+  const syncToBackend = useCallback(() => {
     const sid = sessionIdRef.current
     const fn  = onAutosaveRef.current
     if (!sid || !fn || !apiRef.current) return
-    try {
-      const elements = apiRef.current.getSceneElements()
-      const canvasTextContent = elements
-        .filter(el => el.type === 'text' && el.text?.trim())
-        .sort((a, b) => a.y - b.y || a.x - b.x)
-        .map(el => el.text.trim())
-        .join('\n') || null
-      const canvasDataJson = JSON.stringify({
-        v: STORAGE_VERSION,
-        savedAt: Date.now(),
-        elements,
-        appState: { viewBackgroundColor: apiRef.current.getAppState().viewBackgroundColor || '#F7F4EF' },
-        files: apiRef.current.getFiles(),
-      })
-      setSyncStatus('saving')
-      await fn(sid, { canvasDataJson, canvasTextContent })
-      setSyncStatus('saved')
-    } catch {
-      setSyncStatus('error')
+
+    // Serialização pesada — roda em idle para não bloquear o canvas
+    const doWork = async () => {
+      try {
+        const elements = apiRef.current?.getSceneElements()
+        if (!elements) return
+
+        // Não sincroniza se nada mudou desde o último sync
+        if (elements.length === lastElementCountRef.current && elements.length === 0) return
+
+        setSyncLabel('Sincronizando…')
+
+        const canvasTextContent = elements
+          .filter(el => el.type === 'text' && el.text?.trim())
+          .sort((a, b) => a.y - b.y || a.x - b.x)
+          .map(el => el.text.trim())
+          .join('\n') || null
+
+        const canvasDataJson = JSON.stringify({
+          v: STORAGE_VERSION,
+          savedAt: Date.now(),
+          elements,
+          appState: { viewBackgroundColor: apiRef.current.getAppState()?.viewBackgroundColor || '#F7F4EF' },
+          files: apiRef.current.getFiles(),
+        })
+
+        await fn(sid, { canvasDataJson, canvasTextContent })
+        lastElementCountRef.current = elements.length
+        setSyncLabel('✓ Salvo')
+        // Apaga o label após 3s para não poluir a UI
+        setTimeout(() => setSyncLabel(''), 3000)
+      } catch {
+        setSyncLabel('Só local', '#F39C12')
+      }
     }
-  }, [])
+
+    if (typeof requestIdleCallback !== 'undefined') {
+      requestIdleCallback(() => doWork(), { timeout: 8000 })
+    } else {
+      // Fallback para Safari que não tem requestIdleCallback
+      setTimeout(doWork, 0)
+    }
+  }, [setSyncLabel])
 
   useEffect(() => {
     if (!isOpen) {
       clearInterval(backendSyncRef.current)
       return
     }
-    // Primeiro sync após 15s (tempo para o sessionId chegar do backend)
+    // Primeiro sync após 20s (tempo para o sessionId chegar do backend)
     const firstSync = setTimeout(() => {
       syncToBackend()
       backendSyncRef.current = setInterval(syncToBackend, BACKEND_AUTOSAVE_INTERVAL_MS)
-    }, 15_000)
+    }, 20_000)
     return () => {
       clearTimeout(firstSync)
       clearInterval(backendSyncRef.current)
@@ -356,28 +392,16 @@ export default function CanvasSession({
             background: 'rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.6)',
             letterSpacing: '0.5px', textTransform: 'uppercase',
           }}>Canvas</span>
-          {/* Sync status */}
-          {!navigator.onLine ? (
-            <span style={{ fontSize: '10px', fontWeight: 600, padding: '2px 8px', borderRadius: '20px', background: 'rgba(243,156,18,0.2)', color: '#F39C12', display: 'flex', alignItems: 'center', gap: '4px' }}>
-              <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#F39C12', display: 'inline-block' }} />
-              Offline — local
+          {/* Sync status — atualizado via DOM ref, sem re-render React */}
+          <span
+            ref={syncLabelRef}
+            style={{ fontSize: '10px', color: 'rgba(255,255,255,0.45)', transition: 'color 0.3s' }}
+          />
+          {!navigator.onLine && (
+            <span style={{ fontSize: '10px', fontWeight: 600, padding: '2px 8px', borderRadius: '20px', background: 'rgba(243,156,18,0.2)', color: '#F39C12' }}>
+              Offline
             </span>
-          ) : syncStatus === 'saving' ? (
-            <span style={{ fontSize: '10px', color: 'rgba(255,255,255,0.45)', display: 'flex', alignItems: 'center', gap: '4px' }}>
-              <span style={{ width: 6, height: 6, border: '1.5px solid rgba(255,255,255,0.3)', borderTopColor: 'rgba(255,255,255,0.8)', borderRadius: '50%', display: 'inline-block', animation: 'spin 0.7s linear infinite' }} />
-              Sincronizando…
-            </span>
-          ) : syncStatus === 'saved' ? (
-            <span style={{ fontSize: '10px', color: 'rgba(255,255,255,0.45)', display: 'flex', alignItems: 'center', gap: '4px' }}>
-              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>
-              Salvo
-            </span>
-          ) : syncStatus === 'error' ? (
-            <span style={{ fontSize: '10px', color: '#F39C12', display: 'flex', alignItems: 'center', gap: '4px' }}>
-              <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#F39C12', display: 'inline-block' }} />
-              Só local
-            </span>
-          ) : null}
+          )}
         </div>
         <div className="cs-timer">{fmt(secs)}</div>
         <button className="cs-end-btn" onClick={() => setShowEndModal(true)}>

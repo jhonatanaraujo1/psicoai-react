@@ -110,11 +110,12 @@ export default function Insights({ onGoToPatient }) {
 
   const totalAlerts = Object.values(data?.alertCount || {}).reduce((a, b) => a + b, 0)
 
-  // Tendência do gráfico em linguagem simples
+  // Tendência do gráfico — linguagem factual, não interpretativa
+  // Mostrar o dado bruto; a interpretação clínica é do psicólogo.
   const firstVal = evolutionData[0]?.value || 0
   const lastVal = evolutionData[evolutionData.length - 1]?.value || 0
   const trend = lastVal > firstVal + 3 ? 'subindo' : lastVal < firstVal - 3 ? 'caindo' : 'estável'
-  const trendText = { subindo: '↑ Tendência de melhora', caindo: '↓ Tendência de queda', estável: '→ Situação estável' }[trend]
+  const trendText = { subindo: '↑ Mais sessões positivas', caindo: '↓ Mais sessões de atenção', estável: '→ Distribuição estável' }[trend]
   const trendColor = { subindo: 'var(--g600)', caindo: 'var(--danger)', estável: 'var(--warn)' }[trend]
 
   return (
@@ -384,7 +385,7 @@ export default function Insights({ onGoToPatient }) {
                 </div>
                 <div style={{ marginTop: '10px', padding: '8px 12px', background: 'var(--ow)', borderRadius: 'var(--r)', border: '1px solid var(--gr2)' }}>
                   <div style={{ fontSize: '11px', color: 'var(--gr5)', lineHeight: 1.5 }}>
-                    <strong style={{ color: 'var(--d)' }}>Como ler:</strong> 100% = evolução máxima registrada. O gráfico mostra a média dos pacientes analisados. Quedas pontuais são normais — o que importa é a tendência geral.
+                    <strong style={{ color: 'var(--d)' }}>Como ler:</strong> Proporção de sessões marcadas como evolução positiva vs. atenção, nos pacientes que você analisou com IA. É um dado descritivo — a interpretação clínica é sempre sua.
                   </div>
                 </div>
               </div>
