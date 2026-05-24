@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
+import '@excalidraw/excalidraw/index.css'
 
 // ── LocalStorage helpers ──────────────────────────────────────────────────────
 const STORAGE_VERSION = 2  // bump quando mudar a estrutura do schema
@@ -117,7 +118,7 @@ async function blobToBase64(blob) {
 let _excalidrawPromise = null
 function loadExcalidraw() {
   if (!_excalidrawPromise) {
-    // @excalidraw/excalidraw v0.17+ embutes o CSS — import separado não é necessário
+    // CSS carregado via import estático no topo (static import evita falha do Rolldown com dynamic import)
     // e causa Rolldown resolution error no Vite 8+
     _excalidrawPromise = import('@excalidraw/excalidraw').then(mod => mod).catch(e => {
       _excalidrawPromise = null
