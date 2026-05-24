@@ -95,11 +95,15 @@ export default function App() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   // ── Patient context ──────────────────────────────────────────────────────
-  // Inicializa do localStorage se havia sessão ativa antes do refresh
+  // Inicializa do localStorage — prioridade: sessão ativa (canvas/text) > quicknote
   const [currentPatient, setCurrentPatient] = useState(() => {
     try {
       const s = JSON.parse(localStorage.getItem('psicoai_active_session') || 'null')
-      return s?.patient || null
+      if (s?.patient) return s.patient
+      // Fallback: quicknote aberto antes do refresh
+      const qn = JSON.parse(localStorage.getItem('psicoai_quicknote_state') || 'null')
+      if (qn?.open && qn?.patientId) return { id: qn.patientId, name: qn.patientName }
+      return null
     } catch { return null }
   })
 
@@ -158,10 +162,43 @@ export default function App() {
   }, [activeSessionId, activeSessionType]) // eslint-disable-line react-hooks/exhaustive-deps
 
 
+  // ── QuickNote persistence — localStorage + URL ?nota=<patientId> ─────────
+  // Mesmo padrão do canvas: sobrevive refresh, fechar aba e redeploy do Vercel.
+  // O rascunho do texto já é persistido por psicoai_quicknote_<id> no próprio modal.
+  useEffect(() => {
+    if (quickNoteOpen && currentPatient?.id) {
+      localStorage.setItem('psicoai_quicknote_state', JSON.stringify({
+        open: true,
+        patientId:   currentPatient.id,
+        patientName: currentPatient.name,
+        savedAt:     Date.now(),
+      }))
+      const params = new URLSearchParams(window.location.search)
+      params.set('nota', currentPatient.id)
+      window.history.replaceState({}, '', `${window.location.pathname}?${params}`)
+    } else {
+      localStorage.removeItem('psicoai_quicknote_state')
+      const params = new URLSearchParams(window.location.search)
+      if (params.has('nota')) {
+        params.delete('nota')
+        const q = params.toString()
+        window.history.replaceState({}, '', q ? `${window.location.pathname}?${q}` : window.location.pathname)
+      }
+    }
+  }, [quickNoteOpen, currentPatient?.id]) // eslint-disable-line react-hooks/exhaustive-deps
+
   // ── Session modals ────────────────────────────────────────────────────────
   const [briefingOpen, setBriefingOpen] = useState(false)
   const [pickerOpen, setPickerOpen] = useState(false)
-  const [quickNoteOpen, setQuickNoteOpen] = useState(false)
+  // Inicializa do localStorage/URL — sobrevive refresh igual ao canvas
+  const [quickNoteOpen, setQuickNoteOpen] = useState(() => {
+    try {
+      const params = new URLSearchParams(window.location.search)
+      if (params.has('nota')) return true
+      const qn = JSON.parse(localStorage.getItem('psicoai_quicknote_state') || 'null')
+      return qn?.open === true && !!qn?.patientId
+    } catch { return false }
+  })
   const [pickerMode, setPickerMode] = useState('live') // 'live' | 'quicknote'
   const [textOpen, setTextOpen] = useState(false)
   // Inicializa do localStorage — sobrevive refresh, deploy do Vercel, fechar aba
