@@ -76,7 +76,9 @@ async function req(method, path, body, opts = {}) {
     } catch {
       clearTokens()
       window.dispatchEvent(new CustomEvent('psicoai:session-expired'))
-      throw new Error('Sessão expirada. Faça login novamente.')
+      // Reload limpo — garante que o usuário vê login sem erro acumulado no estado
+      window.location.replace('/')
+      return // nunca alcançado, evita propagação do throw durante o redirect
     }
   }
 
