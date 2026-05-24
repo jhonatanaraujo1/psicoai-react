@@ -7,6 +7,18 @@
 
 const delay = (ms = 400) => new Promise(r => setTimeout(r, ms + Math.random() * 200))
 
+// ── Clinical data cleanup — chamado no logout e em session-expired ────────────
+// Remove TODOS os dados clínicos do localStorage para não vazar entre usuários.
+// Os dados de canvas e anotações são dados de saúde — não devem persistir após logout.
+export function psicoaiClearClinicalStorage() {
+  const keysToRemove = []
+  for (let i = 0; i < localStorage.length; i++) {
+    const k = localStorage.key(i)
+    if (k && k.startsWith('psicoai_')) keysToRemove.push(k)
+  }
+  keysToRemove.forEach(k => localStorage.removeItem(k))
+}
+
 // ── Auth ──────────────────────────────────────────────────────────────────────
 
 const DEMO_USER = {
@@ -51,8 +63,11 @@ export const auth = {
   },
 
   logout() {
+    // Limpa auth
     localStorage.removeItem('psicoai_token')
     localStorage.removeItem('psicoai_user')
+    // Limpa TODOS os dados clínicos — nunca deixar dado de paciente no browser após logout
+    psicoaiClearClinicalStorage()
   },
 
   getStoredUser() {

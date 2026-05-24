@@ -22,9 +22,13 @@ const setTokens   = (at, rt) => {
   if (rt) localStorage.setItem('psicoai_refresh', rt)
 }
 const clearTokens = () => {
-  localStorage.removeItem('psicoai_token')
-  localStorage.removeItem('psicoai_refresh')
-  localStorage.removeItem('psicoai_user')
+  // Remove auth + TODOS os dados clínicos (canvas, quicknote, session ativa)
+  const keysToRemove = []
+  for (let i = 0; i < localStorage.length; i++) {
+    const k = localStorage.key(i)
+    if (k && k.startsWith('psicoai_')) keysToRemove.push(k)
+  }
+  keysToRemove.forEach(k => localStorage.removeItem(k))
 }
 
 // ── Token refresh (singleton) ─────────────────────────────────────────────────
@@ -100,6 +104,35 @@ const get    = (path, params) => {
 const post   = (path, body) => req('POST', path, body)
 const patch  = (path, body) => req('PATCH', path, body)
 const del    = (path)       => req('DELETE', path)
+
+// ── Blob/file fetch (for PDF download, file download) ────────────────────────
+
+async function reqBlob(method, path) {
+  const url = `${BASE}${path}`
+  const headers = {}
+  const token = getToken()
+  if (token) headers['Authorization'] = `Bearer ${token}`
+  const res = await fetch(url, { method, headers })
+  if (!res.ok) {
+    const text = await res.text().catch(() => '')
+    throw new Error(text || `Erro ${res.status}`)
+  }
+  return res.blob()
+}
+
+async function reqMultipart(method, path, formData) {
+  const url = `${BASE}${path}`
+  const headers = {}
+  const token = getToken()
+  if (token) headers['Authorization'] = `Bearer ${token}`
+  const res = await fetch(url, { method, headers, body: formData })
+  if (!res.ok) {
+    const json = await res.json().catch(() => ({}))
+    throw new Error(json?.message || `Erro ${res.status}`)
+  }
+  if (res.status === 204) return null
+  return res.json()
+}
 
 // ── Normalize backend user → frontend user shape ───────────────────────────────
 
@@ -450,6 +483,77 @@ export const api = {
 
   async sendReport({ channels }) {
     return { success: true, sentAt: new Date().toISOString(), channels }
+  },
+
+  // Anotações — listagem global (backend endpoint a ser implementado)
+  async getRecentAnnotations({ search = '', patientId = '' } = {}) {
+    if (patientId) {
+      // Se tem paciente, usa endpoint existente
+      const res = await get(`/api/v1/patients/${patientId}/sessions`, { page: 0, size: 50 })
+      return (res.content || []).map(s => ({ ...s, patientId }))
+    }
+    return [] // listagem global requer endpoint futuro
+  },
+
+  // Documents
+  async getPatientDocuments(patientId) {
+    return get(`/api/v1/patients/${patientId}/documents`)
+  },
+
+  async uploadDocument(patientId, file, category = 'outros', name = null) {
+    const fd = new FormData()
+    fd.append('file', file)
+    fd.append('category', category)
+    if (name) fd.append('name', name)
+    return reqMultipart('POST', `/api/v1/patients/${patientId}/documents`, fd)
+  },
+
+  async downloadDocument(patientId, docId) {
+    return reqBlob('GET', `/api/v1/patients/${patientId}/documents/${docId}/download`)
+  },
+
+  async deleteDocument(patientId, docId) {
+    return del(`/api/v1/patients/${patientId}/documents/${docId}`)
+  },
+
+  async exportProntuarioPdf(patientId) {
+    return reqBlob('GET', `/api/v1/patients/${patientId}/documents/export/prontuario`)
+  },
+
+  async exportRelatorioPdf(patientId, type = 'encaminhamento') {
+    return reqBlob('GET', `/api/v1/patients/${patientId}/documents/export/relatorio?type=${type}`)
+  },
+
+  // CSV import
+  async importPatients(file) {
+    const fd = new FormData()
+    fd.append('file', file)
+    return reqMultipart('POST', '/api/v1/patients/import', fd)
+  },
+
+  // ── Google OAuth / Calendar / Meet ───────────────────────────────────────
+  async getGoogleStatus() {
+    return get('/api/v1/google/status')
+  },
+
+  async getGoogleAuthUrl() {
+    return get('/api/v1/google/auth-url')
+  },
+
+  async disconnectGoogle() {
+    return del('/api/v1/google/disconnect')
+  },
+
+  async setGoogleCalendarSync(enabled) {
+    return patch('/api/v1/google/calendar-sync', { enabled })
+  },
+
+  async createGoogleMeet(patientName) {
+    return post('/api/v1/google/meet', { patientName })
+  },
+
+  async getGoogleCalendarEvents(from, to) {
+    return get('/api/v1/google/calendar-events', { from, to })
   },
 }
 

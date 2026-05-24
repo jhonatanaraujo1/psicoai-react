@@ -468,6 +468,7 @@ export default function App() {
           sessionId={activeSessionId}
           onClose={handleSessionClose}
           onAnalyze={handleAnalyze}
+          onAutosave={(id, data) => api.autosaveSession?.(id, data)}
           initialCanvasData={canvasInitialData}
         />
         {/* AnalyzeSessionsModal e AiDrawer aparecem após "Analisar com IA" no canvas */}
@@ -545,6 +546,7 @@ export default function App() {
         sessionId={activeSessionId}
         onClose={handleSessionClose}
         onAnalyze={handleAnalyze}
+        onAutosave={(id, data) => api.autosaveSession?.(id, data)}
         initialCanvasData={canvasInitialData}
       />
 
