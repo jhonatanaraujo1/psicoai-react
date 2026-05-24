@@ -575,14 +575,18 @@ body{font-family:'DM Sans',sans-serif;background:var(--ow);color:var(--d);displa
   content:'';position:absolute;top:0;left:25%;right:25%;
   height:2px;background:var(--g500);border-radius:0 0 2px 2px;
 }
-/* ≤640px touch: mostrar bottom-nav, esconder hamburger, padding no conteúdo.
-   640px é o maior celular em portrait (iPhone 15 Pro Max = 430px).
-   pointer:coarse garante que laptops com janela estreita continuem com hamburger. */
-@media(max-width:640px) and (pointer:coarse){
+/* ≤640px: mostrar bottom-nav e dar padding ao conteúdo.
+   640px cobre todos os celulares em portrait (iPhone 15 Pro Max = 430px).
+   Sem pointer:coarse — a condição de largura é suficiente e evita
+   falsos negativos em DevTools/simuladores onde pointer permanece fine. */
+@media(max-width:640px){
   .bottom-nav{display:flex}
-  .hamburger{display:none !important}
   /* Espaço para o bottom-nav não cobrir o conteúdo */
   .content{padding-bottom:calc(56px + env(safe-area-inset-bottom,0px))}
+}
+/* Hamburger some apenas em touch (celular real) — laptop estreito mantém hamburger */
+@media(max-width:640px) and (pointer:coarse){
+  .hamburger{display:none !important}
 }
 
 /* SKELETON */
