@@ -161,7 +161,14 @@ export default function App() {
   const [quickNoteOpen, setQuickNoteOpen] = useState(false)
   const [pickerMode, setPickerMode] = useState('live') // 'live' | 'quicknote'
   const [textOpen, setTextOpen] = useState(false)
-  const [canvasOpen, setCanvasOpen] = useState(false)
+  // Inicializa do localStorage — sobrevive refresh, deploy do Vercel, fechar aba
+  const [canvasOpen, setCanvasOpen] = useState(() => {
+    try {
+      const s = JSON.parse(localStorage.getItem('psicoai_active_session') || 'null')
+      if (!s?.sessionId || s.sessionType !== 'canvas') return false
+      return (Date.now() - (s.startedAt || 0)) < 8 * 3600 * 1000
+    } catch { return false }
+  })
   const [cadastroOpen, setCadastroOpen] = useState(false)
   // Pre-loaded content for reopening a session
   const [textInitialHtml, setTextInitialHtml] = useState('')
@@ -447,6 +454,47 @@ export default function App() {
   // ── Not authenticated ─────────────────────────────────────────────────────
   if (!currentUser) {
     return <Login onLogin={handleLogin} />
+  }
+
+  // ── Canvas full-screen — sem sidebar, sem topbar, sem shell ───────────────
+  // O canvas ocupa 100vw × 100vh. Nada mais renderiza para não vazar
+  // eventos de toque no tablet ou criar problemas de z-index.
+  if (canvasOpen) {
+    return (
+      <>
+        <CanvasSession
+          patient={currentPatient}
+          isOpen={canvasOpen}
+          sessionId={activeSessionId}
+          onClose={handleSessionClose}
+          onAnalyze={handleAnalyze}
+          initialCanvasData={canvasInitialData}
+        />
+        {/* AnalyzeSessionsModal e AiDrawer aparecem após "Analisar com IA" no canvas */}
+        {pendingAnalysis && (
+          <AnalyzeSessionsModal
+            pendingData={pendingAnalysis}
+            patient={currentPatient}
+            currentSessionId={pendingAnalysis.sessionId}
+            onConfirm={handleAnalysisConfirm}
+            onCancel={() => { setPendingAnalysis(null); setCurrentView('paciente') }}
+          />
+        )}
+        <AiDrawer
+          isOpen={aiDrawerOpen}
+          onClose={() => setAiDrawerOpen(false)}
+          onSave={handleSaveAnalysis}
+          onRefine={handleRefine}
+          patient={currentPatient}
+          result={analysisResult}
+          loading={analysisLoading}
+        />
+        <ProgressBar />
+        <ConfirmDialog />
+        <ToastContainer />
+        {paymentRequired && <PaymentModal onLogout={handleLogout} />}
+      </>
+    )
   }
 
   // ── App shell ─────────────────────────────────────────────────────────────
