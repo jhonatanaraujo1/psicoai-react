@@ -48,6 +48,8 @@ function Excerpt({ text, query }) {
 function AnnotationCard({ session, query, onPatientClick, expanded, onToggle }) {
   const hasText = !!session.textContent
   const hasAi = session.hasAnalysis
+  // Canvas badge only when actual canvas data exists — type alone is not enough
+  const hasCanvas = session.type === 'canvas' && !!session.canvasDataJson
 
   return (
     <div
@@ -112,7 +114,7 @@ function AnnotationCard({ session, query, onPatientClick, expanded, onToggle }) 
                 IA
               </span>
             )}
-            {session.type === 'canvas' && (
+            {hasCanvas && (
               <span style={{ fontSize: '10px', fontWeight: 600, color: '#7D3C98', background: '#F0EBF8', border: '1px solid #D7BDE2', padding: '1px 7px', borderRadius: '20px' }}>
                 Canvas
               </span>
@@ -158,7 +160,7 @@ function AnnotationCard({ session, query, onPatientClick, expanded, onToggle }) 
               }}>
                 {session.textContent}
               </div>
-            ) : session.type === 'canvas' ? (
+            ) : hasCanvas ? (
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '14px', background: 'var(--w)', borderRadius: 'var(--r)', border: '1px solid var(--gr2)', color: 'var(--gr5)', fontSize: '13px' }}>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--gr4)" strokeWidth="1.8"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/></svg>
                 Sessão feita no Canvas — clique em "Ir para o paciente" para ver a timeline completa.
