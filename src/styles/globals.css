@@ -804,11 +804,69 @@ body{font-family:'DM Sans',sans-serif;background:var(--ow);color:var(--d);displa
   .topbar{padding:0 16px}
 }
 
-/* ── MODAL SCROLL LOCK quando teclado virtual abre ───────────────────────────
-   Garante que overlays de modal não sofram com resize do viewport              */
+/* ── MODAL SCROLL LOCK ────────────────────────────────────────────────────────
+   Aplicado ao body quando qualquer modal está aberto.
+   overflow:hidden é a única forma confiável de travar scroll no iOS Safari.    */
 .modal-lock{
-  /* Impede que o scroll do conteúdo por baixo "transpasse" o overlay */
+  overflow:hidden;
   overscroll-behavior:none;
-  /* Previne que o overlay se mova com o scroll da página */
   -webkit-overflow-scrolling:auto;
+  /* position:fixed evitaria layout shift no iOS mas causa scroll-to-top —
+     overflow:hidden é suficiente para modais de tela inteira                   */
 }
+
+/* ── QuickNoteModal — classes CSS (N-03: fora do JSX) ────────────────────────
+   M-04: hover/active via CSS, não onMouseEnter/Leave inline (que não funciona
+   de forma confiável em touch)                                                 */
+
+/* Placeholder do contentEditable (N-03: movido da <style> tag inline) */
+[contenteditable][data-placeholder]:empty:before{
+  content:attr(data-placeholder);
+  color:#B0ADA8;
+  pointer-events:none;
+}
+
+/* Botões de ícone (fullscreen, fechar) — M-01: min 44×44 tap target */
+.qnm-icon-btn{
+  display:inline-flex;align-items:center;justify-content:center;
+  min-width:44px;min-height:44px;
+  background:none;border:none;cursor:pointer;
+  color:var(--gr4);border-radius:8px;
+  transition:color 0.15s,background 0.15s;
+  touch-action:manipulation;
+  -webkit-tap-highlight-color:transparent;
+}
+.qnm-icon-btn:hover{color:var(--d);background:var(--gr1)}
+.qnm-icon-btn:active{color:var(--d);background:var(--gr2)}
+
+/* Botão "Usar canvas" — M-01: min-height 44px, N-05: label some em telas < 400px */
+.qnm-canvas-btn{
+  display:inline-flex;align-items:center;gap:6px;
+  min-height:44px;padding:0 12px;border-radius:8px;
+  border:1.5px solid var(--gr2);background:var(--w);
+  color:var(--d2);font-size:12px;font-weight:500;
+  cursor:pointer;font-family:'DM Sans',sans-serif;
+  transition:background 0.15s,border-color 0.15s,color 0.15s;
+  touch-action:manipulation;
+  -webkit-tap-highlight-color:transparent;
+  white-space:nowrap;
+}
+.qnm-canvas-btn:hover{background:var(--g50);border-color:var(--g300);color:var(--g700)}
+.qnm-canvas-btn:active{background:var(--g100);border-color:var(--g400)}
+/* N-05: em telas muito estreitas esconde o texto, mantém só o ícone */
+@media(max-width:400px){.qnm-canvas-label{display:none}}
+
+/* Chips de guia — M-01: min-height 40px (44 ideal, 40 tolerável com padding) */
+.qnm-chip{
+  display:inline-flex;align-items:center;gap:5px;
+  min-height:40px;padding:0 12px;
+  background:var(--w);border:1px solid var(--gr2);
+  border-radius:20px;font-size:11.5px;color:var(--d2);
+  cursor:pointer;font-family:'DM Sans',sans-serif;
+  transition:background 0.12s,border-color 0.12s;
+  touch-action:manipulation;
+  -webkit-tap-highlight-color:transparent;
+  white-space:nowrap;
+}
+.qnm-chip:hover{background:var(--g50);border-color:var(--g200)}
+.qnm-chip:active{background:var(--g100)}
