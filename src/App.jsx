@@ -415,7 +415,7 @@ export default function App() {
       case 'pacientes':   return <Pacientes setCurrentView={handleSetView} onNovoCadastro={() => setCadastroOpen(true)} />
       case 'paciente':    return <Paciente patient={currentPatient} setCurrentView={handleSetView} onSessao={() => setBriefingOpen(true)} onQuickNote={() => setQuickNoteOpen(true)} onReopenSession={handleReopenSession} />
       case 'agenda':      return <Agenda currentUser={currentUser} />
-      case 'insights':    return <Insights />
+      case 'insights':    return <Insights onGoToPatient={(patient) => handleSetView('paciente', patient)} />
       case 'financeiro':  return <Financeiro />
       case 'lembretes':   return <Lembretes />
       case 'formularios': return <Formularios />

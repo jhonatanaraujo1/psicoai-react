@@ -66,7 +66,7 @@ function Tip({ text }) {
   )
 }
 
-export default function Insights() {
+export default function Insights({ onGoToPatient }) {
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [drawerOpen, setDrawerOpen] = useState(false)
@@ -97,7 +97,10 @@ export default function Insights() {
 
   const handleDrawerSave = (result) => {
     if (!result || result.error) return
-    showToast(`Análise salva no prontuário de ${drawerPatient?.name || 'paciente'}`, 'success')
+    setDrawerOpen(false)
+    if (drawerPatient && onGoToPatient) {
+      onGoToPatient({ id: drawerPatient.id, name: drawerPatient.name })
+    }
   }
 
   const coveragePct = data?.coveragePercent ?? 0
