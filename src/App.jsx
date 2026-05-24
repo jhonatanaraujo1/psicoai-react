@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, lazy, Suspense } from 'react'
 import './styles/globals.css'
 
 import { auth, api } from './services'
@@ -10,6 +10,7 @@ import PaymentModal from './components/PaymentModal'
 
 import Sidebar from './components/Sidebar'
 import Topbar from './components/Topbar'
+import BottomNav from './components/BottomNav'
 import AiDrawer from './components/AiDrawer'
 import PreSessionBriefing from './components/PreSessionBriefing'
 import PatientPicker from './components/PatientPicker'
@@ -21,7 +22,8 @@ import Login from './views/Login'
 import Dashboard from './views/Dashboard'
 import Pacientes from './views/Pacientes'
 import Paciente from './views/Paciente'
-import CanvasSession from './views/CanvasSession'
+// Lazy: excalidraw é ~1.8MB — só carrega quando o canvas é aberto
+const CanvasSession = lazy(() => import('./views/CanvasSession'))
 import TextSession from './views/TextSession'
 import Agenda from './views/Agenda'
 import Insights from './views/Insights'
@@ -462,15 +464,22 @@ export default function App() {
   if (canvasOpen) {
     return (
       <>
-        <CanvasSession
-          patient={currentPatient}
-          isOpen={canvasOpen}
-          sessionId={activeSessionId}
-          onClose={handleSessionClose}
-          onAnalyze={handleAnalyze}
-          onAutosave={(id, data) => api.autosaveSession?.(id, data)}
-          initialCanvasData={canvasInitialData}
-        />
+        <Suspense fallback={
+          <div style={{ position: 'fixed', inset: 0, background: '#F7F4EF', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '12px', fontSize: '14px', color: '#8B8B8B' }}>
+            <span style={{ width: 24, height: 24, border: '2px solid #E8E5E0', borderTopColor: '#4A7C59', borderRadius: '50%', display: 'inline-block', animation: 'spin 0.8s linear infinite' }} />
+            Carregando canvas...
+          </div>
+        }>
+          <CanvasSession
+            patient={currentPatient}
+            isOpen={canvasOpen}
+            sessionId={activeSessionId}
+            onClose={handleSessionClose}
+            onAnalyze={handleAnalyze}
+            onAutosave={(id, data) => api.autosaveSession?.(id, data)}
+            initialCanvasData={canvasInitialData}
+          />
+        </Suspense>
         {/* AnalyzeSessionsModal e AiDrawer aparecem após "Analisar com IA" no canvas */}
         {pendingAnalysis && (
           <AnalyzeSessionsModal
@@ -529,6 +538,14 @@ export default function App() {
         <div className="content">{renderView()}</div>
       </div>
 
+      {/* Bottom navigation — visível em ≤768px, substitui o hamburger no celular */}
+      <BottomNav
+        currentView={currentView}
+        setCurrentView={handleSetView}
+        onMorePress={() => setSidebarOpen(true)}
+        sessionInBackground={sessionInBackground}
+      />
+
       {/* Sessions */}
       <TextSession
         patient={currentPatient}
@@ -540,15 +557,17 @@ export default function App() {
         initialHtml={textInitialHtml}
       />
 
-      <CanvasSession
-        patient={currentPatient}
-        isOpen={canvasOpen}
-        sessionId={activeSessionId}
-        onClose={handleSessionClose}
-        onAnalyze={handleAnalyze}
-        onAutosave={(id, data) => api.autosaveSession?.(id, data)}
-        initialCanvasData={canvasInitialData}
-      />
+      <Suspense fallback={null}>
+        <CanvasSession
+          patient={currentPatient}
+          isOpen={canvasOpen}
+          sessionId={activeSessionId}
+          onClose={handleSessionClose}
+          onAnalyze={handleAnalyze}
+          onAutosave={(id, data) => api.autosaveSession?.(id, data)}
+          initialCanvasData={canvasInitialData}
+        />
+      </Suspense>
 
       {/* Pickers & modals */}
       <PatientPicker

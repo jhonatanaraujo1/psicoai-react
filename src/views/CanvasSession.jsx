@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { Excalidraw, MainMenu, exportToBlob } from '@excalidraw/excalidraw'
 import '@excalidraw/excalidraw/index.css'
 
 // ── LocalStorage helpers ──────────────────────────────────────────────────────
@@ -114,20 +115,6 @@ async function blobToBase64(blob) {
   })
 }
 
-// ── Lazy-loaded Excalidraw (avoids tldraw entirely) ───────────────────────────
-let _excalidrawPromise = null
-function loadExcalidraw() {
-  if (!_excalidrawPromise) {
-    // CSS carregado via import estático no topo (static import evita falha do Rolldown com dynamic import)
-    // e causa Rolldown resolution error no Vite 8+
-    _excalidrawPromise = import('@excalidraw/excalidraw').then(mod => mod).catch(e => {
-      _excalidrawPromise = null
-      throw e
-    })
-  }
-  return _excalidrawPromise
-}
-
 // ── Main component ────────────────────────────────────────────────────────────
 const BACKEND_AUTOSAVE_INTERVAL_MS = 30_000  // sync pro backend a cada 30s
 
@@ -146,13 +133,8 @@ export default function CanvasSession({
   // syncStatus via DOM ref — sem useState para não re-renderizar o canvas a cada sync
   const syncLabelRef = useRef(null)
 
-  // Excalidraw lazy load
-  const [ExcalidrawComp, setExcalidrawComp]   = useState(null)
-  const [MainMenuComp, setMainMenuComp]       = useState(null)
-  const [exportToBlobFn, setExportToBlobFn]   = useState(null)
-  const [canvasReady, setCanvasReady]         = useState(false)
-
   // Canvas state
+  const [canvasReady, setCanvasReady] = useState(false)
   const [initialData, setInitialData] = useState(null)
   const apiRef           = useRef(null)
   const saveTimerRef     = useRef(null)
@@ -166,15 +148,6 @@ export default function CanvasSession({
   useEffect(() => { sessionIdRef.current  = sessionId },   [sessionId])
   useEffect(() => { patientIdRef.current  = patient?.id }, [patient?.id])
   useEffect(() => { onAutosaveRef.current = onAutosave },  [onAutosave])
-
-  // Load Excalidraw once
-  useEffect(() => {
-    loadExcalidraw().then(mod => {
-      setExcalidrawComp(() => mod.Excalidraw)
-      setExportToBlobFn(() => mod.exportToBlob)
-      if (mod.MainMenu) setMainMenuComp(() => mod.MainMenu)
-    }).catch(e => console.error('[PsicoAI] Failed to load Excalidraw:', e))
-  }, [])
 
   // When session opens: load saved state and start timer
   useEffect(() => {
@@ -341,7 +314,7 @@ export default function CanvasSession({
         }
 
         if (elements.length > 0) {
-          const blob = await exportToBlobFn({
+          const blob = await exportToBlob({
             elements,
             mimeType: 'image/png',
             appState: { ...appState, exportWithDarkMode: false, exportBackground: true },
@@ -411,41 +384,38 @@ export default function CanvasSession({
 
       {/* Canvas area */}
       <div style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
-        {!ExcalidrawComp ? (
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', gap: '12px', fontSize: '14px', color: 'var(--gr4)', flexDirection: 'column' }}>
+        {!canvasReady && (
+          <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px', fontSize: '14px', color: 'var(--gr4)', flexDirection: 'column', background: '#F7F4EF', zIndex: 2 }}>
             <span style={{ width: 24, height: 24, border: '2px solid var(--gr2)', borderTopColor: 'var(--g500)', borderRadius: '50%', display: 'inline-block', animation: 'spin 0.8s linear infinite' }} />
             Carregando canvas...
           </div>
-        ) : (
-          <ExcalidrawComp
-            key={`exc-${patient?.id || 'x'}-${sessionId || 'draft'}`}
-            initialData={initialData || undefined}
-            excalidrawAPI={(api) => {
-              apiRef.current = api
-              if (!canvasReady) setCanvasReady(true)
-            }}
-            onChange={handleChange}
-            langCode="pt-BR"
-            theme="light"
-            UIOptions={{
-              canvasActions: {
-                changeViewBackgroundColor: false,
-                export: { saveFileToDisk: false },
-                loadScene: false,
-              },
-              tools: { image: false },
-            }}
-          >
-            {/* Menu customizado — remove links do Excalidraw (GitHub, Discord, X) */}
-            {MainMenuComp && (
-              <MainMenuComp>
-                <MainMenuComp.DefaultItems.ClearCanvas />
-                <MainMenuComp.DefaultItems.SaveAsImage />
-                <MainMenuComp.DefaultItems.Help />
-              </MainMenuComp>
-            )}
-          </ExcalidrawComp>
         )}
+        <Excalidraw
+          key={`exc-${patient?.id || 'x'}-${sessionId || 'draft'}`}
+          initialData={initialData || undefined}
+          excalidrawAPI={(api) => {
+            apiRef.current = api
+            setCanvasReady(true)
+          }}
+          onChange={handleChange}
+          langCode="pt-BR"
+          theme="light"
+          UIOptions={{
+            canvasActions: {
+              changeViewBackgroundColor: false,
+              export: { saveFileToDisk: false },
+              loadScene: false,
+            },
+            tools: { image: false },
+          }}
+        >
+          {/* Menu customizado — remove links do Excalidraw (GitHub, Discord, X) */}
+          <MainMenu>
+            <MainMenu.DefaultItems.ClearCanvas />
+            <MainMenu.DefaultItems.SaveAsImage />
+            <MainMenu.DefaultItems.Help />
+          </MainMenu>
+        </Excalidraw>
 
         {/* Auto-save indicator */}
         {canvasReady && (
