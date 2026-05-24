@@ -139,9 +139,10 @@ export default function AiDrawer({ isOpen, onClose, onSave, patient, result, loa
           {/* RESULTADO */}
           {!loading && result && !result.error && (
             <div>
-              {/* Aviso ético */}
-              <div style={{ background: 'var(--warn-l)', border: '1px solid #F0D08A', borderRadius: 'var(--r)', padding: '10px 12px', marginBottom: '14px', fontSize: '11px', color: 'var(--warn)', lineHeight: 1.5 }}>
-                ⚠ Análise de suporte clínico gerada por IA. O diagnóstico é responsabilidade exclusiva do psicólogo.
+              {/* Aviso ético — obrigatório CFP 09/2024 */}
+              <div style={{ background: 'var(--warn-l)', border: '1px solid #F0D08A', borderRadius: 'var(--r)', padding: '10px 14px', marginBottom: '14px', fontSize: '11px', color: '#7D5A00', lineHeight: 1.6 }}>
+                <strong style={{ display: 'block', marginBottom: '2px' }}>⚠ Suporte ao raciocínio clínico — não é diagnóstico</strong>
+                Esta análise foi gerada por IA com base nas suas anotações. O diagnóstico é responsabilidade exclusiva do psicólogo. Conforme Resolução CFP 09/2024, toda interpretação clínica requer julgamento profissional qualificado.
               </div>
 
               {/* Meta */}
@@ -422,6 +423,19 @@ export default function AiDrawer({ isOpen, onClose, onSave, patient, result, loa
               )}
             </div>
           )}
+        </div>
+
+        {/* Rodapé legal — sempre visível, independente do estado */}
+        <div style={{
+          padding: '10px 20px',
+          borderTop: '1px solid var(--gr1)',
+          background: 'var(--ow)',
+          fontSize: '10px',
+          color: 'var(--gr4)',
+          lineHeight: 1.5,
+          flexShrink: 0,
+        }}>
+          PsicoAI não realiza diagnósticos. Esta análise é um instrumento de apoio ao raciocínio clínico do psicólogo e não substitui avaliação profissional presencial. Conforme Resolução CFP 09/2024.
         </div>
       </div>
     </>

@@ -7,6 +7,7 @@ import ProgressBar, { startProgress, finishProgress, failProgress } from './comp
 import ConfirmDialog, { confirm } from './components/ConfirmDialog'
 import OnboardingTour from './components/OnboardingTour'
 import PaymentModal from './components/PaymentModal'
+import LgpdBanner from './components/LgpdBanner'
 
 import Sidebar from './components/Sidebar'
 import Topbar from './components/Topbar'
@@ -640,6 +641,9 @@ export default function App() {
 
       {/* Bloqueio por inadimplência — modal de planos com promoção de retomada */}
       {paymentRequired && <PaymentModal onLogout={handleLogout} />}
+
+      {/* Banner LGPD — aparece uma vez, salvo em localStorage */}
+      <LgpdBanner />
     </>
   )
 }
