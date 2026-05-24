@@ -114,7 +114,7 @@ const SLIDES = [
         <line x1="2" y1="20" x2="22" y2="20"/>
       </svg>
     ),
-    badge: 'Insights Clínicos',
+    badge: 'Inteligência Clínica',
     title: 'Inteligência da sua carteira inteira',
     desc: 'A seção Inteligência Clínica agrega as análises de todos os pacientes e revela padrões da sua prática: hipóteses mais frequentes, alertas ativos, cobertura de análise e evolução geral.',
     bullets: [
@@ -309,7 +309,7 @@ export default function OnboardingTour({ isOpen, onClose }) {
           {/* "Não mostrar" link */}
           <button onClick={() => dismiss(true)}
             style={{ fontSize: '12px', color: 'var(--gr4)', background: 'none', border: 'none', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", padding: 0, flex: 1, textAlign: 'left', textDecoration: 'underline', textDecorationColor: 'var(--gr3)' }}>
-            Não mostrar novamente
+            Não exibir este guia novamente
           </button>
 
           {/* Nav buttons */}
@@ -319,7 +319,7 @@ export default function OnboardingTour({ isOpen, onClose }) {
                 style={{ padding: '10px 16px', border: '1px solid var(--gr2)', borderRadius: 'var(--r)', background: 'var(--w)', fontSize: '13px', fontWeight: 500, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", color: 'var(--gr5)', transition: 'all 0.15s' }}
                 onMouseOver={e => { e.currentTarget.style.borderColor = 'var(--g300)'; e.currentTarget.style.color = 'var(--g600)' }}
                 onMouseOut={e => { e.currentTarget.style.borderColor = 'var(--gr2)'; e.currentTarget.style.color = 'var(--gr5)' }}>
-                ← Anterior
+                Anterior
               </button>
             )}
             {isLast ? (
@@ -327,7 +327,7 @@ export default function OnboardingTour({ isOpen, onClose }) {
                 style={{ padding: '10px 22px', border: 'none', borderRadius: 'var(--r)', background: 'var(--g600)', color: '#fff', fontSize: '13px', fontWeight: 600, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", transition: 'background 0.15s', display: 'flex', alignItems: 'center', gap: '6px' }}
                 onMouseOver={e => e.currentTarget.style.background = 'var(--g700)'}
                 onMouseOut={e => e.currentTarget.style.background = 'var(--g600)'}>
-                Começar a usar
+                Começar a usar o PsicoAI
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
               </button>
             ) : (
@@ -335,7 +335,7 @@ export default function OnboardingTour({ isOpen, onClose }) {
                 style={{ padding: '10px 22px', border: 'none', borderRadius: 'var(--r)', background: 'var(--g600)', color: '#fff', fontSize: '13px', fontWeight: 600, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", transition: 'background 0.15s' }}
                 onMouseOver={e => e.currentTarget.style.background = 'var(--g700)'}
                 onMouseOut={e => e.currentTarget.style.background = 'var(--g600)'}>
-                Próximo →
+                Próximo
               </button>
             )}
           </div>

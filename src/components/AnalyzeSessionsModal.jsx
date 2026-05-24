@@ -12,6 +12,40 @@ function fmtDuration(secs) {
   return `${m} min`
 }
 
+// ── Precificação dinâmica por volume ─────────────────────────────────────────
+const CHARS_PER_PAGE = 1500  // ~250 palavras de texto clínico em PT-BR
+const CANVAS_DEFAULT_PAGES = 3  // canvas sem texto estimado em 3 páginas
+
+function estimatePages(session) {
+  const text = session?.textContent || session?.htmlContent || ''
+  if (!text && session?.imageBase64) return CANVAS_DEFAULT_PAGES
+  if (!text) return 1
+  return Math.max(1, Math.ceil(text.replace(/<[^>]+>/g, '').length / CHARS_PER_PAGE))
+}
+
+function estimatePagesFromPending(pending) {
+  const text = pending?.textContent || ''
+  if (!text && pending?.imageBase64) return CANVAS_DEFAULT_PAGES
+  if (!text) return 1
+  return Math.max(1, Math.ceil(text.length / CHARS_PER_PAGE))
+}
+
+function calcPrice(totalPages) {
+  if (totalPages <= 30)  return { price: 4.90,  tier: 'base',    color: 'var(--g600)',  label: null }
+  if (totalPages <= 60)  return { price: 9.90,  tier: 'medio',   color: 'var(--warn)',  label: '+R$5,00 · volume médio' }
+  if (totalPages <= 100) return { price: 19.90, tier: 'alto',    color: '#E67E22',      label: '+R$15,00 · volume alto' }
+  const extraBlocks = Math.ceil((totalPages - 100) / 10)
+  const price = +(19.90 + extraBlocks * 2.90).toFixed(2)
+  return { price, tier: 'muito-alto', color: 'var(--danger)', label: `+R$${(price - 4.90).toFixed(2).replace('.', ',')} · volume extenso` }
+}
+
+function pageBarColor(totalPages) {
+  if (totalPages <= 30)  return 'var(--g500)'
+  if (totalPages <= 60)  return 'var(--warn)'
+  if (totalPages <= 100) return '#E67E22'
+  return 'var(--danger)'
+}
+
 const TEMPLATES = [
   {
     id: 'reflexao_clinica',
@@ -104,11 +138,22 @@ export default function AnalyzeSessionsModal({ pendingData, patient, currentSess
     : null
   const currentPreview = pendingData?.textContent?.slice(0, 100) || null
 
+  // ── Cálculo de volume e preço ────────────────────────────────────────────
+  const currentPages = estimatePagesFromPending(pendingData)
+  const selectedPages = pastSessions
+    .filter(s => selected.has(s.id))
+    .reduce((sum, s) => sum + estimatePages(s), 0)
+  const totalPages = currentPages + selectedPages
+  const pricing = calcPrice(totalPages)
+  const barPct = Math.min(100, (totalPages / 120) * 100)
+
   const handleConfirm = () => {
     onConfirm({
       ...pendingData,
       additionalSessionIds: [...selected],
       template: selectedTemplate,
+      estimatedPages: totalPages,
+      analysisPrice: pricing.price,
     })
   }
 
@@ -132,10 +177,10 @@ export default function AnalyzeSessionsModal({ pendingData, patient, currentSess
         {/* Header */}
         <div style={{ background: 'var(--g700)', padding: '20px 24px', flexShrink: 0 }}>
           <div style={{ fontFamily: "'Fraunces', serif", fontSize: '18px', color: '#fff', fontWeight: 400, marginBottom: '3px' }}>
-            Gerar reflexão clínica
+            Análise clínica com IA
           </div>
           <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.55)' }}>
-            {patientName} · A IA organiza o que você já observou — a inteligência é sua
+            {patientName} · Escolha o foco da análise e as sessões a incluir
           </div>
         </div>
 
@@ -145,7 +190,7 @@ export default function AnalyzeSessionsModal({ pendingData, patient, currentSess
           {/* ── Template selector ─────────────────────────────────────────── */}
           <div style={{ marginBottom: '18px' }}>
             <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.8px', textTransform: 'uppercase', color: 'var(--gr4)', marginBottom: '8px' }}>
-              Tipo de análise
+              Foco da análise
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
               {TEMPLATES.map(tpl => {
@@ -191,7 +236,7 @@ export default function AnalyzeSessionsModal({ pendingData, patient, currentSess
           {/* ── Sessão atual — sempre incluída ───────────────────────────── */}
           <div style={{ marginBottom: '16px' }}>
             <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.8px', textTransform: 'uppercase', color: 'var(--gr4)', marginBottom: '8px' }}>
-              Sessão atual — incluída
+              Sessão atual — sempre incluída
             </div>
             <div style={{
               border: '2px solid var(--g400)', borderRadius: 'var(--r2)',
@@ -231,7 +276,7 @@ export default function AnalyzeSessionsModal({ pendingData, patient, currentSess
               )}
               {!currentPreview && !pendingData?.imageBase64 && (
                 <div style={{ fontSize: '11px', color: 'var(--warn)', paddingLeft: '26px' }}>
-                  ⚠ Sessão sem anotações — adicione conteúdo para uma análise mais rica
+                  Sessão sem anotações — feche e registre as notas antes de analisar para obter um resultado mais preciso
                 </div>
               )}
             </div>
@@ -256,10 +301,10 @@ export default function AnalyzeSessionsModal({ pendingData, patient, currentSess
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--g600)" strokeWidth="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
                   <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--d)' }}>
-                    Incluir sessões anteriores
+                    Adicionar sessões anteriores
                   </span>
                   <span style={{ fontSize: '10px', color: 'var(--g600)', background: 'var(--g50)', padding: '1px 7px', borderRadius: '20px', fontWeight: 600 }}>
-                    opcional · análise longitudinal
+                    opcional · revela padrões ao longo do tempo
                   </span>
                 </div>
                 <svg
@@ -272,7 +317,7 @@ export default function AnalyzeSessionsModal({ pendingData, patient, currentSess
 
               {expanded && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                  {pastSessions.slice(0, 5).map(s => {
+                  {pastSessions.slice(0, 10).map(s => {
                     const isSelected = selected.has(s.id)
                     return (
                       <button
@@ -311,11 +356,9 @@ export default function AnalyzeSessionsModal({ pendingData, patient, currentSess
                                 {fmtDuration(s.durationSeconds)}
                               </span>
                             )}
-                            {s.wordCount > 0 && (
-                              <span style={{ fontSize: '10px', color: 'var(--gr5)' }}>
-                                · {s.wordCount} palavras
-                              </span>
-                            )}
+                            <span style={{ fontSize: '10px', color: isSelected ? 'var(--g600)' : 'var(--gr4)', background: isSelected ? 'var(--g100)' : 'transparent', padding: '1px 5px', borderRadius: '10px', fontWeight: isSelected ? 600 : 400 }}>
+                              ~{estimatePages(s)} pág
+                            </span>
                             {s.hasAnalysis && (
                               <span style={{ fontSize: '10px', color: 'var(--g600)', background: 'var(--g50)', padding: '1px 6px', borderRadius: '20px', fontWeight: 600 }}>
                                 ✓ analisada
@@ -332,9 +375,9 @@ export default function AnalyzeSessionsModal({ pendingData, patient, currentSess
                     )
                   })}
 
-                  {pastSessions.length > 5 && (
+                  {pastSessions.length > 10 && (
                     <div style={{ fontSize: '11px', color: 'var(--gr4)', textAlign: 'center', padding: '4px' }}>
-                      + {pastSessions.length - 5} sessões mais antigas não exibidas (máx 5 por análise)
+                      + {pastSessions.length - 10} sessões mais antigas não exibidas
                     </div>
                   )}
                 </div>
@@ -344,25 +387,84 @@ export default function AnalyzeSessionsModal({ pendingData, patient, currentSess
 
           {!loading && pastSessions.length === 0 && (
             <div style={{ fontSize: '12px', color: 'var(--gr5)', textAlign: 'center', padding: '8px', background: 'var(--ow)', borderRadius: 'var(--r)' }}>
-              Sem sessões anteriores registradas para este paciente
+              Nenhuma sessão anterior concluída para este paciente
             </div>
           )}
 
           {loading && (
             <div style={{ fontSize: '12px', color: 'var(--gr4)', padding: '8px', textAlign: 'center' }}>
-              Carregando sessões anteriores…
+              Carregando histórico de sessões…
             </div>
           )}
         </div>
 
         {/* Footer */}
         <div style={{ padding: '16px 24px', borderTop: '1px solid var(--gr1)', background: 'var(--w)', flexShrink: 0 }}>
-          {/* hint longitudinal */}
-          {selected.size > 0 && (
-            <div style={{ fontSize: '11px', color: 'var(--g700)', background: 'var(--g50)', border: '1px solid var(--g100)', borderRadius: '6px', padding: '8px 12px', marginBottom: '12px', lineHeight: 1.5 }}>
-              ✦ Análise longitudinal: a IA vai identificar padrões <strong>entre {totalSelected} sessões</strong> e como o paciente evoluiu ao longo do tempo.
+
+          {/* Volume meter */}
+          <div style={{ marginBottom: '12px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '5px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span style={{ fontSize: '10px', fontWeight: 700, color: 'var(--gr4)', letterSpacing: '0.6px', textTransform: 'uppercase' }}>
+                  Volume de conteúdo
+                </span>
+                <span style={{ fontSize: '11px', color: pageBarColor(totalPages), fontWeight: 600 }}>
+                  ~{totalPages} {totalPages === 1 ? 'página' : 'páginas'}
+                </span>
+              </div>
+              <span style={{ fontSize: '10px', color: 'var(--gr4)' }}>
+                {totalPages <= 30 ? 'volume padrão' : totalPages <= 60 ? 'volume médio' : totalPages <= 100 ? 'volume alto' : 'volume extenso'}
+              </span>
             </div>
-          )}
+
+            {/* Barra de volume */}
+            <div style={{ height: '4px', background: 'var(--gr1)', borderRadius: '2px', overflow: 'hidden' }}>
+              <div style={{
+                height: '100%', borderRadius: '2px',
+                width: `${barPct}%`,
+                background: pageBarColor(totalPages),
+                transition: 'width 0.3s, background 0.3s',
+              }} />
+            </div>
+
+            {/* Régua de tiers */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '3px' }}>
+              <span style={{ fontSize: '9px', color: 'var(--gr3)' }}>1</span>
+              <span style={{ fontSize: '9px', color: totalPages > 30 ? 'var(--warn)' : 'var(--gr3)' }}>30 pág</span>
+              <span style={{ fontSize: '9px', color: totalPages > 60 ? '#E67E22' : 'var(--gr3)' }}>60 pág</span>
+              <span style={{ fontSize: '9px', color: totalPages > 100 ? 'var(--danger)' : 'var(--gr3)' }}>100+ pág</span>
+            </div>
+
+            {/* Alerta de volume alto → direciona para upgrade */}
+            {pricing.tier !== 'base' && (
+              <div style={{
+                marginTop: '6px', fontSize: '11px', color: pricing.color,
+                background: pricing.tier === 'muito-alto' ? 'var(--danger-l)' : pricing.tier === 'alto' ? '#FEF0E7' : 'var(--warn-l)',
+                border: `1px solid ${pricing.tier === 'muito-alto' ? '#F4C5C5' : pricing.tier === 'alto' ? '#FAD7A0' : '#F0D08A'}`,
+                borderRadius: '6px', padding: '8px 12px', lineHeight: 1.5,
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px',
+              }}>
+                <span>
+                  {pricing.tier === 'muito-alto'
+                    ? '⚠ Volume muito extenso — considere selecionar menos sessões ou fazer upgrade'
+                    : pricing.tier === 'alto'
+                    ? '⚠ Volume alto — pacotes de análise disponíveis nos planos'
+                    : '↑ Volume médio — analise com mais sessões em planos superiores'}
+                </span>
+                <a href="#planos" onClick={e => { e.preventDefault(); window.open('/#precos', '_blank') }}
+                  style={{ fontSize: '11px', fontWeight: 700, color: pricing.color, textDecoration: 'none', whiteSpace: 'nowrap', borderBottom: `1px solid ${pricing.color}` }}>
+                  Ver planos →
+                </a>
+              </div>
+            )}
+
+            {/* Hint longitudinal */}
+            {selected.size > 0 && !pricing.label && (
+              <div style={{ marginTop: '6px', fontSize: '11px', color: 'var(--g700)', background: 'var(--g50)', border: '1px solid var(--g100)', borderRadius: '6px', padding: '6px 10px', lineHeight: 1.4 }}>
+                ✦ Análise longitudinal: padrões <strong>entre {totalSelected} sessões</strong> detectados
+              </div>
+            )}
+          </div>
 
           <div style={{ display: 'flex', gap: '8px' }}>
             <button
@@ -375,7 +477,7 @@ export default function AnalyzeSessionsModal({ pendingData, patient, currentSess
               onClick={handleConfirm}
               style={{
                 flex: 1, padding: '11px', border: 'none', borderRadius: 'var(--r)',
-                background: currentTpl.color === 'var(--danger)' ? 'var(--danger)' : 'var(--g500)',
+                background: pricing.tier === 'muito-alto' ? 'var(--danger)' : currentTpl.color === 'var(--danger)' ? 'var(--danger)' : 'var(--g500)',
                 color: '#fff',
                 fontSize: '13px', fontWeight: 700, cursor: 'pointer',
                 fontFamily: "'DM Sans', sans-serif",
@@ -386,8 +488,12 @@ export default function AnalyzeSessionsModal({ pendingData, patient, currentSess
               onMouseOut={e => e.currentTarget.style.opacity = '1'}
             >
               <span style={{ fontSize: '13px' }}>{currentTpl.icon}</span>
-              {currentTpl.label} · {totalSelected} {totalSelected === 1 ? 'sessão' : 'sessões'}
+              Gerar análise: {currentTpl.label} · {totalSelected} {totalSelected === 1 ? 'sessão' : 'sessões'}
             </button>
+          </div>
+
+          <div style={{ marginTop: '8px', fontSize: '10px', color: 'var(--gr4)', textAlign: 'center', lineHeight: 1.4 }}>
+            Análise incluída no plano · volumes acima de 30 páginas podem gerar custo adicional
           </div>
         </div>
       </div>

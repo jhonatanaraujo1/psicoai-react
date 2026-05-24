@@ -22,7 +22,9 @@ export default function Login({ onLogin }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    if (!email || !password) { setError('Preencha e-mail e senha.'); return }
+    if (!email && !password) { setError('Informe seu e-mail e senha para continuar.'); return }
+    if (!email) { setError('Informe seu e-mail profissional.'); return }
+    if (!password) { setError('Informe sua senha.'); return }
     setLoading(true)
     setError('')
     try {
@@ -78,15 +80,15 @@ export default function Login({ onLogin }) {
         <div className="login-form-wrap">
           <div className="login-form-header">
             <h2>Entrar na plataforma</h2>
-            <p>Acesse seu prontuário e assistente clínico</p>
+            <p>Acesse seu prontuário e o assistente clínico</p>
           </div>
 
           {/* Demo CTA */}
           <button type="button" className="login-demo-btn" onClick={handleDemo}>
             <span className="login-demo-icon">▶</span>
             <div>
-              <div className="login-demo-label">Ver demo sem cadastro</div>
-              <div className="login-demo-sub">demo@psicoai.com.br · demo123</div>
+              <div className="login-demo-label">Experimentar sem cadastro</div>
+              <div className="login-demo-sub">Credenciais de demonstração já preenchidas</div>
             </div>
           </button>
 
@@ -145,7 +147,7 @@ export default function Login({ onLogin }) {
 
           <p className="login-register-hint">
             Ainda não tem conta?{' '}
-            <a href="#" onClick={e => { e.preventDefault(); setMode('register') }}>Criar conta grátis — 14 dias →</a>
+            <a href="#" onClick={e => { e.preventDefault(); setMode('register') }}>Criar conta — 14 dias grátis →</a>
           </p>
 
           <div className="login-footer-note">

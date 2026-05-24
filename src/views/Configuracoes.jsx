@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { api } from '../services'
+import { showToast } from '../components/Toast'
 
 const ABORDAGENS = ['TCC', 'Psicanálise', 'Humanista', 'EMDR', 'ACT', 'DBT', 'Gestalt', 'Integrativa', 'Outra']
 const ESPECIALIDADES = ['Psicologia Clínica', 'Neuropsicologia', 'Psicologia Hospitalar', 'Psicologia Escolar', 'Psicologia do Esporte', 'Psicologia Organizacional', 'Psicoterapia Infantil']
@@ -38,7 +39,7 @@ function Divider({ title, sub }) {
 function BtnSave({ saving, saved, onClick }) {
   return (
     <button onClick={onClick} disabled={saving} style={{ padding: '10px 22px', background: saved ? 'var(--g700)' : 'var(--g600)', color: '#fff', border: 'none', borderRadius: 'var(--r)', fontSize: '13px', fontWeight: 600, cursor: saving ? 'default' : 'pointer', fontFamily: "'DM Sans', sans-serif", display: 'inline-flex', alignItems: 'center', gap: '7px', transition: 'background 0.2s', opacity: saving ? 0.7 : 1 }}>
-      {saving ? 'Salvando...' : saved ? '✓  Alterações salvas' : 'Salvar alterações'}
+      {saving ? 'Salvando…' : saved ? '✓  Alterações salvas' : 'Salvar alterações'}
     </button>
   )
 }
@@ -78,7 +79,7 @@ function TabPerfil({ profile, onSaved }) {
       <Divider title="Identificação profissional" sub="Exibido nos prontuários e recibos gerados" />
       <div className="cfg-grid-2">
         <Field label="Nome completo *"><input style={st.input} value={form.name} onChange={e => set('name', e.target.value)} onFocus={onFocus} onBlur={onBlur} placeholder="Dra. Nome Sobrenome" /></Field>
-        <Field label="CRP"><input style={st.input} value={form.crp} onChange={e => set('crp', e.target.value)} onFocus={onFocus} onBlur={onBlur} placeholder="Ex: 06/89234" /></Field>
+        <Field label="Número do CRP" hint="Formato: estado/número — ex: 06/89234 (SP)"><input style={st.input} value={form.crp} onChange={e => set('crp', e.target.value)} onFocus={onFocus} onBlur={onBlur} placeholder="Ex: 06/89234" /></Field>
         <Field label="Especialidade">
           <select style={sel()} value={form.specialty} onChange={e => set('specialty', e.target.value)} onFocus={onFocus} onBlur={onBlur}>
             <option value="">Selecione</option>
@@ -158,13 +159,13 @@ function TabPlano({ profile }) {
 
   return (
     <div>
-      <Divider title="Plano atual" sub="Gerencie sua assinatura e créditos de análise IA" />
+      <Divider title="Plano atual" sub="Veja seu plano, análises disponíveis e cobrança" />
 
       <div style={{ background: 'var(--g700)', borderRadius: 'var(--r2)', padding: '24px', marginBottom: '16px', position: 'relative', overflow: 'hidden' }}>
         <div style={{ position: 'absolute', top: '-40px', right: '-40px', width: '140px', height: '140px', borderRadius: '50%', background: 'rgba(255,255,255,0.04)' }} />
         <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '1px', color: 'var(--g300)', textTransform: 'uppercase', marginBottom: '5px' }}>Plano ativo</div>
         <div style={{ fontFamily: "'Fraunces', serif", fontSize: '26px', color: '#fff', fontWeight: 300, marginBottom: '3px' }}>{isClinico ? 'Plano Clínico' : 'Plano Base'}</div>
-        <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.5)', marginBottom: '18px' }}>{isClinico ? 'R$299/mês · 20 análises incluídas/mês' : 'R$199/mês · Análises avulsas R$4,90'}</div>
+        <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.5)', marginBottom: '18px' }}>{isClinico ? 'Plano completo · análises IA incluídas por mês' : 'Plano essencial · análises IA disponíveis sob demanda'}</div>
         <div style={{ display: 'flex', gap: '7px', flexWrap: 'wrap' }}>
           {['Prontuário ilimitado', 'Canvas de anotações', 'Agenda integrada', 'Linha do tempo'].concat(isClinico ? ['20 análises IA/mês', 'Relatórios PDF', 'Prioridade no suporte'] : []).map(f => (
             <span key={f} style={{ fontSize: '11px', background: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.75)', padding: '3px 10px', borderRadius: '20px' }}>✓ {f}</span>
@@ -177,7 +178,7 @@ function TabPlano({ profile }) {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
             <div>
               <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--d)' }}>Créditos de análise IA este mês</div>
-              <div style={{ fontSize: '11.5px', color: 'var(--gr5)', marginTop: '2px' }}>20 incluídas + R$4,90 por análise extra</div>
+              <div style={{ fontSize: '11.5px', color: 'var(--gr5)', marginTop: '2px' }}>Incluídos no plano · análises extras disponíveis</div>
             </div>
             <div style={{ fontFamily: "'Fraunces', serif", fontSize: '24px', color: 'var(--g600)' }}>{remaining}<span style={{ fontSize: '13px', color: 'var(--gr4)', fontFamily: "'DM Sans', sans-serif" }}>/{total}</span></div>
           </div>
@@ -190,23 +191,23 @@ function TabPlano({ profile }) {
 
       <div style={{ background: 'var(--g50)', border: '1px solid var(--g100)', borderRadius: 'var(--r)', padding: '12px 16px', fontSize: '13px', color: 'var(--g700)', marginBottom: '16px', display: 'flex', gap: '10px', alignItems: 'center' }}>
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-        Análises avulsas debitadas automaticamente a R$4,90 cada — acionadas por você.
+        Análises IA acionadas por você — nunca automáticas. Consulte os planos disponíveis para ver os pacotes de análise.
       </div>
 
       {!isClinico && (
         <div style={{ background: 'var(--ow)', border: '1px solid var(--gr2)', borderRadius: 'var(--r2)', padding: '20px', marginBottom: '16px' }}>
-          <div style={{ fontFamily: "'Fraunces', serif", fontSize: '17px', color: 'var(--d)', marginBottom: '5px' }}>Upgrade para Plano Clínico</div>
+          <div style={{ fontFamily: "'Fraunces', serif", fontSize: '17px', color: 'var(--d)', marginBottom: '5px' }}>Evoluir para o Plano Clínico</div>
           <div style={{ fontSize: '13px', color: 'var(--gr5)', marginBottom: '14px', lineHeight: 1.6 }}>Inclui 20 análises IA/mês, relatórios de evolução e exportação PDF de prontuário.</div>
 
           {/* Coupon */}
           <div style={{ marginBottom: '14px' }}>
-            <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--gr5)', letterSpacing: '0.4px', textTransform: 'uppercase', marginBottom: '6px' }}>Cupom de desconto</div>
+            <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--gr5)', letterSpacing: '0.4px', textTransform: 'uppercase', marginBottom: '6px' }}>Tem um cupom de desconto?</div>
             <div style={{ display: 'flex', gap: '8px' }}>
               <input
                 value={coupon}
                 onChange={e => { setCoupon(e.target.value.toUpperCase()); setCouponState(null) }}
                 onKeyDown={e => e.key === 'Enter' && checkCoupon()}
-                placeholder="EX: YOUTUBE30"
+                placeholder="Ex: YOUTUBE30"
                 style={{
                   flex: 1, border: `1px solid ${couponState ? (couponState.valid ? '#27AE60' : '#E74C3C') : 'var(--gr2)'}`,
                   borderRadius: 'var(--r)', padding: '8px 12px', fontSize: '13px',
@@ -227,7 +228,7 @@ function TabPlano({ profile }) {
                   fontFamily: "'DM Sans', sans-serif",
                 }}
               >
-                {couponChecking ? '...' : 'Aplicar'}
+                {couponChecking ? 'Verificando…' : 'Aplicar'}
               </button>
             </div>
             {couponState && (
@@ -237,13 +238,13 @@ function TabPlano({ profile }) {
             )}
           </div>
 
-          <button onClick={handleUpgrade} disabled={billingLoading} style={{ padding: '10px 20px', background: 'var(--g600)', color: '#fff', border: 'none', borderRadius: 'var(--r)', fontSize: '13px', fontWeight: 600, cursor: billingLoading ? 'default' : 'pointer', opacity: billingLoading ? 0.7 : 1, fontFamily: "'DM Sans', sans-serif" }}>{billingLoading ? 'Redirecionando...' : 'Fazer upgrade → R$299/mês'}</button>
+          <button onClick={handleUpgrade} disabled={billingLoading} style={{ padding: '10px 20px', background: 'var(--g600)', color: '#fff', border: 'none', borderRadius: 'var(--r)', fontSize: '13px', fontWeight: 600, cursor: billingLoading ? 'default' : 'pointer', opacity: billingLoading ? 0.7 : 1, fontFamily: "'DM Sans', sans-serif" }}>{billingLoading ? 'Redirecionando…' : 'Assinar Plano Clínico → R$299/mês'}</button>
         </div>
       )}
 
       <div style={{ padding: '14px 16px', background: 'var(--w)', border: '1px solid var(--gr2)', borderRadius: 'var(--r)', fontSize: '13px', color: 'var(--gr5)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <span>Sem contrato · Cancele quando quiser</span>
-        <button onClick={handlePortal} disabled={billingLoading} style={{ background: 'none', border: 'none', color: 'var(--danger)', fontSize: '12px', cursor: billingLoading ? 'default' : 'pointer', opacity: billingLoading ? 0.7 : 1, fontFamily: "'DM Sans', sans-serif", fontWeight: 500 }}>{billingLoading ? 'Abrindo portal...' : 'Cancelar assinatura'}</button>
+        <span>Sem fidelidade · Cancele quando quiser · Acesso até o fim do período pago</span>
+        <button onClick={handlePortal} disabled={billingLoading} style={{ background: 'none', border: 'none', color: 'var(--danger)', fontSize: '12px', cursor: billingLoading ? 'default' : 'pointer', opacity: billingLoading ? 0.7 : 1, fontFamily: "'DM Sans', sans-serif", fontWeight: 500 }}>{billingLoading ? 'Abrindo portal…' : 'Cancelar assinatura'}</button>
       </div>
     </div>
   )
@@ -292,14 +293,14 @@ function TabPreferencias({ profile, onSaved }) {
             {ABORDAGENS.map(a => <option key={a} value={a}>{a}</option>)}
           </select>
         </Field>
-        <Field label="Duração padrão (min)"><input style={st.input} type="number" min={20} max={120} value={form.defaultSessionDuration} onChange={e => set('defaultSessionDuration', e.target.value)} onFocus={onFocus} onBlur={onBlur} /></Field>
-        <Field label="Valor padrão (R$)"><input style={st.input} type="number" min={0} value={form.defaultSessionValue} onChange={e => set('defaultSessionValue', e.target.value)} onFocus={onFocus} onBlur={onBlur} /></Field>
+        <Field label="Duração padrão da sessão (min)"><input style={st.input} type="number" min={20} max={120} value={form.defaultSessionDuration} onChange={e => set('defaultSessionDuration', e.target.value)} onFocus={onFocus} onBlur={onBlur} /></Field>
+        <Field label="Valor padrão da sessão (R$)"><input style={st.input} type="number" min={0} value={form.defaultSessionValue} onChange={e => set('defaultSessionValue', e.target.value)} onFocus={onFocus} onBlur={onBlur} /></Field>
       </div>
 
       <Divider title="Agenda" sub="Horário de trabalho exibido no calendário semanal" />
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginBottom: '24px' }}>
-        <Field label="Início do expediente (hora)"><input style={st.input} type="number" min={5} max={12} value={form.workHourStart} onChange={e => set('workHourStart', e.target.value)} onFocus={onFocus} onBlur={onBlur} /></Field>
-        <Field label="Fim do expediente (hora)"><input style={st.input} type="number" min={12} max={23} value={form.workHourEnd} onChange={e => set('workHourEnd', e.target.value)} onFocus={onFocus} onBlur={onBlur} /></Field>
+        <Field label="Horário de início" hint="Formato 24h — ex: 8 para 08:00"><input style={st.input} type="number" min={5} max={12} value={form.workHourStart} onChange={e => set('workHourStart', e.target.value)} onFocus={onFocus} onBlur={onBlur} /></Field>
+        <Field label="Horário de término" hint="Formato 24h — ex: 18 para 18:00"><input style={st.input} type="number" min={12} max={23} value={form.workHourEnd} onChange={e => set('workHourEnd', e.target.value)} onFocus={onFocus} onBlur={onBlur} /></Field>
       </div>
 
       <Divider title="Notificações" sub="Como você quer ser alertado sobre eventos clínicos" />
@@ -354,7 +355,7 @@ function TabSeguranca() {
         ))}
         {err && <div style={{ fontSize: '12px', color: 'var(--danger)', background: 'var(--danger-l)', padding: '8px 12px', borderRadius: 'var(--r)', border: '1px solid #E8B4B0' }}>{err}</div>}
         <button onClick={handlePw} disabled={saving} style={{ padding: '10px 22px', background: pwOk ? 'var(--g700)' : 'var(--g600)', color: '#fff', border: 'none', borderRadius: 'var(--r)', fontSize: '13px', fontWeight: 600, cursor: saving ? 'default' : 'pointer', fontFamily: "'DM Sans', sans-serif", alignSelf: 'flex-start', opacity: saving ? 0.7 : 1 }}>
-          {saving ? 'Salvando...' : pwOk ? '✓ Senha alterada' : 'Alterar senha'}
+          {saving ? 'Salvando…' : pwOk ? '✓ Senha alterada' : 'Alterar senha'}
         </button>
       </div>
 
@@ -371,7 +372,7 @@ function TabSeguranca() {
                 </div>
                 <div style={{ fontSize: '11px', color: 'var(--gr4)', marginTop: '2px' }}>{s.location} · {s.lastSeen}</div>
               </div>
-              {!s.current && <button onClick={() => alert('Sessão encerrada com sucesso')} style={{ fontSize: '11px', color: 'var(--danger)', background: 'none', border: 'none', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", padding: '4px 8px' }}>Encerrar</button>}
+              {!s.current && <button onClick={() => alert('Sessão encerrada com sucesso')} style={{ fontSize: '11px', color: 'var(--danger)', background: 'none', border: 'none', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", padding: '4px 8px' }}>Encerrar sessão</button>}
             </div>
           ))}
         </div>
@@ -379,8 +380,8 @@ function TabSeguranca() {
 
       <div style={{ marginTop: '24px', padding: '16px 20px', background: 'var(--danger-l)', border: '1px solid #E8B4B0', borderRadius: 'var(--r)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '16px' }}>
         <div>
-          <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--danger)', marginBottom: '2px' }}>Zona de perigo</div>
-          <div style={{ fontSize: '12px', color: 'var(--danger)', opacity: 0.8 }}>Excluir conta e todos os dados de forma permanente e irreversível</div>
+          <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--danger)', marginBottom: '2px' }}>Ação irreversível</div>
+          <div style={{ fontSize: '12px', color: 'var(--danger)', opacity: 0.8 }}>Excluir sua conta e todos os dados clínicos de forma permanente</div>
         </div>
         <button onClick={() => alert('Para excluir sua conta, entre em contato via suporte@psicoai.com.br. Remoção em até 30 dias (LGPD art. 18).')}
           style={{ padding: '8px 16px', background: 'var(--danger)', color: '#fff', border: 'none', borderRadius: 'var(--r)', fontSize: '12px', fontWeight: 600, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", whiteSpace: 'nowrap', flexShrink: 0 }}>
@@ -418,14 +419,14 @@ function TabAjuda({ onOpenOnboarding }) {
         <div style={{ flex: 1 }}>
           <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--g700)', marginBottom: '4px' }}>Tour de funcionalidades</div>
           <div style={{ fontSize: '12px', color: 'var(--g600)', lineHeight: 1.5 }}>
-            Percorra as 8 telas que explicam cada módulo da plataforma — Dashboard, Pacientes, Sessões, IA, Insights, Agenda e mais.
+            Percorra as 8 telas que explicam cada módulo da plataforma — Painel clínico, Pacientes, Sessões, IA, Insights, Agenda e mais.
           </div>
         </div>
         <button onClick={resetTour}
           style={{ padding: '10px 18px', background: 'var(--g600)', color: '#fff', border: 'none', borderRadius: 'var(--r)', fontSize: '13px', fontWeight: 600, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", flexShrink: 0, transition: 'background 0.15s', whiteSpace: 'nowrap' }}
           onMouseOver={e => e.currentTarget.style.background = 'var(--g700)'}
           onMouseOut={e => e.currentTarget.style.background = 'var(--g600)'}>
-          Ver tour →
+          Iniciar tour →
         </button>
       </div>
 
@@ -433,7 +434,7 @@ function TabAjuda({ onOpenOnboarding }) {
       <Divider title="Atalhos da plataforma" sub="O que você pode fazer em cada seção" />
       <div className="cfg-grid-2" style={{ gap: '10px', marginBottom: '28px' }}>
         {[
-          { icon: '◉', label: 'Dashboard', desc: 'Agenda do dia, alertas e atalhos de sessão' },
+          { icon: '◉', label: 'Painel clínico', desc: 'Agenda do dia, alertas e atalhos de sessão' },
           { icon: '◈', label: 'Pacientes', desc: 'Prontuário, histórico e linha do tempo' },
           { icon: '⬡', label: 'Sessão', desc: 'Canvas livre ou anotação em texto estruturado' },
           { icon: '◇', label: 'Insights IA', desc: 'Padrões e hipóteses da sua carteira inteira' },
@@ -472,6 +473,185 @@ function TabAjuda({ onOpenOnboarding }) {
   )
 }
 
+// ────────────────────────────────────────────────────────────────────────────
+function TabIntegracoes() {
+  const [status, setStatus] = useState(null)   // { connected, email, calendarSync }
+  const [loading, setLoading] = useState(true)
+  const [connecting, setConnecting] = useState(false)
+  const [disconnecting, setDisconnecting] = useState(false)
+  const [syncing, setSyncing] = useState(false)
+
+  const load = useCallback(() => {
+    setLoading(true)
+    api.getGoogleStatus()
+      .then(setStatus)
+      .catch(() => setStatus({ connected: false, email: null, calendarSync: false }))
+      .finally(() => setLoading(false))
+  }, [])
+
+  useEffect(() => { load() }, [load])
+
+  const handleConnect = async () => {
+    setConnecting(true)
+    try {
+      const res = await api.getGoogleAuthUrl()
+      if (res._mock) {
+        // Mock mode: simulate immediate connection
+        await new Promise(r => setTimeout(r, 600))
+        api._googleConnected = true
+        setStatus({ connected: true, email: 'demo@gmail.com', calendarSync: false })
+        showToast('Google conectado com sucesso!', 'success')
+      } else if (res.url) {
+        // Real: redirect to Google OAuth
+        window.location.href = res.url
+      }
+    } catch (e) {
+      showToast('Erro ao conectar com o Google', 'error')
+    } finally {
+      setConnecting(false)
+    }
+  }
+
+  const handleDisconnect = async () => {
+    if (!confirm('Desconectar o Google? Links de videoatendimento (Meet) e a sincronização com o Google Agenda serão desativados.')) return
+    setDisconnecting(true)
+    try {
+      await api.disconnectGoogle()
+      setStatus({ connected: false, email: null, calendarSync: false })
+      showToast('Google desconectado', 'success')
+    } catch {
+      showToast('Erro ao desconectar', 'error')
+    } finally {
+      setDisconnecting(false)
+    }
+  }
+
+  const handleToggleSync = async () => {
+    if (!status?.connected) return
+    const next = !status.calendarSync
+    setSyncing(true)
+    try {
+      await api.setGoogleCalendarSync(next)
+      setStatus(s => ({ ...s, calendarSync: next }))
+      showToast(next ? 'Agenda Google ativada' : 'Sincronização desativada', 'success')
+    } catch {
+      showToast('Erro ao alterar sincronização', 'error')
+    } finally {
+      setSyncing(false)
+    }
+  }
+
+  const googleGreen = '#34A853'
+
+  return (
+    <div>
+      <Divider title="Google" sub="Conecte sua conta Google para criar salas Meet e sincronizar a agenda" />
+
+      {/* Connection card */}
+      <div style={{ border: `1px solid ${status?.connected ? '#CEEAD6' : 'var(--gr2)'}`, borderRadius: 'var(--r2)', overflow: 'hidden', marginBottom: '20px', background: status?.connected ? '#F6FEF8' : 'var(--w)' }}>
+        <div style={{ padding: '20px 22px', display: 'flex', alignItems: 'center', gap: '16px' }}>
+          {/* Google logo */}
+          <div style={{ width: 44, height: 44, borderRadius: '12px', border: '1px solid var(--gr2)', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <svg width="22" height="22" viewBox="0 0 24 24">
+              <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+              <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+              <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
+              <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+            </svg>
+          </div>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--d)', marginBottom: '2px' }}>
+              Google Workspace
+            </div>
+            {loading ? (
+              <div style={{ fontSize: '12px', color: 'var(--gr4)' }}>Verificando conexão…</div>
+            ) : status?.connected ? (
+              <div style={{ fontSize: '12px', color: googleGreen, fontWeight: 500 }}>
+                ✓ Conectado como {status.email}
+              </div>
+            ) : (
+              <div style={{ fontSize: '12px', color: 'var(--gr5)' }}>
+                Não conectado · Ative para criar salas Meet e sincronizar agenda
+              </div>
+            )}
+          </div>
+          {!loading && (
+            status?.connected ? (
+              <button onClick={handleDisconnect} disabled={disconnecting}
+                style={{ padding: '8px 16px', border: '1px solid var(--gr2)', borderRadius: 'var(--r)', background: 'var(--w)', color: 'var(--danger)', fontSize: '12px', fontWeight: 600, cursor: disconnecting ? 'default' : 'pointer', fontFamily: "'DM Sans', sans-serif", opacity: disconnecting ? 0.6 : 1 }}>
+                {disconnecting ? 'Desconectando…' : 'Desconectar'}
+              </button>
+            ) : (
+              <button onClick={handleConnect} disabled={connecting}
+                style={{ padding: '9px 18px', border: 'none', borderRadius: 'var(--r)', background: '#4285F4', color: '#fff', fontSize: '13px', fontWeight: 600, cursor: connecting ? 'default' : 'pointer', fontFamily: "'DM Sans', sans-serif", opacity: connecting ? 0.7 : 1, display: 'flex', alignItems: 'center', gap: '7px' }}>
+                {connecting ? 'Redirecionando…' : 'Conectar Google'}
+              </button>
+            )
+          )}
+        </div>
+      </div>
+
+      {/* Features */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '24px' }}>
+        {/* Google Meet */}
+        <div style={{ padding: '16px 18px', border: '1px solid var(--gr2)', borderRadius: 'var(--r)', background: 'var(--w)', display: 'flex', alignItems: 'flex-start', gap: '14px', opacity: status?.connected ? 1 : 0.5 }}>
+          <div style={{ width: 36, height: 36, borderRadius: '10px', background: '#E8F5E9', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={googleGreen} strokeWidth="1.8">
+              <polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/>
+            </svg>
+          </div>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--d)', marginBottom: '3px' }}>
+              Criar salas Google Meet
+            </div>
+            <div style={{ fontSize: '12px', color: 'var(--gr5)', lineHeight: 1.5 }}>
+              Ao iniciar uma sessão, gere um link Meet vinculado ao e-mail da psicóloga automaticamente. O link aparece no briefing pré-sessão.
+            </div>
+          </div>
+          <span style={{ fontSize: '11px', fontWeight: 600, color: status?.connected ? googleGreen : 'var(--gr4)', background: status?.connected ? '#E8F5E9' : 'var(--gr1)', padding: '3px 10px', borderRadius: '20px', flexShrink: 0 }}>
+            {status?.connected ? 'Ativo' : 'Requer conexão'}
+          </span>
+        </div>
+
+        {/* Google Calendar Sync */}
+        <div style={{ padding: '16px 18px', border: `1px solid ${status?.calendarSync ? '#CEEAD6' : 'var(--gr2)'}`, borderRadius: 'var(--r)', background: status?.calendarSync ? '#F6FEF8' : 'var(--w)', display: 'flex', alignItems: 'flex-start', gap: '14px', opacity: status?.connected ? 1 : 0.5 }}>
+          <div style={{ width: 36, height: 36, borderRadius: '10px', background: '#E8F5E9', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={googleGreen} strokeWidth="1.8">
+              <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+            </svg>
+          </div>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--d)', marginBottom: '3px' }}>
+              Sincronizar Google Agenda
+            </div>
+            <div style={{ fontSize: '12px', color: 'var(--gr5)', lineHeight: 1.5 }}>
+              Seus eventos do Google Agenda aparecem na Agenda do PsicoAI. Supervisões, reuniões e compromissos pessoais ficam visíveis junto com as sessões.
+            </div>
+          </div>
+          <label style={{ flexShrink: 0, cursor: status?.connected ? 'pointer' : 'not-allowed' }}>
+            <div
+              onClick={status?.connected && !syncing ? handleToggleSync : undefined}
+              style={{
+                width: 36, height: 20, borderRadius: '10px',
+                background: status?.calendarSync ? googleGreen : 'var(--gr2)',
+                position: 'relative', cursor: status?.connected ? 'pointer' : 'not-allowed',
+                transition: 'background 0.2s', opacity: syncing ? 0.6 : 1,
+              }}>
+              <div style={{ width: 16, height: 16, borderRadius: '50%', background: '#fff', position: 'absolute', top: 2, left: status?.calendarSync ? 18 : 2, transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }} />
+            </div>
+          </label>
+        </div>
+      </div>
+
+      {/* Info note */}
+      <div style={{ padding: '12px 14px', background: 'var(--ow)', border: '1px solid var(--gr2)', borderRadius: 'var(--r)', fontSize: '12px', color: 'var(--gr5)', lineHeight: 1.6, display: 'flex', gap: '10px' }}>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--gr4)" strokeWidth="2" style={{ flexShrink: 0, marginTop: '1px' }}><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        O PsicoAI solicita apenas permissões de agenda (criar eventos e ler calendário). Nenhum dado clínico é enviado ao Google. Você pode revogar o acesso a qualquer momento.
+      </div>
+    </div>
+  )
+}
+
 function FaqItem({ q, a }) {
   const [open, setOpen] = useState(false)
   return (
@@ -498,6 +678,7 @@ const TABS = [
   { id: 'plano', label: 'Plano & Cobrança', svg: '<line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>' },
   { id: 'preferencias', label: 'Preferências', svg: '<circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M4.93 4.93a10 10 0 0 0 0 14.14"/>' },
   { id: 'seguranca', label: 'Segurança', svg: '<rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>' },
+  { id: 'integracoes', label: 'Integrações', svg: '<path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/>' },
   { id: 'ajuda', label: 'Ajuda & Guia', svg: '<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>' },
 ]
 
@@ -517,7 +698,7 @@ export default function Configuracoes({ currentUser, onProfileUpdate, onOpenOnbo
 
   if (loading) return (
     <div className="view" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '260px' }}>
-      <div style={{ fontSize: '13px', color: 'var(--gr5)' }}>Carregando configurações...</div>
+      <div style={{ fontSize: '13px', color: 'var(--gr5)' }}>Carregando configurações…</div>
     </div>
   )
 
@@ -539,6 +720,7 @@ export default function Configuracoes({ currentUser, onProfileUpdate, onOpenOnbo
           {tab === 'plano' && <TabPlano profile={profile} />}
           {tab === 'preferencias' && <TabPreferencias profile={profile} onSaved={handleSaved} />}
           {tab === 'seguranca' && <TabSeguranca />}
+          {tab === 'integracoes' && <TabIntegracoes />}
           {tab === 'ajuda' && <TabAjuda onOpenOnboarding={onOpenOnboarding} />}
         </div>
       </div>

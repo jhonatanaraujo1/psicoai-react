@@ -177,6 +177,25 @@ export default function ReportModal({ isOpen, onClose, patient }) {
   const [sending, setSending] = useState(null) // 'email' | 'whatsapp' | 'copy' | null
   const [sent, setSent] = useState({ email: false, whatsapp: false })
   const [copied, setCopied] = useState(false)
+  const [downloadingPdf, setDownloadingPdf] = useState(false)
+
+  const downloadOfficialPdf = async () => {
+    if (!patient?.id) return
+    setDownloadingPdf(true)
+    try {
+      const blob = await api.exportRelatorioPdf(patient.id, reportType)
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `relatorio-${reportType}-${(patient.name || 'paciente').replace(/\s+/g,'_')}.pdf`
+      document.body.appendChild(a); a.click()
+      document.body.removeChild(a); URL.revokeObjectURL(url)
+    } catch (e) {
+      showToast('Erro ao gerar PDF: ' + e.message, 'error')
+    } finally {
+      setDownloadingPdf(false)
+    }
+  }
 
   if (!isOpen || !patient) return null
 
@@ -262,10 +281,10 @@ export default function ReportModal({ isOpen, onClose, patient }) {
         <div style={{ padding: '18px 24px', borderBottom: '1px solid var(--gr2)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0, background: 'var(--g700)' }}>
           <div>
             <div style={{ fontFamily: "'Fraunces', serif", fontSize: '18px', color: '#fff', fontWeight: 400 }}>
-              Gerar Relatório
+              Gerar relatório clínico
             </div>
             <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.55)', marginTop: '2px' }}>
-              {patient.name}
+              {patient.name} · escolha o tipo e as seções antes de gerar
             </div>
           </div>
           <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.1)', border: 'none', color: 'rgba(255,255,255,0.7)', width: '32px', height: '32px', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px', transition: 'background 0.15s' }}
@@ -281,7 +300,7 @@ export default function ReportModal({ isOpen, onClose, patient }) {
             <div style={{ flex: 1, overflowY: 'auto', padding: '20px', scrollbarWidth: 'thin', scrollbarColor: 'var(--gr2) transparent' }}>
 
               {/* Type selector */}
-              <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '1px', textTransform: 'uppercase', color: 'var(--gr4)', marginBottom: '10px' }}>Tipo de Relatório</div>
+              <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '1px', textTransform: 'uppercase', color: 'var(--gr4)', marginBottom: '10px' }}>Tipo de documento</div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '20px' }}>
                 {REPORT_TYPES.map(t => (
                   <button key={t.id} onClick={() => { setReportType(t.id); setReport(null) }}
@@ -302,7 +321,7 @@ export default function ReportModal({ isOpen, onClose, patient }) {
               </div>
 
               {/* Sections */}
-              <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '1px', textTransform: 'uppercase', color: 'var(--gr4)', marginBottom: '10px' }}>Seções Incluídas</div>
+              <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '1px', textTransform: 'uppercase', color: 'var(--gr4)', marginBottom: '10px' }}>Seções do documento</div>
               <div style={{ marginBottom: '20px' }}>
                 {SECTION_DEFS.map(def => (
                   <SectionToggle key={def.id} def={def} value={sections[def.id]} onChange={v => setSection(def.id, v)} />
@@ -310,10 +329,10 @@ export default function ReportModal({ isOpen, onClose, patient }) {
               </div>
 
               {/* Send */}
-              <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '1px', textTransform: 'uppercase', color: 'var(--gr4)', marginBottom: '10px' }}>Enviar Para</div>
+              <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '1px', textTransform: 'uppercase', color: 'var(--gr4)', marginBottom: '10px' }}>Enviar ao paciente (opcional)</div>
               <SendRow
                 icon={<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>}
-                label="E-mail" placeholder="E-mail do paciente"
+                label="E-mail" placeholder="E-mail do paciente (ou deixe em branco)"
                 value={sendEmail} onChange={setSendEmail}
                 sent={sent.email} sending={sending === 'email'}
               />
@@ -333,8 +352,8 @@ export default function ReportModal({ isOpen, onClose, patient }) {
                 onMouseOver={e => !generating && (e.currentTarget.style.background = 'var(--g700)')}
                 onMouseOut={e => !generating && (e.currentTarget.style.background = 'var(--g600)')}>
                 {generating
-                  ? <><span style={{ width: '14px', height: '14px', border: '2px solid rgba(255,255,255,0.3)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.8s linear infinite', display: 'inline-block' }} />Gerando…</>
-                  : <>{report ? '↻ Regerar relatório' : '⬡ Gerar relatório'}</>
+                  ? <><span style={{ width: '14px', height: '14px', border: '2px solid rgba(255,255,255,0.3)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.8s linear infinite', display: 'inline-block' }} />Gerando relatório…</>
+                  : <>{report ? 'Gerar novamente' : `Gerar ${selectedType?.label || 'relatório'}`}</>
                 }
               </button>
             </div>
@@ -363,7 +382,16 @@ export default function ReportModal({ isOpen, onClose, patient }) {
                   onMouseOver={e => { e.currentTarget.style.borderColor = 'var(--g300)'; e.currentTarget.style.color = 'var(--g600)' }}
                   onMouseOut={e => { e.currentTarget.style.borderColor = 'var(--gr2)'; e.currentTarget.style.color = 'var(--gr5)' }}>
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
-                  Imprimir / PDF
+                  Imprimir
+                </button>
+                <button onClick={downloadOfficialPdf} disabled={downloadingPdf}
+                  style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '6px 12px', border: 'none', borderRadius: 'var(--r)', background: 'var(--g600)', color: '#fff', fontSize: '12px', fontWeight: 600, cursor: downloadingPdf ? 'default' : 'pointer', fontFamily: "'DM Sans', sans-serif", transition: 'background 0.15s', opacity: downloadingPdf ? 0.7 : 1 }}
+                  onMouseOver={e => !downloadingPdf && (e.currentTarget.style.background = 'var(--g700)')}
+                  onMouseOut={e => !downloadingPdf && (e.currentTarget.style.background = 'var(--g600)')}>
+                  {downloadingPdf
+                    ? <><span style={{ width: '11px', height: '11px', border: '2px solid rgba(255,255,255,0.3)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.8s linear infinite', display: 'inline-block' }} />Gerando PDF…</>
+                    : <><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Baixar PDF</>
+                  }
                 </button>
                 {sendEmail && (
                   <button onClick={() => sendVia('email')} disabled={!!sending || sent.email}
@@ -403,7 +431,7 @@ export default function ReportModal({ isOpen, onClose, patient }) {
                   </div>
                   <div style={{ fontFamily: "'Fraunces', serif", fontSize: '18px', color: 'var(--d)', fontWeight: 400 }}>{selectedType?.label}</div>
                   <div style={{ fontSize: '13px', color: 'var(--gr5)', maxWidth: '280px', lineHeight: 1.6 }}>{selectedType?.desc}</div>
-                  <div style={{ fontSize: '12px', color: 'var(--gr4)', marginTop: '4px' }}>Configure as opções ao lado e clique em <strong>Gerar relatório</strong></div>
+                  <div style={{ fontSize: '12px', color: 'var(--gr4)', marginTop: '4px' }}>Configure as opções ao lado e clique em <strong>Gerar {selectedType?.label || 'relatório'}</strong></div>
                 </div>
               )}
 
@@ -411,9 +439,9 @@ export default function ReportModal({ isOpen, onClose, patient }) {
               {generating && (
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: '16px', padding: '40px' }}>
                   <div style={{ width: '48px', height: '48px', border: '3px solid var(--g100)', borderTopColor: 'var(--g500)', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
-                  <div style={{ fontFamily: "'Fraunces', serif", fontSize: '18px', color: 'var(--d)' }}>Gerando relatório…</div>
+                  <div style={{ fontFamily: "'Fraunces', serif", fontSize: '18px', color: 'var(--d)' }}>Gerando {selectedType?.label || 'relatório'}…</div>
                   <div style={{ fontSize: '13px', color: 'var(--gr5)', textAlign: 'center', maxWidth: '260px', lineHeight: 1.6 }}>
-                    Compilando dados clínicos, análises IA e estruturando o documento.
+                    Compilando dados clínicos e análises para estruturar o documento.
                   </div>
                 </div>
               )}
@@ -422,8 +450,9 @@ export default function ReportModal({ isOpen, onClose, patient }) {
               {genError && !generating && (
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: '12px', padding: '40px', textAlign: 'center' }}>
                   <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="var(--danger)" strokeWidth="1.4"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-                  <div style={{ fontSize: '14px', color: 'var(--d)', fontWeight: 500 }}>{genError}</div>
-                  <button onClick={generate} className="btn-primary" style={{ fontSize: '13px' }}>Tentar novamente</button>
+                  <div style={{ fontSize: '14px', color: 'var(--d)', fontWeight: 500 }}>Não foi possível gerar o relatório</div>
+                  <div style={{ fontSize: '13px', color: 'var(--gr5)', maxWidth: '260px', lineHeight: 1.5 }}>{genError}</div>
+                  <button onClick={generate} style={{ padding: '10px 20px', border: 'none', borderRadius: 'var(--r)', background: 'var(--g600)', color: '#fff', fontSize: '13px', fontWeight: 600, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>Tentar novamente</button>
                 </div>
               )}
 

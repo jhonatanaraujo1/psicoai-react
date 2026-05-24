@@ -123,8 +123,8 @@ export default function CadastroModal({ isOpen, onClose, onSave, initialData = n
         {/* Header */}
         <div style={{ background: 'var(--g700)', padding: '20px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
           <div>
-            <div style={{ fontFamily: "'Fraunces', serif", fontSize: '18px', color: '#fff', fontWeight: 400 }}>{initialData ? 'Editar Paciente' : 'Cadastrar Paciente'}</div>
-            <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.5)', marginTop: '3px' }}>Preencha os dados clínicos e de contato</div>
+            <div style={{ fontFamily: "'Fraunces', serif", fontSize: '18px', color: '#fff', fontWeight: 400 }}>{initialData ? 'Editar prontuário' : 'Novo paciente'}</div>
+            <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.5)', marginTop: '3px' }}>{initialData ? 'Atualize os dados clínicos e de atendimento' : 'Preencha os dados clínicos e de atendimento'}</div>
           </div>
           <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.1)', border: 'none', color: 'rgba(255,255,255,0.7)', width: '32px', height: '32px', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px' }}>✕</button>
         </div>
@@ -139,7 +139,7 @@ export default function CadastroModal({ isOpen, onClose, onSave, initialData = n
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '12px' }}>
               <Field label="Nome completo" required>
-                <Input field="nome" placeholder="Nome do paciente" />
+                <Input field="nome" placeholder="Como aparece no prontuário" />
               </Field>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                 <Field label="Data de nascimento">
@@ -167,21 +167,21 @@ export default function CadastroModal({ isOpen, onClose, onSave, initialData = n
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               <Field label="Queixa principal" required>
-                <Textarea field="queixa" placeholder="Descreva a queixa principal do paciente..." rows={2} />
+                <Textarea field="queixa" placeholder="Motivo da procura, como o paciente descreve o sofrimento..." rows={2} />
               </Field>
               <Field label="Histórico relevante">
-                <Textarea field="historico" placeholder="Histórico familiar, internações, tratamentos anteriores..." rows={2} />
+                <Textarea field="historico" placeholder="Histórico familiar, internações, tratamentos anteriores, eventos significativos..." rows={2} />
               </Field>
               <Field label="Medicação em uso">
-                <Input field="medicacao" placeholder="Ex: Sertralina 50mg — Dr. João (CRM 12345)" />
+                <Input field="medicacao" placeholder="Ex: Sertralina 50mg — prescrição Dr. João Silva (CRM 12345)" />
               </Field>
-              <Field label="Hipótese diagnóstica (CID-11)">
+              <Field label="Hipótese diagnóstica — CID-10/11 (opcional)">
                 <div style={{ position: 'relative' }}>
                   <input
                     type="text"
                     value={form.cid}
                     onChange={e => set('cid', e.target.value)}
-                    placeholder="Ex: F43.1 — TEPT (opcional)"
+                    placeholder="Ex: F43.1 — TEPT"
                     onFocus={focusStyle}
                     onBlur={blurStyle}
                     style={inputStyle}
@@ -191,7 +191,7 @@ export default function CadastroModal({ isOpen, onClose, onSave, initialData = n
                     {CID_SUGESTOES.map(c => <option key={c} value={c} />)}
                   </datalist>
                 </div>
-                <span style={{ fontSize: '11px', color: 'var(--gr4)' }}>Hipótese clínica inicial — pode ser atualizada pela IA após sessões</span>
+                <span style={{ fontSize: '11px', color: 'var(--gr4)' }}>Hipótese clínica inicial — a IA refinará após análise das sessões</span>
               </Field>
             </div>
           </div>
@@ -208,7 +208,7 @@ export default function CadastroModal({ isOpen, onClose, onSave, initialData = n
               <Field label="Frequência">
                 <Select field="frequencia" options={FREQUENCIAS} placeholder="Selecione" />
               </Field>
-              <Field label="Modalidade">
+              <Field label="Modalidade de pagamento">
                 <Select field="pagamento" options={['Particular', 'Plano de saúde', 'Convênio empresarial', 'Gratuito']} placeholder="Selecione" />
               </Field>
               <Field label="Valor por sessão (R$)">
@@ -219,7 +219,13 @@ export default function CadastroModal({ isOpen, onClose, onSave, initialData = n
 
           {Object.keys(errors).length > 0 && (
             <div style={{ background: 'var(--danger-l)', border: '1px solid #E8B4B0', borderRadius: 'var(--r)', padding: '10px 14px', fontSize: '12px', color: 'var(--danger)' }}>
-              Preencha os campos obrigatórios antes de salvar.
+              Preencha os campos obrigatórios marcados com * antes de salvar o prontuário:{' '}
+              {[
+                errors.nome && 'Nome completo',
+                errors.genero && 'Gênero',
+                errors.queixa && 'Queixa principal',
+                errors.abordagem && 'Abordagem',
+              ].filter(Boolean).join(', ')}.
             </div>
           )}
         </div>
@@ -236,7 +242,7 @@ export default function CadastroModal({ isOpen, onClose, onSave, initialData = n
             onMouseOut={e => e.currentTarget.style.background = 'var(--g500)'}
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="20 6 9 17 4 12"/></svg>
-            {initialData ? 'Salvar Alterações' : 'Cadastrar Paciente'}
+            {initialData ? 'Salvar alterações no prontuário' : 'Criar prontuário do paciente'}
           </button>
         </div>
       </div>

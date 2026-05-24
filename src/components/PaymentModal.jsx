@@ -21,7 +21,7 @@ const PLANS = [
       'Linha do tempo clínica',
       'Alertas de padrão clínico',
       'Conformidade CFP 09/2024',
-      'Análises IA avulsas — R$4,90 cada',
+      'Análises IA sob demanda incluídas',
     ],
     badge: null,
     highlight: false,
@@ -133,11 +133,11 @@ export default function PaymentModal({ onLogout }) {
                 fontFamily: "'Fraunces', serif", fontSize: '22px',
                 color: '#fff', fontWeight: 300, marginBottom: '5px',
               }}>
-                Sua assinatura precisa de atenção
+                Falha no pagamento da assinatura
               </div>
               <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.55)', lineHeight: 1.5 }}>
-                Houve uma falha no pagamento. Seus dados clínicos estão intactos —
-                retome agora para continuar atendendo sem interrupção.
+                Seus prontuários e sessões estão intactos — renove a assinatura
+                abaixo para retomar o acesso completo.
               </div>
             </div>
           </div>
@@ -294,7 +294,7 @@ export default function PaymentModal({ onLogout }) {
                   fontFamily: "'DM Sans', sans-serif", whiteSpace: 'nowrap',
                 }}
               >
-                {couponChecking ? '...' : 'Aplicar'}
+                {couponChecking ? 'Verificando…' : 'Aplicar cupom'}
               </button>
             </div>
             {couponState && (
@@ -323,10 +323,10 @@ export default function PaymentModal({ onLogout }) {
           }}>
             <div>
               <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--d)' }}>
-                Só precisa atualizar o cartão?
+                Precisa só trocar o cartão?
               </div>
               <div style={{ fontSize: '12px', color: 'var(--gr5)', marginTop: '2px' }}>
-                Acesse o portal de cobrança para trocar o método de pagamento.
+                Acesse o portal de cobrança para atualizar o método de pagamento sem mudar o plano.
               </div>
             </div>
             <button
@@ -341,7 +341,7 @@ export default function PaymentModal({ onLogout }) {
                 fontFamily: "'DM Sans', sans-serif", whiteSpace: 'nowrap',
               }}
             >
-              {loading === 'portal' ? 'Abrindo...' : 'Gerenciar cobrança →'}
+              {loading === 'portal' ? 'Abrindo portal…' : 'Atualizar dados de cobrança'}
             </button>
           </div>
 

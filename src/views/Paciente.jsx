@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react'
 import { api } from '../services'
 import CadastroModal from '../components/CadastroModal'
 import ReportModal from '../components/ReportModal'
+import DocumentsPanel from '../components/DocumentsPanel'
+import AiAnalysisPanel from '../components/AiAnalysisPanel'
 
 function fmtDuration(secs) {
   if (!secs) return '—'
@@ -41,7 +43,7 @@ const STATUS_BADGE = {
   gray:   'badge-gray',
 }
 
-export default function Paciente({ patient: propPatient, setCurrentView, onSessao }) {
+export default function Paciente({ patient: propPatient, setCurrentView, onSessao, onQuickNote, onReopenSession }) {
   const [summary, setSummary] = useState(null)
   const [sessions, setSessions] = useState([])
   const [forms, setForms] = useState([])
@@ -56,8 +58,26 @@ export default function Paciente({ patient: propPatient, setCurrentView, onSessa
   const [notesSaved, setNotesSaved] = useState(false)
   const [reportOpen, setReportOpen] = useState(false)
   const [expandedSessionId, setExpandedSessionId] = useState(null)
+  const [exportingPdf, setExportingPdf] = useState(false)
 
   const patientId = propPatient?.id
+
+  function downloadBlob(blob, filename) {
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url; a.download = filename
+    document.body.appendChild(a); a.click()
+    document.body.removeChild(a); URL.revokeObjectURL(url)
+  }
+
+  async function handleExportProntuario() {
+    setExportingPdf(true)
+    try {
+      const blob = await api.exportProntuarioPdf(patientId)
+      downloadBlob(blob, `prontuario-${(p?.name || 'paciente').replace(/\s+/g, '_')}.pdf`)
+    } catch (e) { alert('Erro ao gerar PDF: ' + e.message) }
+    finally { setExportingPdf(false) }
+  }
 
   const load = () => {
     if (!patientId) return
@@ -177,13 +197,29 @@ export default function Paciente({ patient: propPatient, setCurrentView, onSessa
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                   Editar
                 </button>
+                <button
+                  className="btn-outline"
+                  onClick={handleExportProntuario}
+                  disabled={exportingPdf}
+                  title="Exportar prontuário completo em PDF"
+                >
+                  {exportingPdf
+                    ? <span style={{ width: 11, height: 11, borderRadius: '50%', border: '1.5px solid var(--gr4)', borderTopColor: 'transparent', display: 'inline-block', animation: 'spin 0.7s linear infinite' }} />
+                    : <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                  }
+                  {exportingPdf ? 'Gerando…' : 'Exportar PDF'}
+                </button>
                 <button onClick={() => setDeleteConfirm(true)} style={{ ...btnSt, background: 'var(--danger-l)', color: 'var(--danger)' }}>
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
                   Excluir
                 </button>
+                <button style={{ ...btnSt, background: 'var(--w)', color: 'var(--g600)', border: '1.5px solid var(--g300)' }} onClick={onQuickNote}>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                  Anotação rápida
+                </button>
                 <button className="btn-primary" onClick={onSessao}>
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                  Anotar Sessão
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                  Atendimento ao vivo
                 </button>
               </div>
             </div>
@@ -369,10 +405,16 @@ export default function Paciente({ patient: propPatient, setCurrentView, onSessa
             <div className="card-title">Histórico de Sessões</div>
             <div className="card-sub">{sessions.length} sessões registradas · clique para ver detalhes</div>
           </div>
-          <button className="btn-primary" onClick={onSessao} style={{ fontSize: '12px', padding: '7px 14px' }}>
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-            Anotar Sessão
-          </button>
+          <div style={{ display: 'flex', gap: '6px' }}>
+            <button style={{ ...btnSt, fontSize: '12px', padding: '7px 14px', background: 'var(--w)', color: 'var(--g600)', border: '1.5px solid var(--g300)' }} onClick={onQuickNote}>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+              Anotação rápida
+            </button>
+            <button className="btn-primary" onClick={onSessao} style={{ fontSize: '12px', padding: '7px 14px' }}>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+              Ao vivo
+            </button>
+          </div>
         </div>
 
         {loading ? (
@@ -392,8 +434,8 @@ export default function Paciente({ patient: propPatient, setCurrentView, onSessa
           </div>
         ) : (
           <>
-            <div style={{ display: 'grid', gridTemplateColumns: '52px 1fr 88px 80px 110px 28px 28px', borderBottom: '2px solid var(--gr2)', padding: '8px 20px', background: 'var(--ow)' }}>
-              {['Sessão', 'Resumo', 'Data', 'Duração', 'Status', '', ''].map((h, i) => (
+            <div style={{ display: 'grid', gridTemplateColumns: '52px 48px 1fr 96px 80px 110px 28px 28px', borderBottom: '2px solid var(--gr2)', padding: '8px 20px', background: 'var(--ow)' }}>
+              {['Sessão', 'Tipo', 'Resumo / Anotações', 'Criado', 'Duração', 'Status', '', ''].map((h, i) => (
                 <div key={i} style={{ fontSize: '10px', fontWeight: 600, letterSpacing: '0.8px', textTransform: 'uppercase', color: 'var(--gr4)' }}>{h}</div>
               ))}
             </div>
@@ -407,13 +449,25 @@ export default function Paciente({ patient: propPatient, setCurrentView, onSessa
                   {/* Row */}
                   <div
                     onClick={() => setExpandedSessionId(isExpanded ? null : s.id)}
-                    style={{ display: 'grid', gridTemplateColumns: '52px 1fr 88px 80px 110px 28px 28px', padding: '12px 20px', alignItems: 'center', cursor: 'pointer', transition: 'background 0.12s', background: isExpanded ? 'var(--g50)' : '' }}
+                    style={{ display: 'grid', gridTemplateColumns: '52px 48px 1fr 96px 80px 110px 28px 28px', padding: '12px 20px', alignItems: 'center', cursor: 'pointer', transition: 'background 0.12s', background: isExpanded ? 'var(--g50)' : '' }}
                     onMouseEnter={e => { if (!isExpanded) e.currentTarget.style.background = 'var(--ow)' }}
                     onMouseLeave={e => { if (!isExpanded) e.currentTarget.style.background = '' }}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
                       {evColor && <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: evColor, flexShrink: 0, display: 'inline-block' }} />}
                       <span style={{ fontFamily: "'Fraunces', serif", fontSize: '14px', color: 'var(--d)' }}>{s.num}</span>
+                    </div>
+                    {/* Type badge */}
+                    <div>
+                      <span style={{
+                        fontSize: '9.5px', fontWeight: 600, padding: '2px 6px', borderRadius: '10px',
+                        background: s.type === 'canvas' ? 'rgba(74,124,89,0.08)' : 'rgba(41,128,185,0.08)',
+                        color: s.type === 'canvas' ? 'var(--g600)' : '#2980B9',
+                        border: `1px solid ${s.type === 'canvas' ? 'var(--g100)' : 'rgba(41,128,185,0.2)'}`,
+                        textTransform: 'uppercase', letterSpacing: '0.3px',
+                      }}>
+                        {s.type === 'canvas' ? '✏ Canvas' : '⌨ Texto'}
+                      </span>
                     </div>
                     <div style={{ fontSize: '12px', color: 'var(--gr5)', lineHeight: 1.4, paddingRight: '16px', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: isExpanded ? 'unset' : 2, WebkitBoxOrient: 'vertical' }}>
                       {s.hasAnalysis && (
@@ -424,7 +478,12 @@ export default function Paciente({ patient: propPatient, setCurrentView, onSessa
                       )}
                       {s.summary}
                     </div>
-                    <div style={{ fontSize: '12px', color: 'var(--gr5)' }}>{fmtDate(s.finishedAt || s.createdAt)}</div>
+                    <div style={{ fontSize: '11px', color: 'var(--gr5)', lineHeight: 1.4 }}>
+                      <div>{fmtDate(s.createdAt)}</div>
+                      {s.updatedAt && s.updatedAt !== s.createdAt && (
+                        <div style={{ fontSize: '10px', color: 'var(--gr3)' }}>Edit. {fmtDate(s.updatedAt)}</div>
+                      )}
+                    </div>
                     <div style={{ fontSize: '12px', color: 'var(--gr5)', fontVariantNumeric: 'tabular-nums' }}>{fmtDuration(s.durationSeconds)}</div>
                     <div>
                       <span style={{ display: 'inline-block', fontSize: '11px', fontWeight: 600, padding: '3px 8px', borderRadius: '20px', background: bs.bg, color: bs.color }}>
@@ -448,12 +507,33 @@ export default function Paciente({ patient: propPatient, setCurrentView, onSessa
                   {/* Expanded notes panel */}
                   {isExpanded && (
                     <div style={{ background: 'var(--ow)', borderTop: '1px solid var(--g100)', padding: '20px 24px' }}>
+                      {/* Dates row */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '14px', flexWrap: 'wrap' }}>
+                        <span style={{ fontSize: '11px', color: 'var(--gr4)', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                          Criado: {fmtDate(s.createdAt)}
+                        </span>
+                        {s.finishedAt && (
+                          <span style={{ fontSize: '11px', color: 'var(--gr4)', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                            Encerrado: {fmtDate(s.finishedAt)}
+                          </span>
+                        )}
+                        {s.updatedAt && s.updatedAt !== s.finishedAt && s.updatedAt !== s.createdAt && (
+                          <span style={{ fontSize: '11px', color: 'var(--gr4)', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                            Editado: {fmtDate(s.updatedAt)}
+                          </span>
+                        )}
+                        <span style={{ fontSize: '11px', color: 'var(--gr4)', marginLeft: 'auto' }}>{fmtDuration(s.durationSeconds)}</span>
+                      </div>
+
+                      {/* Content */}
                       {s.textContent ? (
                         <div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
                             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--g600)" strokeWidth="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
                             <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--g700)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Anotações desta sessão</span>
-                            <span style={{ fontSize: '10px', color: 'var(--gr4)', marginLeft: 'auto' }}>{fmtDate(s.finishedAt || s.createdAt)} · {fmtDuration(s.durationSeconds)}</span>
                           </div>
                           <div style={{
                             fontSize: '13.5px', lineHeight: '1.8', color: 'var(--d)',
@@ -467,13 +547,37 @@ export default function Paciente({ patient: propPatient, setCurrentView, onSessa
                           </div>
                         </div>
                       ) : s.type === 'canvas' ? (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '16px', background: 'var(--w)', borderRadius: 'var(--r)', border: '1px solid var(--gr2)' }}>
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--gr4)" strokeWidth="1.8"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/><path d="M2 2l7.586 7.586"/><circle cx="11" cy="11" r="2"/></svg>
-                          <span style={{ fontSize: '13px', color: 'var(--gr5)' }}>Esta sessão foi feita no Canvas — visualização das anotações desenhadas não disponível aqui.</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '14px 16px', background: 'var(--w)', borderRadius: 'var(--r)', border: '1px solid var(--gr2)' }}>
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--g500)" strokeWidth="1.8"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
+                          <span style={{ fontSize: '13px', color: 'var(--gr5)' }}>Sessão feita no Canvas. Clique em "Continuar anotando" para reabrir.</span>
                         </div>
                       ) : (
                         <div style={{ fontSize: '13px', color: 'var(--gr4)', textAlign: 'center', padding: '16px' }}>
                           Nenhuma anotação registrada nesta sessão.
+                        </div>
+                      )}
+
+                      {/* Painel IA da sessão */}
+                      {s.hasAnalysis && (
+                        <div style={{ marginTop: '16px' }}>
+                          <AiAnalysisPanel
+                            sessionId={s.id}
+                            analysis={analyses.find(a => a.sessionId === s.id) || null}
+                            createdAt={analyses.find(a => a.sessionId === s.id)?.createdAt}
+                          />
+                        </div>
+                      )}
+
+                      {/* Reopen button */}
+                      {onReopenSession && (
+                        <div style={{ marginTop: '14px', paddingTop: '14px', borderTop: '1px solid var(--gr2)', display: 'flex', justifyContent: 'flex-end' }}>
+                          <button
+                            onClick={e => { e.stopPropagation(); onReopenSession(s) }}
+                            style={{ ...btnSt, background: 'var(--g50)', border: '1px solid var(--g200)', color: 'var(--g700)', fontSize: '12px', padding: '8px 16px' }}
+                          >
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                            Continuar anotando nesta sessão
+                          </button>
                         </div>
                       )}
                     </div>
@@ -567,6 +671,9 @@ export default function Paciente({ patient: propPatient, setCurrentView, onSessa
           </>
         )}
       </div>
+      {/* Documents */}
+      <DocumentsPanel patientId={patientId} patientName={p?.name} />
+
       {/* Notes */}
       <div className="card">
         <div className="card-header">

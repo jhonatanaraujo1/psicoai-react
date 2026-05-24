@@ -15,13 +15,28 @@ export default function PreSessionBriefing({ patient, onStart, onCancel, isOpen 
   const [step, setStep] = useState(1) // 1 = briefing, 2 = tipo de anotação
   const [sessions, setSessions] = useState([])
   const [summary, setSummary] = useState(null)
+  const [googleConnected, setGoogleConnected] = useState(false)
+  const [creatingMeet, setCreatingMeet] = useState(false)
 
   useEffect(() => {
     if (isOpen && patient?.id) {
       api.getPatientSessions(patient.id).then(res => setSessions(res.content || []))
       api.getPatientSummary(patient.id).then(setSummary).catch(() => {})
+      api.getGoogleStatus().then(s => setGoogleConnected(s.connected)).catch(() => {})
     }
   }, [isOpen, patient?.id])
+
+  const handleCreateMeet = async () => {
+    setCreatingMeet(true)
+    try {
+      const res = await api.createGoogleMeet(patient.name)
+      setMeetLink(res.meetLink)
+    } catch (e) {
+      alert('Não foi possível criar a sala Google Meet. Verifique a conexão com o Google em Configurações → Integrações e tente novamente.')
+    } finally {
+      setCreatingMeet(false)
+    }
+  }
 
   if (!isOpen || !patient) return null
 
@@ -60,7 +75,7 @@ export default function PreSessionBriefing({ patient, onStart, onCancel, isOpen 
         <div style={{ background: 'var(--g700)', padding: '20px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
           <div>
             <div style={{ fontFamily: "'Fraunces', serif", fontSize: '18px', color: '#fff', fontWeight: 400 }}>
-              Briefing Pré-Sessão
+              Preparação para a sessão
             </div>
             <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.5)', marginTop: '3px' }}>
               {patient.name} · Sessão {sessionNum}
@@ -78,9 +93,9 @@ export default function PreSessionBriefing({ patient, onStart, onCancel, isOpen 
             <div style={{ background: 'var(--danger-l)', border: '1px solid #E8B4B0', borderRadius: 'var(--r)', padding: '12px 14px', display: 'flex', gap: '10px' }}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--danger)" strokeWidth="2" style={{ flexShrink: 0, marginTop: '1px' }}><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
               <div>
-                <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--danger)', marginBottom: '3px' }}>Alerta IA ativo</div>
+                <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--danger)', marginBottom: '3px' }}>Alerta clínico ativo</div>
                 <div style={{ fontSize: '12px', color: 'var(--danger)', lineHeight: 1.5, opacity: 0.85 }}>
-                  Padrão de risco identificado na última análise. Gere um novo relatório para ver o diagnóstico atualizado.
+                  Padrão de risco identificado na última análise. Atualize a análise após esta sessão para revisar o diagnóstico.
                 </div>
               </div>
             </div>
@@ -157,10 +172,10 @@ export default function PreSessionBriefing({ patient, onStart, onCancel, isOpen 
             <div style={{ background: 'var(--ow)', border: '1px solid var(--gr2)', borderRadius: 'var(--r)', padding: '14px 16px' }}>
               <div style={{ fontSize: '10px', fontWeight: 600, letterSpacing: '1px', textTransform: 'uppercase', color: 'var(--gr4)', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                Primeira Sessão
+                Primeira sessão
               </div>
               <div style={{ fontSize: '13px', color: 'var(--gr4)', lineHeight: 1.6 }}>
-                Nenhuma sessão anterior registrada para este paciente.
+                Sem histórico anterior — esta é a primeira sessão registrada para este paciente.
               </div>
             </div>
           )}
@@ -177,13 +192,31 @@ export default function PreSessionBriefing({ patient, onStart, onCancel, isOpen 
                 </svg>
                 <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--d)' }}>Google Meet</span>
               </div>
-              <span style={{ fontSize: '10px', fontWeight: 600, padding: '2px 8px', borderRadius: '20px', background: '#E8F5E9', color: '#2E7D32', letterSpacing: '0.3px' }}>
-                Integração em breve
-              </span>
+              {googleConnected ? (
+                <span style={{ fontSize: '10px', fontWeight: 600, padding: '2px 8px', borderRadius: '20px', background: '#E8F5E9', color: '#2E7D32', letterSpacing: '0.3px' }}>
+                  ✓ Conectado
+                </span>
+              ) : (
+                <span style={{ fontSize: '10px', fontWeight: 600, padding: '2px 8px', borderRadius: '20px', background: 'var(--gr1)', color: 'var(--gr4)', letterSpacing: '0.3px' }}>
+                  Opcional
+                </span>
+              )}
             </div>
             <div style={{ padding: '14px 16px' }}>
+              {googleConnected && !meetLink && (
+                <button
+                  onClick={handleCreateMeet}
+                  disabled={creatingMeet}
+                  style={{ width: '100%', padding: '9px 14px', marginBottom: '10px', border: 'none', borderRadius: 'var(--r)', background: '#00897B', color: '#fff', fontSize: '13px', fontWeight: 600, cursor: creatingMeet ? 'default' : 'pointer', fontFamily: "'DM Sans', sans-serif", display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '7px', opacity: creatingMeet ? 0.7 : 1 }}
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
+                  {creatingMeet ? 'Criando sala…' : 'Criar sala Google Meet'}
+                </button>
+              )}
               <div style={{ fontSize: '12px', color: 'var(--gr5)', marginBottom: '10px', lineHeight: 1.5 }}>
-                Cole o link da reunião ou gere um na sua conta Google Meet. Em breve o PsicoAI gerará o link automaticamente via integração.
+                {googleConnected
+                  ? 'Clique acima para criar uma sala vinculada à sua conta Google, ou cole um link existente.'
+                  : 'Cole o link da videoconferência abaixo, ou conecte o Google em Configurações → Integrações para gerar salas automaticamente.'}
               </div>
               <div style={{ display: 'flex', gap: '8px' }}>
                 <input
@@ -298,7 +331,7 @@ export default function PreSessionBriefing({ patient, onStart, onCancel, isOpen 
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <polygon points="5 3 19 12 5 21 5 3"/>
               </svg>
-              Iniciar Sessão
+              Iniciar sessão agora
             </button>
           </div>
         )}
@@ -307,7 +340,7 @@ export default function PreSessionBriefing({ patient, onStart, onCancel, isOpen 
         {step === 2 && (
           <div style={{ padding: '20px 24px', borderTop: '1px solid var(--gr2)', flexShrink: 0, background: 'var(--w)' }}>
             <div style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.8px', textTransform: 'uppercase', color: 'var(--gr4)', marginBottom: '14px', textAlign: 'center' }}>
-              Como você quer registrar esta sessão?
+              Como deseja registrar esta sessão?
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '12px' }}>
               {/* Opção texto */}
@@ -330,9 +363,9 @@ export default function PreSessionBriefing({ patient, onStart, onCancel, isOpen 
                     <polyline points="10 9 9 9 8 9"/>
                   </svg>
                 </div>
-                <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--d)', marginBottom: '4px' }}>Texto livre</div>
+                <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--d)', marginBottom: '4px' }}>Anotação em texto</div>
                 <div style={{ fontSize: '11px', color: 'var(--gr5)', lineHeight: 1.4 }}>
-                  Escreva, organize e estruture suas anotações com formatação
+                  Escreva e organize as anotações com formatação — ideal para quem digita durante a sessão
                 </div>
               </button>
 
@@ -355,9 +388,9 @@ export default function PreSessionBriefing({ patient, onStart, onCancel, isOpen 
                     <circle cx="11" cy="11" r="2"/>
                   </svg>
                 </div>
-                <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--d)', marginBottom: '4px' }}>Canvas / Draw</div>
+                <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--d)', marginBottom: '4px' }}>Canvas livre</div>
                 <div style={{ fontSize: '11px', color: 'var(--gr5)', lineHeight: 1.4 }}>
-                  Desenhe, rabisque e anote — otimizado para tablet e Apple Pencil
+                  Desenhe, rabisque e escreva à mão — otimizado para tablet e Apple Pencil
                 </div>
               </button>
             </div>
@@ -365,7 +398,7 @@ export default function PreSessionBriefing({ patient, onStart, onCancel, isOpen 
               onClick={() => setStep(1)}
               style={{ width: '100%', padding: '9px', border: '1px solid var(--gr2)', borderRadius: 'var(--r)', background: 'transparent', fontSize: '12px', color: 'var(--gr5)', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}
             >
-              ← Voltar
+              Voltar ao resumo
             </button>
           </div>
         )}

@@ -46,10 +46,10 @@ export default function PatientPicker({ isOpen, onSelect, onCancel }) {
         }}>
           <div>
             <div style={{ fontFamily: "'Fraunces', serif", fontSize: '18px', color: '#fff', fontWeight: 400 }}>
-              Anotar Sessão
+              Selecionar paciente
             </div>
             <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.5)', marginTop: '3px' }}>
-              Para qual paciente você vai escrever suas anotações?
+              Escolha o paciente para registrar a sessão de hoje
             </div>
           </div>
           <button
@@ -74,7 +74,7 @@ export default function PatientPicker({ isOpen, onSelect, onCancel }) {
               type="text"
               value={search}
               onChange={e => setSearch(e.target.value)}
-              placeholder="Buscar por nome ou CID..."
+              placeholder="Buscar por nome ou código CID..."
               autoFocus
               style={{
                 width: '100%', boxSizing: 'border-box',
@@ -93,7 +93,9 @@ export default function PatientPicker({ isOpen, onSelect, onCancel }) {
         <div style={{ flex: 1, overflowY: 'auto', scrollbarWidth: 'thin', scrollbarColor: 'var(--gr2) transparent' }}>
           {filtered.length === 0 ? (
             <div style={{ padding: '32px', textAlign: 'center', color: 'var(--gr4)', fontSize: '13px' }}>
-              Nenhum paciente encontrado
+              {allPatients.length === 0
+                ? 'Nenhum paciente cadastrado ainda. Cadastre o primeiro em Pacientes → Novo paciente.'
+                : 'Nenhum paciente encontrado para essa busca.'}
             </div>
           ) : (
             filtered.map((p) => {

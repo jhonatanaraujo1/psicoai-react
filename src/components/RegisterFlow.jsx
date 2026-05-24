@@ -190,7 +190,7 @@ export default function RegisterFlow({ onLogin, onBack }) {
               <div style={{ fontSize: '13px', color: 'var(--gr5)' }}>
                 {step === 1
                   ? 'Crie sua conta em segundos — sem cartão de crédito'
-                  : 'Personaliza sua experiência desde o primeiro dia'}
+                  : 'Personaliza o assistente para a sua prática clínica'}
               </div>
             </div>
           )}
@@ -208,10 +208,11 @@ export default function RegisterFlow({ onLogin, onBack }) {
               </div>
 
               <div>
-                <Label opt>CRP</Label>
+                <Label opt>Número do CRP</Label>
                 <input style={baseSt(false)} value={form.crp}
                   onChange={e => set('crp', e.target.value)} onFocus={onFo} onBlur={onBl}
                   placeholder="Ex: 06/89234" />
+                <div style={{ fontSize: '11px', color: 'var(--gr4)', marginTop: '5px' }}>Formato: estado/número — ex: 06/89234 (SP), 07/12345 (RJ)</div>
               </div>
 
               <div>
@@ -223,13 +224,13 @@ export default function RegisterFlow({ onLogin, onBack }) {
               </div>
 
               <div>
-                <Label>Senha</Label>
+                <Label>Senha de acesso</Label>
                 <div style={{ position: 'relative' }}>
                   <input type={showPass ? 'text' : 'password'}
                     style={{ ...baseSt(errors.password), paddingRight: '46px' }}
                     value={form.password}
                     onChange={e => set('password', e.target.value)} onFocus={onFo} onBlur={onBl}
-                    placeholder="Mínimo 8 caracteres" />
+                    placeholder="Crie uma senha segura" />
                   <button type="button" onClick={() => setShowPass(v => !v)} style={{ position: 'absolute', right: '13px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--gr4)', padding: '4px', display: 'flex', alignItems: 'center' }}>
                     {showPass
                       ? <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
@@ -238,6 +239,7 @@ export default function RegisterFlow({ onLogin, onBack }) {
                   </button>
                 </div>
                 <PwStrength pw={form.password} />
+                {!errors.password && <div style={{ fontSize: '11px', color: 'var(--gr4)', marginTop: '4px' }}>Mínimo 8 caracteres, com letras e números</div>}
                 <ErrMsg msg={errors.password} />
               </div>
 
@@ -292,7 +294,7 @@ export default function RegisterFlow({ onLogin, onBack }) {
 
               {/* What's personalised */}
               <div style={{ background: 'var(--ow)', borderRadius: '10px', padding: '12px 14px', border: '1px solid var(--gr2)' }}>
-                <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--gr5)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '8px' }}>Isso personaliza</div>
+                <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--gr5)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '8px' }}>Por que pedimos isso</div>
                 {['Templates de sessão pré-configurados para sua abordagem', 'Sugestões da IA alinhadas à sua especialidade', 'Abordagem padrão ao criar novos pacientes'].map((t, i) => (
                   <div key={i} style={{ display: 'flex', gap: '8px', alignItems: 'flex-start', fontSize: '12px', color: 'var(--gr5)', marginBottom: i < 2 ? '5px' : 0, lineHeight: 1.4 }}>
                     <span style={{ color: 'var(--g500)', flexShrink: 0, marginTop: '1px' }}>✓</span>
@@ -315,10 +317,10 @@ export default function RegisterFlow({ onLogin, onBack }) {
               </div>
 
               <div style={{ fontFamily: "'Fraunces', serif", fontSize: '26px', fontWeight: 400, color: 'var(--d)', marginBottom: '8px' }}>
-                Bem-vinda, {firstName}!
+                Tudo pronto, {firstName}!
               </div>
               <div style={{ fontSize: '14px', color: 'var(--gr5)', marginBottom: '28px', lineHeight: 1.6, maxWidth: '320px', margin: '0 auto 28px' }}>
-                Sua conta está pronta. Aqui está o que espera por você:
+                Sua conta está criada. Veja o que espera por você:
               </div>
 
               {/* Feature grid */}
@@ -341,11 +343,11 @@ export default function RegisterFlow({ onLogin, onBack }) {
                 style={{ width: '100%', padding: '14px', background: 'var(--g600)', color: '#fff', border: 'none', borderRadius: 'var(--r)', fontSize: '14px', fontWeight: 600, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', transition: 'background 0.15s' }}
                 onMouseOver={e => e.currentTarget.style.background = 'var(--g700)'}
                 onMouseOut={e => e.currentTarget.style.background = 'var(--g600)'}>
-                Entrar na plataforma
+                Acessar meu consultório
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
               </button>
               <div style={{ fontSize: '11px', color: 'var(--gr4)', marginTop: '12px' }}>
-                Um tour rápido vai apresentar as funcionalidades principais
+                Você vai conhecer cada módulo em um tour de 2 minutos
               </div>
             </div>
           )}
@@ -355,14 +357,14 @@ export default function RegisterFlow({ onLogin, onBack }) {
             <div style={{ padding: '0 28px 24px', display: 'flex', gap: '10px' }}>
               <button onClick={goBack}
                 style={{ flex: 1, padding: '12px', border: '1px solid var(--gr2)', borderRadius: 'var(--r)', background: 'var(--w)', fontSize: '13px', fontWeight: 500, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", color: 'var(--gr5)' }}>
-                {step === 1 ? '← Voltar' : '← Anterior'}
+                ← Voltar
               </button>
               <button onClick={goNext} disabled={loading}
                 style={{ flex: 2, padding: '12px', border: 'none', borderRadius: 'var(--r)', background: loading ? 'var(--g400)' : 'var(--g600)', color: '#fff', fontSize: '13px', fontWeight: 600, cursor: loading ? 'default' : 'pointer', fontFamily: "'DM Sans', sans-serif", display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', transition: 'background 0.15s' }}
                 onMouseOver={e => !loading && (e.currentTarget.style.background = 'var(--g700)')}
                 onMouseOut={e => !loading && (e.currentTarget.style.background = loading ? 'var(--g400)' : 'var(--g600)')}>
                 {loading
-                  ? <><span style={{ width: '14px', height: '14px', border: '2px solid rgba(255,255,255,0.3)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.8s linear infinite', display: 'inline-block' }} />Criando conta…</>
+                  ? <><span style={{ width: '14px', height: '14px', border: '2px solid rgba(255,255,255,0.3)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.8s linear infinite', display: 'inline-block' }} />Criando sua conta…</>
                   : <>{step === 1 ? 'Continuar' : 'Criar minha conta'} →</>
                 }
               </button>
