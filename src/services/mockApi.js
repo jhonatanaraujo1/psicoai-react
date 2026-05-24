@@ -258,6 +258,35 @@ const ANALYSES = {
       createdAt: '2026-05-03T16:35:00Z',
     },
   ],
+  'p-007': [
+    {
+      id: 'a-010', sessionId: 's-pa-018', patientId: 'p-007', patientName: 'Pedro Alves',
+      evolution: 'neutral',
+      summary: 'Paciente apresenta quadro consistente com segundo episódio de burnout. Despersonalização marcante — relata se sentir "robô" no trabalho. Há sinais de melhora na consciência dos próprios limites, mas ainda sem mudança comportamental concreta.',
+      hypotheses: JSON.stringify([
+        { code: 'Z73.0', label: 'Síndrome de Burnout', system: 'CID-11', probability: 82, rationale: 'Segundo episódio confirmado. Exaustão emocional, despersonalização e redução da realização profissional presentes' },
+        { code: 'F33.0', label: 'Episódio Depressivo Recorrente Leve', system: 'CID-11', probability: 41, rationale: 'Humor persistentemente rebaixado nos últimos 3 meses, mas ainda funcional. Monitorar evolução' },
+        { code: 'F41.1', label: 'Transtorno de Ansiedade Generalizada', system: 'CID-11', probability: 35, rationale: 'Preocupação excessiva com desempenho e controle — diferencial a acompanhar' },
+      ]),
+      patterns: JSON.stringify([
+        { type: 'rumination', description: 'Pensamentos repetitivos sobre falhas no trabalho — relata "loop mental" antes de dormir há 6 semanas', severity: 'high' },
+        { type: 'isolation', description: 'Cancelou eventos sociais 4 vezes nas últimas 3 semanas — comportamento novo para ele', severity: 'medium' },
+        { type: 'catastrophizing', description: 'Antecipa demissão em cenários onde não há evidência objetiva de risco', severity: 'medium' },
+      ]),
+      riskAlerts: JSON.stringify([
+        { level: 'medium', description: 'Sono fragmentado há 6 semanas (3-4h por noite) — risco de agravamento do quadro' },
+        { level: 'low', description: 'Hipertensão leve pode ser agravada pelo estresse crônico — manter contato com cardiologista' },
+      ]),
+      nextSessionSuggestions: JSON.stringify([
+        'Mapear concretamente o que está gerando mais sobrecarga — volume de trabalho vs conflito de valores',
+        'Introduzir técnica de delimitação de horários (boundary setting) com tarefa de casa prática',
+        'Avaliar se afastamento temporário é viável — discutir com o paciente sem induzi-lo',
+        'Encaminhar para avaliação psiquiátrica se sono não melhorar nas próximas 2 semanas',
+      ]),
+      cost: 4.90, usedIncluded: true, inputTokens: 1100, outputTokens: 590,
+      createdAt: '2026-05-14T16:20:00Z',
+    },
+  ],
   'p-002': [
     {
       id: 'a-003', sessionId: 's-005', patientId: 'p-002', patientName: 'Carla Silva',
@@ -407,6 +436,16 @@ function buildReportSections(patient, type, sections, analyses, sessions, psicol
     sections.sessions && allSessions.length > 0 && { id: 'sessions', label: 'Histórico de Sessões', text: allSessions.map(s => `• ${s.num} — ${fmtDate(s.finishedAt || s.createdAt)} — ${s.statusLabel}\n  ${s.summary || '—'}`).join('\n\n') },
     { id: 'sig', label: null, isSignature: true, text: `${psicologoName}${crp ? `\nCRP ${crp}` : ''}` },
   ].filter(Boolean)
+}
+
+const DOCUMENTS_BY_PATIENT = {
+  'p-001': [
+    { id: 'doc-001', name: 'Anamnese inicial — Lucas', originalName: 'anamnese_lucas.pdf', mimeType: 'application/pdf', fileSize: 245000, category: 'anamnese', createdAt: '2025-09-16T10:30:00Z' },
+    { id: 'doc-002', name: 'TCLE assinado', originalName: 'tcle_lucas.pdf', mimeType: 'application/pdf', fileSize: 89000, category: 'tcle', createdAt: '2025-09-16T11:00:00Z' },
+  ],
+  'p-002': [
+    { id: 'doc-003', name: 'Laudo de encaminhamento', originalName: 'laudo_carla.pdf', mimeType: 'application/pdf', fileSize: 112000, category: 'laudo', createdAt: '2025-12-01T09:00:00Z' },
+  ],
 }
 
 const FORMS_BY_PATIENT = {
@@ -596,14 +635,26 @@ export const api = {
 
   async finishSession(sessionId, data) {
     await delay(400)
+    const { textContent, htmlContent, imageBase64, canvasDataJson, canvasTextContent, durationSeconds } = data
     for (const sessions of Object.values(SESSIONS_BY_PATIENT)) {
       const s = sessions.find(s => s.id === sessionId)
       if (s) {
-        Object.assign(s, { ...data, status: 'finished', finishedAt: new Date().toISOString() })
+        Object.assign(s, {
+          textContent:      textContent      ?? s.textContent,
+          htmlContent:      htmlContent      ?? s.htmlContent,
+          imageBase64:      imageBase64      ?? s.imageBase64,
+          canvasDataJson:   canvasDataJson   ?? s.canvasDataJson,
+          canvasTextContent: canvasTextContent ?? s.canvasTextContent,
+          durationSeconds:  durationSeconds  ?? s.durationSeconds,
+          status:    'finished',
+          finishedAt: new Date().toISOString(),
+        })
         return s
       }
     }
-    throw new Error('Sessão não encontrada')
+    // Sessão não existe no mock ainda (criada em background) — adiciona ao primeiro paciente como fallback
+    console.warn('[mockApi] finishSession: sessionId não encontrado, ignorando:', sessionId)
+    return { sessionId, saved: true }
   },
 
   // Analyses
@@ -618,9 +669,26 @@ export const api = {
 
   async createAnalysis({ sessionId, patientId, additionalSessionIds = [], template = null }) {
     await delay(2800) // simula chamada à IA
+
+    // Busca sessão atual para extrair todo conteúdo disponível
+    let currentSession = null
+    for (const sessions of Object.values(SESSIONS_BY_PATIENT)) {
+      const found = sessions.find(s => s.id === sessionId)
+      if (found) { currentSession = found; break }
+    }
+
+    // Constrói contexto rico — o que o backend real enviaria para Claude/GPT-4o
+    // Camadas de informação em ordem de fidelidade:
+    //  1. canvasTextContent → texto extraído diretamente dos elementos (sem OCR, 100% fiel)
+    //  2. imageBase64       → imagem do canvas (IA usa visão para estrutura, setas, diagramas)
+    //  3. textContent       → notas de texto da sessão
+    //  4. sessões anteriores → contexto longitudinal
+    const hasCanvas    = !!(currentSession?.imageBase64)
+    const hasText      = !!(currentSession?.textContent || currentSession?.canvasTextContent)
+    const sessionCount = 1 + (additionalSessionIds?.length || 0)
+
     // Usa análise de Lucas como template realista
     const baseTemplate = ANALYSES['p-001'][0]
-    const sessionCount = 1 + (additionalSessionIds?.length || 0)
     const analysis = {
       ...baseTemplate,
       id: 'a-' + Date.now(),
@@ -630,8 +698,13 @@ export const api = {
       refineCount: 0,
       patientId: patientId || 'p-001',
       createdAt: new Date().toISOString(),
-      clinicalBasis: 'Baseado nas menções de pesadelos recorrentes (3ª sessão consecutiva), no relato de evitação de situações sociais e no padrão de hipervigilância descrito pelo psicólogo nas anotações.',
+      clinicalBasis: [
+        hasCanvas && 'anotações manuscritas do canvas (texto extraído + visão da imagem)',
+        hasText   && 'conteúdo textual da sessão',
+        sessionCount > 1 && `${sessionCount - 1} sessão(ões) anterior(es) incluída(s) na análise longitudinal`,
+      ].filter(Boolean).join(', ') || 'conteúdo da sessão atual',
     }
+
     // Persiste no registro do paciente correto
     if (patientId && patientId !== 'p-001') {
       if (!ANALYSES[patientId]) ANALYSES[patientId] = []
@@ -820,7 +893,7 @@ export const api = {
       recentAnalyses: [
         { analysisId: 'a-001', patientId: 'p-001', patientName: 'Lucas Martins', evolution: 'negative', summary: 'Padrão de evitação progressiva. F43.1 TEPT 78%.', createdAt: '2026-05-17T16:32:00Z' },
         { analysisId: 'a-003', patientId: 'p-002', patientName: 'Carla Silva', evolution: 'positive', summary: 'Primeiro evento de exposição bem-sucedido. Fobia social em regressão.', createdAt: '2026-05-04T11:38:00Z' },
-        { analysisId: 'a-002', patientId: 'p-001', patientName: 'Lucas Martins', evolution: 'neutral', summary: 'Processamento moderado. Resistência manejável.', createdAt: '2026-05-03T16:35:00Z' },
+        { analysisId: 'a-010', patientId: 'p-007', patientName: 'Pedro Alves', evolution: 'neutral', summary: 'Segundo episódio de burnout. Despersonalização presente. Sono fragmentado há 6 semanas.', createdAt: '2026-05-14T16:20:00Z' },
       ],
     }
   },
@@ -995,6 +1068,142 @@ export const api = {
   async createBillingPortalSession() {
     await delay(400)
     return { url: `${window.location.origin}/?billing=demo` }
+  },
+
+  // Busca análise IA de uma sessão específica pelo sessionId
+  async getSessionAnalysis(sessionId) {
+    await delay(280)
+    const all = Object.values(ANALYSES).flat()
+    return all.find(a => a.sessionId === sessionId) || null
+  },
+
+  // Anotações — listagem global de sessões com texto
+  async getRecentAnnotations({ search = '', patientId = '' } = {}) {
+    await delay(400)
+    const all = Object.entries(SESSIONS_BY_PATIENT).flatMap(([pid, sessions]) => {
+      const patient = PATIENTS.find(p => p.id === pid)
+      return sessions
+        .filter(s => s.textContent || s.status === 'finished')
+        .map(s => ({
+          ...s,
+          patientId: pid,
+          patientName: patient?.name || '—',
+          patientInitials: patient?.initials || '??',
+          patientAvatarBg: patient?.avatarBg || 'var(--gr1)',
+          patientAvatarColor: patient?.avatarColor || 'var(--gr5)',
+          patient,
+        }))
+    }).sort((a, b) => new Date(b.finishedAt || b.createdAt) - new Date(a.finishedAt || a.createdAt))
+
+    let result = all
+    if (patientId) result = result.filter(s => s.patientId === patientId)
+    if (search.trim()) {
+      const q = search.toLowerCase()
+      result = result.filter(s =>
+        s.textContent?.toLowerCase().includes(q) ||
+        s.patientName?.toLowerCase().includes(q)
+      )
+    }
+    return result
+  },
+
+  // Documents (pasta de documentos)
+  async getPatientDocuments(patientId) {
+    await delay(350)
+    return (DOCUMENTS_BY_PATIENT[patientId] || [])
+  },
+
+  async uploadDocument(patientId, file, category = 'outros', name = null) {
+    await delay(800)
+    const doc = {
+      id: 'doc-' + Date.now(),
+      name: name?.trim() || file.name,
+      originalName: file.name,
+      mimeType: file.type || 'application/octet-stream',
+      fileSize: file.size,
+      category: category || 'outros',
+      createdAt: new Date().toISOString(),
+    }
+    if (!DOCUMENTS_BY_PATIENT[patientId]) DOCUMENTS_BY_PATIENT[patientId] = []
+    DOCUMENTS_BY_PATIENT[patientId].unshift(doc)
+    return doc
+  },
+
+  async downloadDocument(patientId, docId) {
+    await delay(400)
+    // Return a tiny placeholder blob in mock mode
+    return new Blob(['[arquivo de demonstração]'], { type: 'text/plain' })
+  },
+
+  async deleteDocument(patientId, docId) {
+    await delay(400)
+    if (DOCUMENTS_BY_PATIENT[patientId]) {
+      DOCUMENTS_BY_PATIENT[patientId] = DOCUMENTS_BY_PATIENT[patientId].filter(d => d.id !== docId)
+    }
+  },
+
+  async exportProntuarioPdf(patientId) {
+    await delay(1200)
+    const patient = PATIENTS.find(p => p.id === patientId)
+    const text = `PRONTUÁRIO ELETRÔNICO\nPsicoAI · Demo\n\nPaciente: ${patient?.name || 'Paciente'}\nGerado em: ${new Date().toLocaleString('pt-BR')}\n\n[Versão de demonstração — conecte o backend para PDF real]`
+    return new Blob([text], { type: 'application/pdf' })
+  },
+
+  async exportRelatorioPdf(patientId, type = 'encaminhamento') {
+    await delay(1000)
+    const patient = PATIENTS.find(p => p.id === patientId)
+    const text = `RELATÓRIO DE ENCAMINHAMENTO\nPsicoAI · Demo\n\nPaciente: ${patient?.name || 'Paciente'}\nTipo: ${type}\nGerado em: ${new Date().toLocaleString('pt-BR')}\n\n[Versão de demonstração — conecte o backend para PDF real]`
+    return new Blob([text], { type: 'application/pdf' })
+  },
+
+  async importPatients(file) {
+    await delay(1500)
+    // In mock: just report simulated import
+    return { imported: 3, skipped: 0, errors: [] }
+  },
+
+  // ── Google OAuth / Calendar / Meet ───────────────────────────────────────
+  _googleConnected: false,
+  _googleCalendarSync: false,
+
+  async getGoogleStatus() {
+    await delay(200)
+    return { connected: this._googleConnected, email: this._googleConnected ? 'demo@gmail.com' : null, calendarSync: this._googleCalendarSync }
+  },
+
+  async getGoogleAuthUrl() {
+    await delay(100)
+    // No mock, simula conexão diretamente
+    return { url: null, _mock: true }
+  },
+
+  async disconnectGoogle() {
+    await delay(400)
+    this._googleConnected = false
+    this._googleCalendarSync = false
+    return null
+  },
+
+  async setGoogleCalendarSync(enabled) {
+    await delay(300)
+    this._googleCalendarSync = enabled
+    return null
+  },
+
+  async createGoogleMeet(patientName) {
+    await delay(800)
+    const code = Math.random().toString(36).slice(2, 5) + '-' + Math.random().toString(36).slice(2, 5) + '-' + Math.random().toString(36).slice(2, 5)
+    return { meetLink: `https://meet.google.com/${code}`, eventId: 'mock-event-id' }
+  },
+
+  async getGoogleCalendarEvents(from, to) {
+    await delay(500)
+    if (!this._googleCalendarSync) return []
+    const now = new Date()
+    return [
+      { id: 'gev-1', summary: 'Supervisão clínica', start: new Date(now.getTime() + 86400000).toISOString(), end: new Date(now.getTime() + 90000000).toISOString(), meetLink: 'https://meet.google.com/abc-defg-hij', source: 'google' },
+      { id: 'gev-2', summary: 'Reunião de equipe', start: new Date(now.getTime() + 172800000).toISOString(), end: new Date(now.getTime() + 176400000).toISOString(), meetLink: null, source: 'google' },
+    ]
   },
 
   // Cupons — mock com códigos de teste

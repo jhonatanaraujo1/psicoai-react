@@ -85,8 +85,9 @@ export default function Insights() {
     setDrawerResult(null)
     setDrawerLoading(true)
     try {
-      const analyses = await api.getPatientAnalyses(item.id)
-      setDrawerResult(analyses[0] || { error: 'Nenhuma análise encontrada para este paciente.' })
+      const res = await api.getPatientAnalyses(item.id)
+      const list = res?.content ?? (Array.isArray(res) ? res : [])
+      setDrawerResult(list[0] || { error: 'Nenhuma análise encontrada para este paciente.' })
     } catch {
       setDrawerResult({ error: 'Não foi possível carregar a análise.' })
     } finally {
