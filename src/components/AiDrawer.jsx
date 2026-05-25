@@ -8,10 +8,10 @@ const STEP_LABELS = [
 ]
 
 const SEVERITY_STYLES = {
-  high:     { bg: 'var(--danger-l)', border: 'var(--danger)', color: 'var(--danger)', label: 'Alto' },
-  critical: { bg: 'var(--danger-l)', border: 'var(--danger)', color: 'var(--danger)', label: 'Crítico' },
-  medium:   { bg: 'var(--warn-l)',   border: 'var(--warn)',   color: 'var(--warn)',   label: 'Médio' },
-  low:      { bg: 'var(--g50)',      border: 'var(--g300)',   color: 'var(--g600)',   label: 'Baixo' },
+  high:     { bg: 'var(--danger-l)', border: 'var(--danger)', color: 'var(--danger)', label: 'Recente' },
+  critical: { bg: 'var(--danger-l)', border: 'var(--danger)', color: 'var(--danger)', label: 'Frequente' },
+  medium:   { bg: 'var(--warn-l)',   border: 'var(--warn)',   color: 'var(--warn)',   label: 'Pontual' },
+  low:      { bg: 'var(--g50)',      border: 'var(--g300)',   color: 'var(--g600)',   label: 'Isolado' },
 }
 
 const PATTERN_LABELS = {
@@ -219,10 +219,11 @@ export default function AiDrawer({ isOpen, onClose, onSave, patient, result, loa
                   <div className="ai-sec-body" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                     {riskAlerts.map((alert, i) => {
                       const sty = SEVERITY_STYLES[alert.level] || SEVERITY_STYLES.low
+                      const riskLabel = { critical: 'Atenção', high: 'Observar', medium: 'Monitorar', low: 'Registrado' }[alert.level] || 'Registrado'
                       return (
                         <div key={i} style={{ background: sty.bg, border: `1px solid ${sty.border}30`, borderLeft: `3px solid ${sty.border}`, borderRadius: 'var(--r)', padding: '9px 12px' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
-                            <span style={{ fontSize: '10px', fontWeight: 700, color: sty.color, textTransform: 'uppercase', letterSpacing: '0.5px' }}>{sty.label}</span>
+                            <span style={{ fontSize: '10px', fontWeight: 700, color: sty.color, textTransform: 'uppercase', letterSpacing: '0.5px' }}>{riskLabel}</span>
                           </div>
                           <div style={{ fontSize: '12px', color: 'var(--d)', lineHeight: 1.5 }}>{alert.description}</div>
                         </div>
@@ -232,33 +233,29 @@ export default function AiDrawer({ isOpen, onClose, onSave, patient, result, loa
                 </div>
               )}
 
-              {/* Hipóteses diagnósticas */}
+              {/* O que seus registros revelam */}
               {hypotheses.length > 0 && (
                 <div className="ai-section">
                   <div className="ai-sec-header">
                     <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-                    Hipóteses Diagnósticas
+                    O que seus registros revelam
                   </div>
                   <div className="ai-sec-body">
                     {hypotheses.map((h, i) => (
                       <div key={i} style={{ marginBottom: i < hypotheses.length - 1 ? '16px' : 0 }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '6px' }}>
-                          <div>
+                          <div style={{ flex: 1 }}>
                             <div style={{ fontSize: '14px', fontWeight: 600, color: 'var(--d)' }}>{h.label || h.name}</div>
-                            <div style={{ fontSize: '11px', color: 'var(--gr5)' }}>
-                              {h.code}{h.system ? ` · ${h.system}` : ''}
+                          </div>
+                          {(h.sessionCount != null) && (
+                            <div style={{ fontFamily: "'Fraunces', serif", fontSize: '13px', color: 'var(--g600)', fontWeight: 600, flexShrink: 0, marginLeft: '8px', background: 'var(--g50)', padding: '3px 8px', borderRadius: '12px' }}>
+                              {h.sessionCount} {h.sessionCount === 1 ? 'sessão' : 'sessões'}
                             </div>
-                          </div>
-                          <div style={{ fontFamily: "'Fraunces', serif", fontSize: '24px', color: 'var(--g500)', fontWeight: 400, flexShrink: 0, marginLeft: '8px' }}>
-                            {h.probability}%
-                          </div>
+                          )}
                         </div>
-                        <div className="prog-track" style={{ marginBottom: '6px' }}>
-                          <div className="prog-fill" style={{ width: `${h.probability}%` }} />
-                        </div>
-                        {(h.rationale || h.reasoning) && (
+                        {(h.rationale || h.reasoning || h.description) && (
                           <div style={{ fontSize: '11px', color: 'var(--gr5)', lineHeight: 1.5, background: 'var(--gr1)', padding: '7px 10px', borderRadius: '6px' }}>
-                            {h.rationale || h.reasoning}
+                            {h.rationale || h.reasoning || h.description}
                           </div>
                         )}
                       </div>

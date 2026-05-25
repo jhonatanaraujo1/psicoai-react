@@ -150,7 +150,6 @@ export default function Teleatendimento() {
               {[
                 { title: 'Enviar link automático no lembrete', desc: 'Inclui o link da sala nos lembretes de sessão remota', checked: true },
                 { title: 'Antessala ativada', desc: 'Paciente aguarda até você autorizar a entrada', checked: true },
-                { title: 'Gravar sessão (com consentimento)', desc: 'Requer TCLE específico assinado pelo paciente', checked: false },
               ].map((c, i) => (
                 <div key={i}>
                   {i > 0 && <div style={{ height: '1px', background: 'var(--gr1)', marginBottom: '14px' }} />}

@@ -23,10 +23,10 @@ const PATTERN_INFO = {
 }
 
 const ALERT_INFO = {
-  critical: { label: 'Atenção imediata', color: 'var(--danger)', bg: 'var(--danger-l)', desc: 'Requer avaliação urgente' },
-  high:     { label: 'Alta prioridade',  color: '#E67E22',        bg: '#FEF3E8',        desc: 'Acompanhar de perto' },
-  medium:   { label: 'Monitorar',        color: 'var(--warn)',    bg: 'var(--warn-l)',  desc: 'Observar na próxima sessão' },
-  low:      { label: 'Atenção leve',     color: 'var(--g600)',    bg: 'var(--g50)',     desc: 'Dentro do esperado' },
+  critical: { label: 'Atenção',        color: 'var(--danger)', bg: 'var(--danger-l)', desc: 'Padrão recorrente identificado' },
+  high:     { label: 'Observar',       color: '#E67E22',        bg: '#FEF3E8',        desc: 'Acompanhar de perto' },
+  medium:   { label: 'Monitorar',      color: 'var(--warn)',    bg: 'var(--warn-l)',  desc: 'Observar na próxima sessão' },
+  low:      { label: 'Registrado',     color: 'var(--g600)',    bg: 'var(--g50)',     desc: 'Dentro do esperado' },
 }
 
 function Skeleton({ style }) {
@@ -321,38 +321,37 @@ export default function Insights({ onGoToPatient }) {
               </div>
             </div>
 
-            {/* Hipóteses — com contexto claro */}
+            {/* Temas frequentes — baseados nos registros do psicólogo */}
             <div className="card">
               <div className="card-header">
                 <div>
                   <div className="card-title" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    Hipóteses da IA
-                    <Tip text="O que a IA levantou como hipótese nos pacientes analisados. Use como referência de estudo — o diagnóstico é sempre seu." />
+                    Temas frequentes nos seus registros
+                    <Tip text="Temas que a IA identificou repetidamente nas suas anotações. Baseado no que você mesmo registrou em sessão." />
                   </div>
-                  <div className="card-sub">O que apareceu mais nas análises geradas</div>
+                  <div className="card-sub">O que aparece mais nas suas anotações</div>
                 </div>
               </div>
               <div className="card-body">
                 {(data?.topHypotheses || []).length === 0 ? (
-                  <div style={{ textAlign: 'center', padding: '20px 0', fontSize: '12px', color: 'var(--gr4)' }}>Nenhuma hipótese disponível ainda</div>
+                  <div style={{ textAlign: 'center', padding: '20px 0', fontSize: '12px', color: 'var(--gr4)' }}>Nenhum tema registrado ainda</div>
                 ) : (
                   <>
-                    {(data?.topHypotheses || []).map(({ code, label, occurrences, avgProbability }) => (
-                      <div key={code} style={{ marginBottom: '14px' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '5px', gap: '8px' }}>
-                          <div>
-                            <div style={{ fontSize: '12px', color: 'var(--d)', fontWeight: 600 }}>{label}</div>
-                            <div style={{ fontSize: '10px', color: 'var(--gr4)', marginTop: '1px' }}>{code} · apareceu em {occurrences} análise{occurrences > 1 ? 's' : ''}</div>
-                          </div>
-                          <span style={{ fontSize: '14px', fontWeight: 700, color: 'var(--g600)', flexShrink: 0 }}>{avgProbability}%</span>
+                    {(data?.topHypotheses || []).map(({ code, label, occurrences }) => (
+                      <div key={code || label} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px', borderRadius: 'var(--r)', background: 'var(--ow)', border: '1px solid var(--gr2)', marginBottom: '8px' }}>
+                        <div style={{ width: '28px', height: '28px', borderRadius: '6px', background: 'var(--g50)', color: 'var(--g600)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Fraunces', serif", fontSize: '13px', fontWeight: 600, flexShrink: 0 }}>
+                          {occurrences}
                         </div>
-                        <div style={{ height: '6px', background: 'var(--gr2)', borderRadius: '4px', overflow: 'hidden' }}>
-                          <div style={{ width: `${avgProbability}%`, height: '100%', background: 'var(--g500)', borderRadius: '4px' }} />
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontSize: '12px', color: 'var(--d)', fontWeight: 600 }}>{label}</div>
+                          <div style={{ fontSize: '10px', color: 'var(--gr4)', marginTop: '1px' }}>
+                            {occurrences} análise{occurrences !== 1 ? 's' : ''} com este tema
+                          </div>
                         </div>
                       </div>
                     ))}
-                    <div style={{ padding: '10px 12px', background: 'var(--warn-l)', borderRadius: '8px', fontSize: '11px', color: 'var(--warn)', lineHeight: 1.5 }}>
-                      ⚠ São hipóteses de apoio — o diagnóstico é sempre responsabilidade do psicólogo.
+                    <div style={{ padding: '10px 12px', background: 'var(--g50)', borderRadius: '8px', fontSize: '11px', color: 'var(--g600)', lineHeight: 1.5 }}>
+                      Baseado nas suas anotações — a interpretação clínica é sempre sua.
                     </div>
                   </>
                 )}

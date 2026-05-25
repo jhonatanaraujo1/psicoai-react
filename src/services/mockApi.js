@@ -215,10 +215,10 @@ const PATIENTS = [
 const SESSIONS_BY_PATIENT = {
   'p-001': [
     { id: 's-014', patientId: 'p-001', patientName: 'Lucas Martins', num: 'S14', type: 'text', status: 'open', durationSeconds: null, finishedAt: null, createdAt: new Date().toISOString(), hasAnalysis: false, statusLabel: 'Aberta', evolution: null, summary: 'Sessão em andamento.' },
-    { id: 's-013', patientId: 'p-001', patientName: 'Lucas Martins', num: 'S13', type: 'text', status: 'finished', durationSeconds: 3120, finishedAt: '2026-05-17T16:30:00Z', createdAt: '2026-05-17T15:30:00Z', hasAnalysis: true, statusLabel: 'Alerta IA', evolution: 'red', summary: 'Evitação ao tema familiar detectada 4x. Flashback verbal na marca 23min. Padrão TEPT reforçado pela 3ª vez consecutiva.', textContent: 'Paciente chegou 10min atrasado, visivelmente agitado. Mencionou "semana difícil" sem detalhar. Ao perguntar sobre o pai, desviou o assunto imediatamente — mudou de postura, cruzou os braços, começou a falar sobre o trabalho. Fiz três tentativas de retomar o tema familiar e nas três ele evitou.\n\nNa marca de ~23min, ao mencionar o natal de 2019, houve uma pausa longa (~8s) e ele disse "não sei por que me lembro disso agora" — possível intrusão de memória traumática (flashback verbal). Voz ficou mais baixa por cerca de 5min depois.\n\nRetomou o ritmo ao falar sobre a namorada — tema mais seguro para ele. Finalizamos com exercício de respiração. Paciente saiu aparentemente mais calmo mas sem elaborar o conteúdo central.' },
+    { id: 's-013', patientId: 'p-001', patientName: 'Lucas Martins', num: 'S13', type: 'text', status: 'finished', durationSeconds: 3120, finishedAt: '2026-05-17T16:30:00Z', createdAt: '2026-05-17T15:30:00Z', hasAnalysis: true, statusLabel: 'Alerta IA', evolution: 'red', summary: 'Evitação ao tema familiar detectada 4x. Flashback verbal na marca 23min. Tema familiar evitado pela 3ª vez consecutiva.', textContent: 'Paciente chegou 10min atrasado, visivelmente agitado. Mencionou "semana difícil" sem detalhar. Ao perguntar sobre o pai, desviou o assunto imediatamente — mudou de postura, cruzou os braços, começou a falar sobre o trabalho. Fiz três tentativas de retomar o tema familiar e nas três ele evitou.\n\nNa marca de ~23min, ao mencionar o natal de 2019, houve uma pausa longa (~8s) e ele disse "não sei por que me lembro disso agora" — possível intrusão de memória traumática (flashback verbal). Voz ficou mais baixa por cerca de 5min depois.\n\nRetomou o ritmo ao falar sobre a namorada — tema mais seguro para ele. Finalizamos com exercício de respiração. Paciente saiu aparentemente mais calmo mas sem elaborar o conteúdo central.' },
     { id: 's-012', patientId: 'p-001', patientName: 'Lucas Martins', num: 'S12', type: 'text', status: 'finished', durationSeconds: 3000, finishedAt: '2026-05-03T16:30:00Z', createdAt: '2026-05-03T15:30:00Z', hasAnalysis: true, statusLabel: 'Neutro', evolution: 'yellow', summary: 'Processamento de memória traumática. Paciente mais receptivo. Sem crises durante a sessão.', textContent: 'Sessão mais fluida que as anteriores. Lucas conseguiu nomear o episódio de conflito com o pai pela segunda vez — sinal importante de que a resistência está diminuindo levemente.\n\nTrabalhamos com a técnica de janela de tolerância. Ele identificou sozinho quando começou a sair da zona de conforto e pediu para pausar — ótimo sinal de auto-regulação emergindo.\n\nAinda há evitação, mas com menor intensidade. Não houve manifestações físicas de ativação (sem alteração na voz, sem pausas longas). Tarefa de casa: escrever 3 coisas positivas da relação com o pai antes das S13.' },
     { id: 's-011', patientId: 'p-001', patientName: 'Lucas Martins', num: 'S11', type: 'text', status: 'finished', durationSeconds: 2880, finishedAt: '2026-04-19T16:30:00Z', createdAt: '2026-04-19T15:30:00Z', hasAnalysis: false, statusLabel: 'Neutro', evolution: 'yellow', summary: 'Estabilização após crise. Técnicas de regulação emocional trabalhadas.', textContent: 'Sessão de contenção após a crise relatada entre S10 e S11 (contato por WhatsApp na semana passada — choro intenso, pensamentos intrusivos sobre o acidente).\n\nFoco em estabilização: respiração diafragmática 4-7-8, grounding com os 5 sentidos. Lucas respondeu bem — conseguiu se regular em ~15min de prática.\n\nNão aprofundamos o trauma hoje. Apenas validei o que ele sentiu e reforçamos a janela de tolerância como conceito. Ele disse que "nunca teve recursos para isso antes".\n\nPlano para S12: retomar o trabalho narrativo com cuidado. Avaliar se encaminhamento psiquiátrico é necessário — sono continua fragmentado (relatou 3-4h por noite nas últimas 2 semanas).' },
-    { id: 's-010', patientId: 'p-001', patientName: 'Lucas Martins', num: 'S10', type: 'text', status: 'finished', durationSeconds: 3300, finishedAt: '2026-04-05T16:30:00Z', createdAt: '2026-04-05T15:30:00Z', hasAnalysis: true, statusLabel: 'Regressão', evolution: 'red', summary: 'Evitação marcante. Humor deprimido. Sem abertura para aprofundamento. Hipótese TEPT intensificada.', textContent: 'Sessão muito difícil. Paciente chegou monossilábico, olhar baixo. Disse que "não tem muito o que falar hoje". Tentei diferentes abordagens — tema do trabalho, da namorada, do corpo — sem abertura significativa.\n\nHumor visivelmente deprimido. Sem choro, mas sem afeto também — flat. Perguntei diretamente sobre ideação suicida: negou, mas com pouca energia na resposta — vou monitorar.\n\nÚnica abertura foi quando falou sobre o cachorro que morreu quando tinha 12 anos — "meu pai disse que eu era fraco por chorar". Tema paterno surgiu lateralmente mas não conseguimos aprofundar.\n\nEncerrei a sessão mais cedo (50min) a pedido dele. Combinei contato por mensagem em 3 dias para verificar o estado.' },
+    { id: 's-010', patientId: 'p-001', patientName: 'Lucas Martins', num: 'S10', type: 'text', status: 'finished', durationSeconds: 3300, finishedAt: '2026-04-05T16:30:00Z', createdAt: '2026-04-05T15:30:00Z', hasAnalysis: true, statusLabel: 'Regressão', evolution: 'red', summary: 'Evitação marcante. Humor deprimido. Sem abertura para aprofundamento. Resistência ao aprofundamento aumentada.', textContent: 'Sessão muito difícil. Paciente chegou monossilábico, olhar baixo. Disse que "não tem muito o que falar hoje". Tentei diferentes abordagens — tema do trabalho, da namorada, do corpo — sem abertura significativa.\n\nHumor visivelmente deprimido. Sem choro, mas sem afeto também — flat. Perguntei diretamente sobre ideação suicida: negou, mas com pouca energia na resposta — vou monitorar.\n\nÚnica abertura foi quando falou sobre o cachorro que morreu quando tinha 12 anos — "meu pai disse que eu era fraco por chorar". Tema paterno surgiu lateralmente mas não conseguimos aprofundar.\n\nEncerrei a sessão mais cedo (50min) a pedido dele. Combinei contato por mensagem em 3 dias para verificar o estado.' },
   ],
   'p-002': [
     { id: 's-006', patientId: 'p-002', patientName: 'Carla Silva', num: 'S6', type: 'text', status: 'finished', durationSeconds: 3000, finishedAt: '2026-05-18T11:30:00Z', createdAt: '2026-05-18T10:30:00Z', hasAnalysis: false, statusLabel: 'Evolução', evolution: 'green', summary: 'Paciente relatou melhora significativa em situações sociais no trabalho.', textContent: 'Carla chegou sorrindo — raridade nas primeiras sessões. Contou que participou de um almoço de equipe na sexta-feira e conseguiu ficar por 1h sem precisar sair. Para ela, isso é enorme.\n\nRelatou que usou a técnica de respiração antes de entrar na sala de reunião. Disse que sentiu o coração acelerar mas "ficou de boa". Validei muito essa conquista — é a primeira vez que ela nomeou um recurso interno que funcionou.\n\nAinda há ansiedade antecipatória intensa (começa a se preocupar dias antes de qualquer evento social), mas a resposta no momento do evento está melhorando. Plano: continuar exposição gradual, próximo passo seria um evento social fora do trabalho.' },
@@ -233,9 +233,8 @@ const ANALYSES = {
       evolution: 'negative',
       summary: 'A sessão revelou padrão consistente de evitação ao tema familiar, com terceiro registro consecutivo de comportamento evasivo. O paciente demonstrou ativação emocional intensa ao mencionar o pai, incluindo lapsus verbal e alteração no ritmo da fala. O vínculo terapêutico permanece sólido, mas a resistência ao aprofundamento do trauma aumentou.',
       hypotheses: JSON.stringify([
-        { code: 'F43.1', label: 'Transtorno de Estresse Pós-Traumático', system: 'CID-11', probability: 78, rationale: 'Comportamento evasivo recorrente, flashback verbal, ativação emocional intensa ao tema traumático' },
-        { code: '309.81', label: 'PTSD', system: 'DSM-5', probability: 72, rationale: 'Critérios B e C presentes (intrusão e evitação). Avaliar critério D (alterações cognitivas)' },
-        { code: 'F41.1', label: 'Transtorno de Ansiedade Generalizada', system: 'CID-11', probability: 45, rationale: 'Ruminação presente, mas ansiosa com foco em tema específico, não generalizada' },
+        { label: 'Estresse e reatividade a tema traumático', sessionCount: 3, description: 'Comportamento evasivo recorrente, flashback verbal e ativação emocional intensa ao mencionar o tema apareceram nas últimas 3 sessões' },
+        { label: 'Ruminação ansiosa com foco específico', sessionCount: 2, description: 'Preocupações circulam em torno do mesmo episódio; não há generalização para outros temas' },
       ]),
       patterns: JSON.stringify([
         { type: 'avoidance', description: 'Desvio de assunto ao mencionar relação paterna — 4 ocorrências nesta sessão', severity: 'high' },
@@ -259,7 +258,7 @@ const ANALYSES = {
       evolution: 'neutral',
       summary: 'Sessão de processamento com abertura moderada. O paciente conseguiu nomear a memória traumática pela segunda vez, sinal positivo de progresso. Resistência presente mas manejável.',
       hypotheses: JSON.stringify([
-        { code: 'F43.1', label: 'TEPT', system: 'CID-11', probability: 70, rationale: 'Critérios mantidos; leve melhora na resposta de evitação' },
+        { label: 'Reatividade ao tema traumático', sessionCount: 2, description: 'Critérios mantidos; leve melhora na resposta de evitação em relação à sessão anterior' },
       ]),
       patterns: JSON.stringify([
         { type: 'avoidance', description: 'Evitação presente mas com menor intensidade vs sessão anterior', severity: 'medium' },
@@ -279,9 +278,9 @@ const ANALYSES = {
       evolution: 'neutral',
       summary: 'Paciente apresenta quadro consistente com segundo episódio de burnout. Despersonalização marcante — relata se sentir "robô" no trabalho. Há sinais de melhora na consciência dos próprios limites, mas ainda sem mudança comportamental concreta.',
       hypotheses: JSON.stringify([
-        { code: 'Z73.0', label: 'Síndrome de Burnout', system: 'CID-11', probability: 82, rationale: 'Segundo episódio confirmado. Exaustão emocional, despersonalização e redução da realização profissional presentes' },
-        { code: 'F33.0', label: 'Episódio Depressivo Recorrente Leve', system: 'CID-11', probability: 41, rationale: 'Humor persistentemente rebaixado nos últimos 3 meses, mas ainda funcional. Monitorar evolução' },
-        { code: 'F41.1', label: 'Transtorno de Ansiedade Generalizada', system: 'CID-11', probability: 35, rationale: 'Preocupação excessiva com desempenho e controle — diferencial a acompanhar' },
+        { label: 'Exaustão emocional e despersonalização', sessionCount: 2, description: 'Segundo episódio identificado nos seus registros. Exaustão emocional, sensação de distanciamento e redução da realização profissional aparecem consistentemente' },
+        { label: 'Humor persistentemente rebaixado', sessionCount: 2, description: 'Aparece nos registros dos últimos 3 meses, mas paciente ainda funcional. Monitorar evolução' },
+        { label: 'Preocupação excessiva com desempenho', sessionCount: 1, description: 'Controle e performance como temas recorrentes — acompanhar se persiste nas próximas sessões' },
       ]),
       patterns: JSON.stringify([
         { type: 'rumination', description: 'Pensamentos repetitivos sobre falhas no trabalho — relata "loop mental" antes de dormir há 6 semanas', severity: 'high' },
@@ -308,7 +307,7 @@ const ANALYSES = {
       evolution: 'positive',
       summary: 'Sessão marcada por avanço significativo. Pela primeira vez, a paciente participou de uma reunião presencial sem apresentar sintomas de pânico. O relato foi entusiasmado e com senso de autoeficácia elevado.',
       hypotheses: JSON.stringify([
-        { code: 'F40.1', label: 'Fobia Social', system: 'CID-11', probability: 65, rationale: 'Critérios reduzindo com tratamento — reavaliação diagnóstica em 3 sessões' },
+        { label: 'Ansiedade social com exposição progressiva', sessionCount: 3, description: 'Padrão de ansiedade antecipatória e evitação em redução — resposta positiva às intervenções registradas' },
       ]),
       patterns: JSON.stringify([
         { type: 'avoidance', description: 'Evitação em redução progressiva — melhor resultado desde início do tratamento', severity: 'low' },
@@ -399,7 +398,7 @@ function buildReportSections(patient, type, sections, analyses, sessions, psicol
       { id: 'patient',  label: 'Identificação do Paciente', text: `Nome: ${patient.name}\nData de nascimento: ${dob}${patient.age ? ` (${patient.age} anos)` : ''}\nGênero: ${patient.gender || '—'}\nContato: ${patient.phone || '—'} ${patient.email ? `| ${patient.email}` : ''}` },
       sections.clinical && { id: 'clinical', label: 'Acompanhamento Psicológico', text: `Início do tratamento: ${fmtDate(patient.createdAt)}\nDuração: ${monthsStr}\nAbordagem: ${patient.approach || '—'}\nFrequência: ${patient.frequency || '—'}` },
       sections.clinical && { id: 'queixa',   label: 'Queixa e Histórico Clínico',  text: `${patient.complaint || '—'}${patient.history ? `\n\nHistórico relevante: ${patient.history}` : ''}` },
-      sections.hypotheses && topHyp && { id: 'hyp', label: 'Hipótese Diagnóstica Atual', text: `${topHyp.code} — ${topHyp.label} (${topHyp.system})\nProbabilidade clínica estimada: ${topHyp.probability}%\n\n${hypotheses.slice(1).map(h => `• ${h.code} — ${h.label}: ${h.probability}%`).join('\n')}` },
+      sections.hypotheses && topHyp && { id: 'hyp', label: 'Observações Clínicas Relevantes', text: `${topHyp.label}${topHyp.sessionCount ? ` — observado em ${topHyp.sessionCount} sessões` : ''}\n${topHyp.description || ''}\n\n${hypotheses.slice(1).map(h => `• ${h.label}${h.sessionCount ? ` (${h.sessionCount} sessões)` : ''}`).join('\n')}` },
       { id: 'med',      label: 'Medicação em Uso',           text: patient.medication || 'Nenhuma medicação em uso no momento.' },
       { id: 'referral', label: 'Motivo do Encaminhamento',  text: referralReason },
       sections.patterns && patterns.length > 0 && { id: 'patterns', label: 'Observações Clínicas Relevantes', text: patterns.map(p => `• ${PAT_LABELS[p.type] || p.type} — ${SEV_LABELS[p.severity] || p.severity}: ${p.description}`).join('\n') },
@@ -419,7 +418,7 @@ function buildReportSections(patient, type, sections, analyses, sessions, psicol
       { id: 'patient',  label: 'Identificação',              text: `Paciente: ${patient.name}, ${patient.age || '—'} anos\nAbordagem: ${patient.approach || '—'} · Frequência: ${patient.frequency || '—'}\nSessões realizadas: ${sessionCount} (${finishedSessions.length} concluídas, ${sessions.filter(s=>s.status==='open').length} em aberto)` },
       sections.clinical && { id: 'queixa', label: 'Queixa e Histórico Inicial', text: `${patient.complaint || '—'}${patient.history ? `\n\nHistórico: ${patient.history}` : ''}` },
       sections.sessions && finishedSessions.length > 0 && { id: 'sessions', label: 'Resumo das Sessões Recentes', text: finishedSessions.slice(0, 5).map(s => `• ${s.num} (${fmtDate(s.finishedAt)}): ${s.summary || '—'}`).join('\n') },
-      sections.hypotheses && hypotheses.length > 0 && { id: 'hyp', label: 'Hipóteses Diagnósticas Atuais', text: hypotheses.map(h => `• ${h.code} — ${h.label} (${h.system}): ${h.probability}%\n  ${h.rationale || ''}`).join('\n\n') },
+      sections.hypotheses && hypotheses.length > 0 && { id: 'hyp', label: 'Temas Clínicos Identificados', text: hypotheses.map(h => `• ${h.label}${h.sessionCount ? ` — ${h.sessionCount} sessão(ões)` : ''}\n  ${h.description || h.rationale || ''}`).join('\n\n') },
       sections.patterns && patterns.length > 0 && { id: 'patterns', label: 'Padrões Comportamentais Detectados', text: patterns.map(p => `• ${PAT_LABELS[p.type] || p.type} (${SEV_LABELS[p.severity] || p.severity}): ${p.description}`).join('\n') },
       sections.alerts && alerts.length > 0 && { id: 'alerts', label: 'Alertas Clínicos Ativos', text: alerts.map(a => `• [${a.level.toUpperCase()}] ${a.description}`).join('\n') },
       { id: 'overall',  label: 'Avaliação Geral da Evolução', text: `${overallLabel}\nSessões com evolução positiva: ${positives} · Neutras: ${neutral} · Atenção: ${negatives}${latestAnalysis ? `\n\nÚltima análise IA (${fmtDate(latestAnalysis.createdAt)}): ${latestAnalysis.summary}` : ''}` },
@@ -445,7 +444,7 @@ function buildReportSections(patient, type, sections, analyses, sessions, psicol
     { id: 'header',   label: 'Prontuário Clínico',          text: `Gerado em: ${today}\nPaciente: ${patient.name}` },
     { id: 'patient',  label: 'Dados do Paciente',           text: `Nome: ${patient.name}\nData de nascimento: ${dob}${patient.age ? ` (${patient.age} anos)` : ''}\nGênero: ${patient.gender || '—'}\nE-mail: ${patient.email || '—'}\nTelefone: ${patient.phone || '—'}` },
     sections.clinical && { id: 'clinical', label: 'Dados Clínicos', text: `Queixa: ${patient.complaint || '—'}\nHistórico: ${patient.history || '—'}\nMedicação: ${patient.medication || 'Nenhuma'}\nAbordagem: ${patient.approach || '—'}\nFrequência: ${patient.frequency || '—'}\nInício: ${fmtDate(patient.createdAt)}` },
-    sections.hypotheses && hypotheses.length > 0 && { id: 'hyp', label: 'Hipóteses Diagnósticas', text: hypotheses.map(h => `• ${h.code} — ${h.label} (${h.system}): ${h.probability}%`).join('\n') },
+    sections.hypotheses && hypotheses.length > 0 && { id: 'hyp', label: 'Temas Clínicos Identificados', text: hypotheses.map(h => `• ${h.label}${h.sessionCount ? ` (${h.sessionCount} sessão${h.sessionCount !== 1 ? 'ões' : ''})` : ''}`).join('\n') },
     sections.patterns && patterns.length > 0 && { id: 'patterns', label: 'Padrões Comportamentais', text: patterns.map(p => `• ${PAT_LABELS[p.type] || p.type} (${SEV_LABELS[p.severity] || p.severity}): ${p.description}`).join('\n') },
     sections.alerts && alerts.length > 0 && { id: 'alerts', label: 'Alertas Clínicos', text: alerts.map(a => `• [${a.level.toUpperCase()}] ${a.description}`).join('\n') },
     sections.sessions && allSessions.length > 0 && { id: 'sessions', label: 'Histórico de Sessões', text: allSessions.map(s => `• ${s.num} — ${fmtDate(s.finishedAt || s.createdAt)} — ${s.statusLabel}\n  ${s.summary || '—'}`).join('\n\n') },
@@ -503,7 +502,7 @@ export const api = {
       },
       todaySessions: today,
       recentAlerts: [
-        { patientId: 'p-001', patientName: 'Lucas Martins', level: 'high', description: 'Padrão de evitação progressiva — 4 ocorrências nesta sessão. F43.1 TEPT · 78%.', analysisId: 'a-001', createdAt: '2026-05-17T16:32:00Z' },
+        { patientId: 'p-001', patientName: 'Lucas Martins', level: 'high', description: 'Padrão de evitação progressiva — 4 ocorrências registradas nesta sessão, tema recorrente há 3 sessões.', analysisId: 'a-001', createdAt: '2026-05-17T16:32:00Z' },
         { patientId: 'p-001', patientName: 'Lucas Martins', level: 'medium', description: 'Isolamento social auto-relatado aumentou nas últimas 3 semanas.', analysisId: 'a-001', createdAt: '2026-05-17T16:32:00Z' },
         { patientId: 'p-006', patientName: 'Beatriz Almeida', level: 'high', description: 'Luto complicado — isolamento social severo. Avaliação de risco recomendada.', analysisId: 'a-010', createdAt: '2026-05-12T11:00:00Z' },
       ],
@@ -899,14 +898,14 @@ export const api = {
         { type: 'catastrophizing', count: 1, severity: 'medium' },
       ],
       topHypotheses: [
-        { code: 'F43.1', label: 'TEPT', system: 'CID-11', occurrences: 3, avgProbability: 73 },
-        { code: 'F41.1', label: 'TAG', system: 'CID-11', occurrences: 2, avgProbability: 56 },
-        { code: 'F40.1', label: 'Fobia Social', system: 'CID-11', occurrences: 1, avgProbability: 65 },
-        { code: 'F33.1', label: 'Depressão Recorrente', system: 'CID-11', occurrences: 1, avgProbability: 48 },
+        { label: 'Estresse e reatividade a tema traumático', occurrences: 3 },
+        { label: 'Ruminação ansiosa com foco específico', occurrences: 2 },
+        { label: 'Ansiedade social com exposição progressiva', occurrences: 1 },
+        { label: 'Exaustão emocional e despersonalização', occurrences: 1 },
       ],
       alertCount: { low: 0, medium: 1, high: 2, critical: 0 },
       recentAnalyses: [
-        { analysisId: 'a-001', patientId: 'p-001', patientName: 'Lucas Martins', evolution: 'negative', summary: 'Padrão de evitação progressiva. F43.1 TEPT 78%.', createdAt: '2026-05-17T16:32:00Z' },
+        { analysisId: 'a-001', patientId: 'p-001', patientName: 'Lucas Martins', evolution: 'negative', summary: 'Padrão de evitação ao tema familiar — 4 ocorrências. Tema recorrente nos seus registros por 3 sessões consecutivas.', createdAt: '2026-05-17T16:32:00Z' },
         { analysisId: 'a-003', patientId: 'p-002', patientName: 'Carla Silva', evolution: 'positive', summary: 'Primeiro evento de exposição bem-sucedido. Fobia social em regressão.', createdAt: '2026-05-04T11:38:00Z' },
         { analysisId: 'a-010', patientId: 'p-007', patientName: 'Pedro Alves', evolution: 'neutral', summary: 'Segundo episódio de burnout. Despersonalização presente. Sono fragmentado há 6 semanas.', createdAt: '2026-05-14T16:20:00Z' },
       ],

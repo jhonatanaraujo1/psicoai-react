@@ -95,7 +95,7 @@ export default function PreSessionBriefing({ patient, onStart, onCancel, isOpen 
               <div>
                 <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--danger)', marginBottom: '3px' }}>Alerta clínico ativo</div>
                 <div style={{ fontSize: '12px', color: 'var(--danger)', lineHeight: 1.5, opacity: 0.85 }}>
-                  Padrão de risco identificado na última análise. Atualize a análise após esta sessão para revisar o diagnóstico.
+                  Padrão de atenção identificado na última análise. Atualize a análise após esta sessão para manter o registro atualizado.
                 </div>
               </div>
             </div>
@@ -121,7 +121,7 @@ export default function PreSessionBriefing({ patient, onStart, onCancel, isOpen 
                       </div>
                       {sessionsSinceAi > 0 && (
                         <div style={{ fontSize: '11px', color: 'var(--warn)', fontWeight: 500, marginTop: '2px' }}>
-                          {sessionsSinceAi} {sessionsSinceAi === 1 ? 'sessão' : 'sessões'} sem atualização — diagnóstico pode estar desatualizado
+                          {sessionsSinceAi} {sessionsSinceAi === 1 ? 'sessão' : 'sessões'} sem análise — seus registros podem ter evoluído desde então
                         </div>
                       )}
                     </div>

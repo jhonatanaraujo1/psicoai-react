@@ -117,7 +117,7 @@ export default function Dashboard({ setCurrentView, currentUser }) {
           </div>
           <div className="stat-val">{recentAlerts.filter(a => ['high','critical'].includes(a.level)).length}</div>
           <div className="stat-label">Alertas IA ativos</div>
-          <div className="stat-delta" style={{ color: 'var(--warn)' }}>Requer atenção</div>
+          <div className="stat-delta" style={{ color: 'var(--warn)' }}>Observar</div>
         </div>
         <div className="stat-card" onClick={() => setCurrentView('insights')} style={{ cursor: 'pointer' }}>
           <div className="stat-icon green">
@@ -216,7 +216,7 @@ export default function Dashboard({ setCurrentView, currentUser }) {
                     <div className="alert-desc">{alert.description}</div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 5 }}>
                       <span className={`card-badge ${isHigh ? 'badge-danger' : 'badge-warn'}`}>
-                        {alert.level === 'critical' ? 'Crítico' : isHigh ? 'Alta prioridade' : 'Moderado'}
+                        {alert.level === 'critical' ? 'Atenção' : isHigh ? 'Observar' : 'Monitorar'}
                       </span>
                       <span style={{ fontSize: 10, color: 'var(--gr4)' }}>{fmtDate(alert.createdAt)}</span>
                     </div>

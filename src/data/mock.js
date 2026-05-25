@@ -13,8 +13,8 @@ export const todaySessions = [
 ];
 
 export const recentActivity = [
-  { initials: 'LM', name: 'Lucas Martins', session: 13, summary: 'Evitação ao discutir relação paterna. Hipótese: F43.1 TEPT · 72%.', hasAI: true, aiLabel: 'Diagnóstico IA · 17 mai, 15:30', date: '17 mai', avatarBg: 'var(--g50)', avatarColor: 'var(--g600)' },
-  { initials: 'RF', name: 'Rafael Fonseca', session: 22, summary: 'Padrão de ruminação. Ansiedade (8x), culpa (5x). Hipótese: F41.1 TAG · 64%.', hasAI: true, aiLabel: 'Diagnóstico IA · 17 mai, 10:45', date: '17 mai', avatarBg: 'var(--warn-l)', avatarColor: 'var(--warn)' },
+  { initials: 'LM', name: 'Lucas Martins', session: 13, summary: 'Evitação ao discutir relação paterna — tema recorrente por 3 sessões consecutivas.', hasAI: true, aiLabel: 'Análise IA · 17 mai, 15:30', date: '17 mai', avatarBg: 'var(--g50)', avatarColor: 'var(--g600)' },
+  { initials: 'RF', name: 'Rafael Fonseca', session: 22, summary: 'Padrão de ruminação nos seus registros. Ansiedade (8x), culpa (5x) nas últimas sessões.', hasAI: true, aiLabel: 'Análise IA · 17 mai, 10:45', date: '17 mai', avatarBg: 'var(--warn-l)', avatarColor: 'var(--warn)' },
   { initials: 'CS', name: 'Carla Silva', session: 5, summary: 'Anotação registrada.', hasAI: false, date: '16 mai', avatarBg: 'var(--g100)', avatarColor: 'var(--g700)' },
   { initials: 'MC', name: 'Marina Costa', session: 9, summary: 'Anotação registrada.', hasAI: false, date: '15 mai', avatarBg: 'var(--g50)', avatarColor: 'var(--g500)' },
   { initials: 'JO', name: 'João Oliveira', session: 3, summary: 'Anotação registrada.', hasAI: false, date: '14 mai', avatarBg: 'var(--gr1)', avatarColor: 'var(--gr5)' },
