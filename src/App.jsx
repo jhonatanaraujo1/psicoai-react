@@ -417,7 +417,7 @@ export default function App() {
       setSession(null); setActiveSessionType(null); setCanvasOpen(false); setTextOpen(false)
     }
     api.finishSession(bgSession.id, { durationSeconds: 0 }).catch(() => {})
-    showToast('Sessão encerrada', 'info', { description: `${bgSession.patient?.name || 'Paciente'} — sem análise IA.`, duration: 4000 })
+    showToast('Anotação salva', 'info', { description: `${bgSession.patient?.name || 'Paciente'} — sem análise IA.`, duration: 4000 })
   }
 
   // Abre canvas histórico (sessão já encerrada) para visualização/edição
@@ -446,7 +446,7 @@ export default function App() {
     setTextOpen(false)
     setCanvasOpen(false)
     if (sid) api.finishSession(sid, { durationSeconds: 0 }).catch(() => {})
-    showToast('Sessão encerrada', 'info', {
+    showToast('Anotação salva', 'info', {
       description: `Anotações de ${name} salvas no prontuário.`,
       duration: 4000,
     })

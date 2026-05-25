@@ -26,11 +26,9 @@ const GUIDE_ITEMS = [
 const textDraftKey = (patientId) => `psicoai_text_draft_p${patientId}`
 
 export default function TextSession({ patient, isOpen, onClose, onMinimize, onAnalyze, sessionId, onAutosave, initialHtml = '' }) {
-  const [secs, setSecs] = useState(0)
   const [showEndModal, setShowEndModal] = useState(false)
   const [showGuide, setShowGuide] = useState(true)
   const [savedIndicator, setSavedIndicator] = useState(false)
-  const timerRef      = useRef(null)
   const autosaveRef   = useRef(null)
   const localSaveRef  = useRef(null)
   const editorRef     = useRef(null)
@@ -60,12 +58,7 @@ export default function TextSession({ patient, isOpen, onClose, onMinimize, onAn
 
   useEffect(() => {
     if (isOpen) {
-      // Restaura tempo real desde o início da sessão (sobrevive ao refresh)
-      const stored = (() => { try { return JSON.parse(localStorage.getItem('psicoai_active_session') || 'null') } catch { return null } })()
-      const elapsed = stored?.startedAt ? Math.max(0, Math.floor((Date.now() - stored.startedAt) / 1000)) : 0
-      setSecs(elapsed)
       setShowEndModal(false)
-      timerRef.current = setInterval(() => setSecs(s => s + 1), 1000)
       // Load draft from localStorage or initialHtml
       setTimeout(() => {
         if (!editorRef.current) return
@@ -83,10 +76,8 @@ export default function TextSession({ patient, isOpen, onClose, onMinimize, onAn
         if (!isTouchDevice) editorRef.current.focus()
       }, 80)
     } else {
-      clearInterval(timerRef.current)
       clearTimeout(localSaveRef.current)
     }
-    return () => clearInterval(timerRef.current)
   }, [isOpen]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Autosave every 30s while session is open and we have a real sessionId
@@ -98,12 +89,6 @@ export default function TextSession({ patient, isOpen, onClose, onMinimize, onAn
     }, 30000)
     return () => clearInterval(autosaveRef.current)
   }, [isOpen, sessionId, onAutosave])
-
-  const fmt = (s) => {
-    const m = Math.floor(s / 60).toString().padStart(2, '0')
-    const ss = (s % 60).toString().padStart(2, '0')
-    return `${m}:${ss}`
-  }
 
   const exec = (cmd, arg) => {
     document.execCommand(cmd, false, arg || null)
@@ -131,7 +116,7 @@ export default function TextSession({ patient, isOpen, onClose, onMinimize, onAn
     const html = editorRef.current?.innerHTML || ''
     setShowEndModal(false)
     clearDraft()
-    onClose({ textContent: text, htmlContent: html, duration: secs })
+    onClose({ textContent: text, htmlContent: html, duration: 0 })
   }
 
   const handleEndWithAI = () => {
@@ -139,13 +124,12 @@ export default function TextSession({ patient, isOpen, onClose, onMinimize, onAn
     const html = editorRef.current?.innerHTML || ''
     setShowEndModal(false)
     clearDraft()
-    onAnalyze({ imageBase64: null, textContent: text, htmlContent: html, duration: secs })
+    onAnalyze({ imageBase64: null, textContent: text, htmlContent: html, duration: 0 })
   }
 
   if (!isOpen) return null
 
   const patientName = patient?.name || '—'
-  const sessionNum = (patient?.sessions || 0) + 1
 
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 700, display: 'flex', flexDirection: 'column', background: '#F5F2EC' }}>
@@ -174,16 +158,15 @@ export default function TextSession({ patient, isOpen, onClose, onMinimize, onAn
             </button>
           )}
           <div className="cs-logo">Ψ</div>
-          <div className="cs-patient">{patientName} · Sessão {sessionNum}</div>
+          <div className="cs-patient">{patientName}</div>
           <span style={{
             fontSize: '10px', fontWeight: 600, padding: '2px 8px', borderRadius: '20px',
             background: 'rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.6)',
             letterSpacing: '0.5px', textTransform: 'uppercase',
           }}>Texto</span>
         </div>
-        <div className="cs-timer">{fmt(secs)}</div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <button className="cs-end-btn" onClick={() => setShowEndModal(true)}>Encerrar Sessão</button>
+          <button className="cs-end-btn" onClick={() => setShowEndModal(true)}>Salvar anotação</button>
         </div>
       </div>
 
@@ -229,7 +212,7 @@ export default function TextSession({ patient, isOpen, onClose, onMinimize, onAn
           {/* Cabeçalho da nota */}
           <div style={{ marginBottom: '24px' }}>
             <div style={{ fontFamily: "'Fraunces', serif", fontSize: '22px', color: '#1C1C1C', fontWeight: 400, marginBottom: '6px' }}>
-              {patientName} · Sessão {sessionNum}
+              {patientName}
             </div>
             <div style={{ fontSize: '12px', color: '#8B8B8B' }}>
               {new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
@@ -345,10 +328,10 @@ export default function TextSession({ patient, isOpen, onClose, onMinimize, onAn
           }}>
             <div style={{ padding: '24px 24px 16px' }}>
               <div style={{ fontFamily: "'Fraunces', serif", fontSize: '20px', fontWeight: 400, color: '#1C1C1C', marginBottom: '6px' }}>
-                Encerrar sessão
+                Salvar anotação
               </div>
               <div style={{ fontSize: '13px', color: '#8B8B8B', lineHeight: 1.6, marginBottom: '12px' }}>
-                <strong style={{ color: '#1C1C1C' }}>{fmt(secs)}</strong> · {patientName} · Sessão {sessionNum}
+                {patientName} · {new Date().toLocaleDateString('pt-BR')}
               </div>
               {/* word count hint */}
               {(() => {
@@ -399,15 +382,15 @@ export default function TextSession({ patient, isOpen, onClose, onMinimize, onAn
                 onMouseOver={e => e.currentTarget.style.background = 'var(--ow)'}
                 onMouseOut={e => e.currentTarget.style.background = 'var(--w)'}
               >
-                <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--d)', marginBottom: '3px' }}>Só salvar as anotações</div>
-                <div style={{ fontSize: '12px', color: 'var(--gr5)' }}>Suas notas ficam salvas no prontuário. Você pode pedir a análise depois, direto pelo perfil do paciente.</div>
+                <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--d)', marginBottom: '3px' }}>Só salvar</div>
+                <div style={{ fontSize: '12px', color: 'var(--gr5)' }}>Suas notas ficam salvas no prontuário. Você pode pedir a análise depois, direto pelo paciente.</div>
               </button>
 
               <button
                 onClick={() => setShowEndModal(false)}
                 style={{ background: 'none', border: 'none', color: 'var(--gr4)', fontSize: '12px', cursor: 'pointer', padding: '4px', fontFamily: "'DM Sans', sans-serif" }}
               >
-                ← Continuar escrevendo
+                ← Continuar anotando
               </button>
             </div>
           </div>

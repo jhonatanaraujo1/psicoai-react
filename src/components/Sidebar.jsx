@@ -115,7 +115,7 @@ export default function Sidebar({ currentView, setCurrentView, isOpen, onClose, 
 
         <div className="nav-section">Clínico</div>
         {navItem('pacientes',   'Meus pacientes')}
-        {navItem('sessao',      'Registrar atendimento')}
+        {navItem('sessao',      'Nova anotação')}
         {navItem('anotacoes',   'Histórico de anotações')}
         {navItem('insights',    'Análises com IA')}
 
