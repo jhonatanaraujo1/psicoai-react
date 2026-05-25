@@ -40,16 +40,26 @@ export default defineConfig({
         // que o código da app. Isolar em chunk próprio resolve o problema.
         manualChunks(id) {
           if (id.includes('/node_modules/')) {
+            // React core: isolar garante que react/react-dom são avaliados
+            // como chunk próprio ANTES do app code e do workbox-window.
+            // Isso elimina a race condition entre SW MessagePort e init do React.
+            if (
+              id.includes('/react/') ||
+              id.includes('/react-dom/') ||
+              id.includes('/react-is/') ||
+              id.includes('/scheduler/')
+            ) return 'vendor-react'
+
+            // recharts + todas as sub-deps d3: têm circular deps internas
+            // que causam TDZ quando no mesmo chunk que o app code.
             if (
               id.includes('/recharts/') ||
               id.includes('/d3-') ||
               id.includes('/d3/') ||
-              id.includes('/victory-vendor/') ||
               id.includes('/internmap/') ||
-              id.includes('/robust-predicates/')
-            ) {
-              return 'vendor-recharts'
-            }
+              id.includes('/robust-predicates/') ||
+              id.includes('/victory-vendor/')
+            ) return 'vendor-charts'
           }
         },
       },
