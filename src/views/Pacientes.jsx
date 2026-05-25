@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { api } from '../services'
 
 const STATUS_COLORS = {
@@ -74,6 +74,9 @@ export default function Pacientes({ setCurrentView, onNovoCadastro }) {
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
+  const [importing, setImporting] = useState(false)
+  const [importResult, setImportResult] = useState(null)
+  const csvInputRef = useRef(null)
 
   // Debounce search
   useEffect(() => {
@@ -92,6 +95,26 @@ export default function Pacientes({ setCurrentView, onNovoCadastro }) {
       .catch(e => setError(e.message || 'Erro ao carregar pacientes'))
       .finally(() => setLoading(false))
   }, [debouncedSearch, statusFilter])
+
+  async function handleCsvImport(e) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    e.target.value = ''
+    setImporting(true)
+    setImportResult(null)
+    try {
+      const result = await api.importPatients(file)
+      setImportResult(result)
+      // Refresh patient list
+      const res = await api.getPatients({ search: debouncedSearch, status: statusFilter })
+      setPatients(res.content)
+      setTotal(res.totalElements)
+    } catch (err) {
+      setImportResult({ imported: 0, skipped: 0, errors: [err.message || 'Erro ao importar'] })
+    } finally {
+      setImporting(false)
+    }
+  }
 
   const statusOptions = [
     { value: '', label: 'Todos os status' },
@@ -122,11 +145,50 @@ export default function Pacientes({ setCurrentView, onNovoCadastro }) {
             {loading ? '…' : `${total} paciente${total !== 1 ? 's' : ''} em acompanhamento`}
           </div>
         </div>
-        <button className="btn-primary" onClick={onNovoCadastro}>
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          Novo Paciente
-        </button>
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <input ref={csvInputRef} type="file" accept=".csv" style={{ display: 'none' }} onChange={handleCsvImport} />
+          <button
+            className="btn-outline"
+            onClick={() => csvInputRef.current?.click()}
+            disabled={importing}
+            title="Importar pacientes via planilha CSV"
+          >
+            {importing
+              ? <span style={{ width: 11, height: 11, borderRadius: '50%', border: '1.5px solid var(--gr4)', borderTopColor: 'transparent', display: 'inline-block', animation: 'spin 0.7s linear infinite' }} />
+              : <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            }
+            {importing ? 'Importando…' : 'Importar CSV'}
+          </button>
+          <button className="btn-primary" onClick={onNovoCadastro}>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Novo Paciente
+          </button>
+        </div>
       </div>
+
+      {/* Import result */}
+      {importResult && (
+        <div style={{ background: importResult.errors?.length ? 'var(--warn-l)' : 'var(--g50)', border: `1px solid ${importResult.errors?.length ? 'var(--warn)' : 'var(--g200)'}`, borderRadius: 'var(--r)', padding: '10px 16px', marginBottom: '16px', display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={importResult.errors?.length ? 'var(--warn)' : 'var(--g600)'} strokeWidth="2" style={{ flexShrink: 0, marginTop: 1 }}>
+            {importResult.errors?.length
+              ? <><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></>
+              : <><polyline points="20 6 9 17 4 12"/></>}
+          </svg>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--d)' }}>
+              {importResult.imported} paciente{importResult.imported !== 1 ? 's' : ''} importado{importResult.imported !== 1 ? 's' : ''}
+              {importResult.skipped > 0 && ` · ${importResult.skipped} ignorado${importResult.skipped !== 1 ? 's' : ''}`}
+            </div>
+            {importResult.errors?.length > 0 && (
+              <div style={{ fontSize: '12px', color: 'var(--warn)', marginTop: 4 }}>
+                {importResult.errors.slice(0, 3).map((e, i) => <div key={i}>{e}</div>)}
+                {importResult.errors.length > 3 && <div>+{importResult.errors.length - 3} outros erros</div>}
+              </div>
+            )}
+          </div>
+          <button onClick={() => setImportResult(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--gr4)', fontSize: '16px', lineHeight: 1, padding: '0 2px' }}>×</button>
+        </div>
+      )}
 
       {/* Filters */}
       <div style={{ display: 'flex', gap: '10px', marginBottom: '20px', flexWrap: 'wrap' }}>

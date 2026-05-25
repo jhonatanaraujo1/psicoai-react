@@ -274,7 +274,7 @@ export default function Anotacoes({ setCurrentView }) {
         {(search || filterPatient) && (
           <button
             onClick={() => { setSearch(''); setFilterPatient('') }}
-            style={{ height: '38px', padding: '0 14px', border: '1px solid var(--gr2)', borderRadius: 'var(--r)', fontSize: '12px', background: 'var(--w)', color: 'var(--gr5)', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif', display: 'flex', alignItems: 'center', gap: '5px" }}
+            style={{ height: '38px', padding: '0 14px', border: '1px solid var(--gr2)', borderRadius: 'var(--r)', fontSize: '12px', background: 'var(--w)', color: 'var(--gr5)', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", display: 'flex', alignItems: 'center', gap: '5px' }}
           >
             ✕ Limpar
           </button>

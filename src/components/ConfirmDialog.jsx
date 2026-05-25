@@ -39,12 +39,18 @@ export default function ConfirmDialog() {
     <div
       style={{
         position: 'fixed', inset: 0, zIndex: 99997,
-        background: closing ? 'rgba(0,0,0,0)' : 'rgba(10,14,10,0.65)',
-        backdropFilter: closing ? 'blur(0px)' : 'blur(6px)',
+        // backdrop-filter: blur() causa artefatos de composição no Android Chrome
+        // (GPU layer não cobre corretamente o viewport, parece "zoom" ou "desencaixe").
+        // Substituído por overlay semi-transparente simples — mesmo efeito visual,
+        // zero problema de composição.
+        background: closing ? 'rgba(0,0,0,0)' : 'rgba(10,14,10,0.72)',
         display: 'flex',
         alignItems: 'flex-end',        // bottom sheet por padrão (mobile)
         justifyContent: 'center',
-        transition: 'background 0.22s, backdrop-filter 0.22s',
+        transition: 'background 0.22s',
+        // Previne overscroll e scroll do conteúdo por baixo no Android
+        touchAction: 'none',
+        overscrollBehavior: 'none',
       }}
       onClick={(e) => { if (e.target === e.currentTarget) close(false) }}
     >

@@ -2,6 +2,10 @@
 
 > Leia este arquivo inteiro antes de qualquer ação. Ele contém o contexto completo do projeto, estado atual, bugs conhecidos e próximos passos priorizados.
 
+**Última atualização:** 2026-05-22  
+**App ao vivo:** https://psicoai-react.vercel.app  
+**Login mock:** qualquer email + senha ≥6 chars (ou demo@psicoai.com.br / demo123)
+
 ---
 
 ## 1. O QUE É O PSICOAI
@@ -29,7 +33,7 @@
 - React 19 + Vite 8
 - CSS puro (design system próprio, sem Tailwind)
 - PWA (vite-plugin-pwa)
-- Canvas de sessão: tldraw
+- Canvas de sessão: **Excalidraw** (MIT — tldraw foi substituído por conflito de licença)
 - Demo: `demo@psicoai.com.br` / `demo123`
 
 ### Backend
@@ -60,6 +64,9 @@ VITE_API_BASE_URL=http://localhost:8080   ← ativa backend real
 VITE_API_BASE_URL=                        ← modo mock (Vercel demo)
 ```
 
+**Estado atual do `.env.local`:** `VITE_API_BASE_URL` está **comentado** — local roda em mock.  
+Vercel não tem a var configurada → mock automático em produção também.
+
 **Eventos globais do frontend:**
 - `psicoai:session-expired` → logout automático (401 sem refresh)
 - `psicoai:payment-required` → abre PaymentModal (402 do backend)
@@ -73,7 +80,7 @@ VITE_API_BASE_URL=                        ← modo mock (Vercel demo)
 - ✅ Dashboard (stats, agenda do dia, alertas, snapshot financeiro)
 - ✅ Pacientes (lista, busca, cadastro)
 - ✅ Prontuário do paciente (linha do tempo, histórico de sessões, análises)
-- ✅ Canvas de sessão (tldraw) + Sessão em texto
+- ✅ Canvas de sessão (Excalidraw MIT — tldraw substituído por licença) + Sessão em texto
 - ✅ Agenda (calendário mensal/semanal)
 - ✅ Insights IA (padrões, hipóteses, cobertura)
 - ✅ Financeiro (lançamentos, controle)
@@ -160,6 +167,42 @@ Botões "Fazer upgrade" e "Cancelar assinatura" agora chamam `api.createCheckout
 
 ---
 
+## 5B. MUDANÇAS DESTA SESSÃO (2026-05-22)
+
+### Preços removidos de toda UI do app
+**Filosofia adotada:** mostrar preços dentro do app faz o sistema parecer caro para psicólogos com poucos pacientes. Solução: mostrar apenas volume de conteúdo (indicador visual) + CTA "Ver planos" sem valores.
+
+**Arquivos alterados:**
+- `src/components/AnalyzeSessionsModal.jsx` — volume bar com 4 tiers, sem R$ visíveis ao usuário
+- `src/views/Configuracoes.jsx` — referências de preço substituídas por descrição de plano
+- `src/components/PaymentModal.jsx` — "R$4,90 cada" removido da feature list
+
+### Sistema de tiers de volume (AnalyzeSessionsModal)
+Implementado para proteger margem em análises de alto volume:
+```js
+const CHARS_PER_PAGE = 1500
+// Tiers internos (não exibidos ao usuário):
+// ≤30 págs  → base      (custo API ~R$0.20)
+// 31-60     → médio     
+// 61-100    → alto      
+// 100+      → extenso   (custo pode superar receita — alerta + "Ver planos")
+```
+- Volume bar visual (verde → vermelho) com label de tier
+- Quando tier ≠ base: alerta colorido + link "Ver planos →" (sem mostrar valor extra)
+- Estimativa de páginas por sessão: `~X pág` como badge em cada checkbox
+- Últimas 10 sessões mostradas (era 5)
+
+### Reabertura de sessões (implementada em sessão anterior)
+Clicar numa sessão do histórico reabre TextSession ou CanvasSession com conteúdo precarregado. Landing page Step 1 atualizado para refletir isso.
+
+### Landing page atualizada (psicoai-landing.html)
+- 4º depoimento adicionado (Dra. Ana Kessler — formulários por link antes da 1ª sessão)
+- Grid de depoimentos: 3→4 colunas
+- Hero subheadline reescrito (menciona formulários, Google Meet, histórico de sessões)
+- 2 cards "Kit Completo" novos: Anotações rápidas + Reabrir sessões anteriores
+
+---
+
 ## 6. PRÓXIMOS PASSOS PRIORIZADOS
 
 ### 🔴 Único blocker restante: Deploy do backend
@@ -178,6 +221,8 @@ Todos os bugs de código foram corrigidos. O único item que bloqueia ir para pr
 |---|--------|---------|
 | 4 | `hasAnalysis` real nas sessões (Bug 4) | `SessionService.kt` |
 | 5 | Atualizar copy da landing page (feedback de psicólogos) | `psicoai-landing.html` |
+| 6 | **Compressão de contexto longitudinal** — usar campo `summary` das análises antigas (sessões além das últimas 3) em vez de `textContent` completo. Evita prejuízo em análises de 24+ meses. Discutido, não implementado ainda. | `AnalyzeSessionsModal.jsx` + `mockApi.js` |
+| 7 | **Decisão pendente:** modelo de preços final. Landing page ainda mostra R$4,90/análise — manter como marketing ou remover também? Quantas análises por plano? | `psicoai-landing.html`, `PaymentModal.jsx` |
 
 ### Deploy do backend — opções recomendadas
 
