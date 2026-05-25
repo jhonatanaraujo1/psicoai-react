@@ -65,7 +65,7 @@ const MORE_ICON = (
   </svg>
 )
 
-export default function BottomNav({ currentView, setCurrentView, onMorePress, sessionInBackground }) {
+export default function BottomNav({ currentView, setCurrentView, onMorePress, openSessionsCount, onSessionsBadgeClick }) {
   return (
     <nav className="bottom-nav" role="navigation" aria-label="Navegação principal">
       {NAV_ITEMS.map(item => {
@@ -81,13 +81,36 @@ export default function BottomNav({ currentView, setCurrentView, onMorePress, se
           >
             <span className="bn-icon">{item.icon}</span>
             <span className="bn-label">{item.label}</span>
-            {/* Indicador de sessão em background no item Pacientes */}
-            {item.key === 'pacientes' && sessionInBackground && (
-              <span className="bn-session-dot" aria-label="Sessão em andamento" />
-            )}
           </button>
         )
       })}
+
+      {/* Badge de sessões — aparece à esquerda do "Mais" quando há sessões abertas */}
+      {openSessionsCount > 0 && (
+        <button
+          className="bn-item"
+          onClick={onSessionsBadgeClick}
+          aria-label={`${openSessionsCount} sessão(ões) em andamento`}
+          style={{ position: 'relative' }}
+        >
+          <span className="bn-icon" style={{ position: 'relative' }}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="#FF6B2C" strokeWidth="1.8" width="22" height="22">
+              <circle cx="12" cy="12" r="10"/>
+              <polyline points="12 6 12 12 16 14"/>
+            </svg>
+            <span style={{
+              position: 'absolute', top: -4, right: -6,
+              width: 16, height: 16, borderRadius: '50%',
+              background: '#FF6B2C', color: '#fff',
+              fontSize: '10px', fontWeight: 700,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              border: '2px solid var(--bg, #fff)',
+              animation: 'pulse-dot 1.8s ease-in-out infinite',
+            }}>{openSessionsCount}</span>
+          </span>
+          <span className="bn-label" style={{ color: '#D94F00', fontSize: '10px' }}>Sessões</span>
+        </button>
+      )}
 
       {/* Botão "Mais" — abre a sidebar com todas as rotas */}
       <button

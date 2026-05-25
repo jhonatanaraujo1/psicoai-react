@@ -235,6 +235,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--ow);color:var(--d);displa
 @keyframes spin{to{transform:rotate(360deg)}}
 @keyframes slideDown{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}
 @keyframes pulse-dot{0%,100%{box-shadow:0 0 0 0 rgba(74,222,128,0.6)}50%{box-shadow:0 0 0 6px rgba(74,222,128,0)}}
+@keyframes pulse-border{0%,100%{box-shadow:0 0 0 0 rgba(255,107,44,0.25)}50%{box-shadow:0 0 0 4px rgba(255,107,44,0)}}
 .ai-loading-text{font-size:13px;color:var(--gr5);text-align:center;line-height:1.6}
 .ai-loading-steps{display:flex;flex-direction:column;gap:6px;width:100%;max-width:280px}
 .ai-step{font-size:11px;color:var(--gr4);display:flex;align-items:center;gap:8px}

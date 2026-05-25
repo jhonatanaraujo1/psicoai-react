@@ -6,6 +6,7 @@ import { showToast, dismissToast, ToastContainer } from './components/Toast'
 import ProgressBar, { startProgress, finishProgress, failProgress } from './components/ProgressBar'
 import ConfirmDialog, { confirm } from './components/ConfirmDialog'
 import OnboardingTour from './components/OnboardingTour'
+import OpenSessionsPanel from './components/OpenSessionsPanel'
 import PaymentModal from './components/PaymentModal'
 import LgpdBanner from './components/LgpdBanner'
 
@@ -129,6 +130,17 @@ export default function App() {
     } catch { return null }
   })
 
+  // ── Sessões paralelas (background) ───────────────────────────────────────
+  // Cada item: { id, type, patient: {id,name}, startedAt }
+  const [backgroundSessions, setBackgroundSessions] = useState([])
+  // Painel de listagem de sessões abertas
+  const [sessionsPanelOpen, setSessionsPanelOpen] = useState(false)
+  // Ação pendente para quando o usuário fechar/retomar sessão e quiser iniciar nova
+  const [pendingNewSessionAction, setPendingNewSessionAction] = useState(null) // () => void
+
+  // Total de sessões abertas = foreground (se houver) + background
+  const totalOpenSessions = (activeSessionId ? 1 : 0) + backgroundSessions.length
+
   // Persiste sessão no localStorage sempre que mudar
   // e atualiza a URL com o session ID
   const setSession = (id) => { activeSessionRef.current = id; setActiveSessionId(id) }
@@ -227,31 +239,30 @@ export default function App() {
   const [pendingAnalysis, setPendingAnalysis] = useState(null)
 
   // Sessão está "em background" quando existe mas a view está fechada (usuário navegou para outra tela)
-  const sessionInBackground = !!(activeSessionId && !textOpen && !canvasOpen && !pendingAnalysis)
-
   // ── Handlers ──────────────────────────────────────────────────────────────
 
-  const handleSetView = (view, patient = null) => {
+  // Inicia nova sessão (quicknote ou live) — chamado diretamente ou após gate
+  const _startNewSession = (view, patient) => {
     if (view === 'sessao') {
-      // Sidebar "Anotações Clínicas" → fluxo de anotação rápida (sem timer)
-      if (patient) {
-        setCurrentPatient(patient)
-        setQuickNoteOpen(true)
-      } else {
-        setPickerMode('quicknote')
-        setPickerOpen(true)
-      }
-      return
+      if (patient) { setCurrentPatient(patient); setQuickNoteOpen(true) }
+      else { setPickerMode('quicknote'); setPickerOpen(true) }
+    } else if (view === 'liveSession') {
+      if (patient) { setCurrentPatient(patient); setBriefingOpen(true) }
+      else { setPickerMode('live'); setPickerOpen(true) }
     }
-    if (view === 'liveSession') {
-      // Atendimento ao vivo com timer — acessado pelo botão no perfil do paciente
-      if (patient) {
-        setCurrentPatient(patient)
-        setBriefingOpen(true)
-      } else {
-        setPickerMode('live')
-        setPickerOpen(true)
+  }
+
+  const handleSetView = (view, patient = null) => {
+    if (view === 'sessao' || view === 'liveSession') {
+      // Gate: se já há sessões abertas, mostra o painel antes de iniciar nova
+      if (totalOpenSessions > 0) {
+        setPendingNewSessionAction(() => () => _startNewSession(view, patient))
+        setSessionsPanelOpen(true)
+        setSidebarOpen(false)
+        return
       }
+      _startNewSession(view, patient)
+      setSidebarOpen(false)
       return
     }
     if (patient) setCurrentPatient(patient)
@@ -338,6 +349,74 @@ export default function App() {
 
     if (type === 'text') setTextOpen(true)
     else setCanvasOpen(true)
+  }
+
+  // ── Handlers de minimizar: move sessão foreground → background ──────────
+  const handleMinimizeCanvas = () => {
+    if (activeSessionId) {
+      setBackgroundSessions(prev =>
+        prev.find(s => s.id === activeSessionId) ? prev : [
+          ...prev,
+          { id: activeSessionId, type: 'canvas', patient: currentPatient, startedAt: Date.now() },
+        ]
+      )
+      setSession(null)
+      setActiveSessionType(null)
+    }
+    setCanvasOpen(false)
+  }
+
+  const handleMinimizeText = () => {
+    if (activeSessionId) {
+      setBackgroundSessions(prev =>
+        prev.find(s => s.id === activeSessionId) ? prev : [
+          ...prev,
+          { id: activeSessionId, type: 'text', patient: currentPatient, startedAt: Date.now() },
+        ]
+      )
+      setSession(null)
+      setActiveSessionType(null)
+    }
+    setTextOpen(false)
+  }
+
+  // ── Retomar sessão do background ─────────────────────────────────────────
+  const handleResumeBackgroundSession = (bgSession) => {
+    // Se há sessão no foreground, manda ela pro background também
+    if (activeSessionId) {
+      setBackgroundSessions(prev =>
+        prev.find(s => s.id === activeSessionId) ? prev : [
+          ...prev,
+          { id: activeSessionId, type: activeSessionType, patient: currentPatient, startedAt: Date.now() },
+        ]
+      )
+    }
+    // Remove do array de background
+    setBackgroundSessions(prev => prev.filter(s => s.id !== bgSession.id))
+    // Coloca no foreground
+    setCurrentPatient(bgSession.patient)
+    setSession(bgSession.id)
+    setActiveSessionType(bgSession.type)
+    if (bgSession.type === 'canvas') { setCanvasOpen(true); setTextOpen(false) }
+    else { setTextOpen(true); setCanvasOpen(false) }
+  }
+
+  // ── Encerrar sessão do background ────────────────────────────────────────
+  const handleEndBackgroundById = async (bgSession) => {
+    const ok = await confirm({
+      title: 'Encerrar sessão?',
+      message: `A sessão de ${bgSession.patient?.name || 'paciente'} será encerrada. As anotações autosalvas ficam no prontuário.`,
+      confirmLabel: 'Encerrar',
+      cancelLabel: 'Cancelar',
+      danger: true,
+    })
+    if (!ok) return
+    setBackgroundSessions(prev => prev.filter(s => s.id !== bgSession.id))
+    if (bgSession.id === activeSessionId) {
+      setSession(null); setActiveSessionType(null); setCanvasOpen(false); setTextOpen(false)
+    }
+    api.finishSession(bgSession.id, { durationSeconds: 0 }).catch(() => {})
+    showToast('Sessão encerrada', 'info', { description: `${bgSession.patient?.name || 'Paciente'} — sem análise IA.`, duration: 4000 })
   }
 
   // Abre canvas histórico (sessão já encerrada) para visualização/edição
@@ -581,12 +660,8 @@ export default function App() {
           onHamburger={() => setSidebarOpen(o => !o)}
           onAiOpen={() => setAiDrawerOpen(true)}
           currentUser={currentUser}
-          sessionInBackground={sessionInBackground}
-          activeSessionPatient={sessionInBackground ? currentPatient?.name : null}
-          activeSessionType={sessionInBackground ? activeSessionType : null}
-          activeSessionId={sessionInBackground ? activeSessionId : null}
-          onReturnToSession={handleReturnToSession}
-          onEndBackgroundSession={handleEndBackgroundSession}
+          openSessionsCount={totalOpenSessions}
+          onSessionsBadgeClick={() => setSessionsPanelOpen(o => !o)}
         />
         <div className="content">{renderView()}</div>
       </div>
@@ -596,7 +671,8 @@ export default function App() {
         currentView={currentView}
         setCurrentView={handleSetView}
         onMorePress={() => setSidebarOpen(true)}
-        sessionInBackground={sessionInBackground}
+        openSessionsCount={totalOpenSessions}
+        onSessionsBadgeClick={() => setSessionsPanelOpen(o => !o)}
       />
 
       {/* Sessions */}
@@ -606,7 +682,7 @@ export default function App() {
         sessionId={activeSessionId}
         onAutosave={(id, data) => api.autosaveSession?.(id, data)}
         onClose={handleSessionClose}
-        onMinimize={() => setTextOpen(false)}
+        onMinimize={handleMinimizeText}
         onAnalyze={handleAnalyze}
         initialHtml={textInitialHtml}
       />
@@ -617,12 +693,29 @@ export default function App() {
           isOpen={canvasOpen}
           sessionId={activeSessionId}
           onClose={handleSessionClose}
-          onMinimize={() => setCanvasOpen(false)}
+          onMinimize={handleMinimizeCanvas}
           onAnalyze={handleAnalyze}
           onAutosave={(id, data) => api.autosaveSession?.(id, data)}
           initialCanvasData={canvasInitialData}
         />
       </Suspense>
+
+      {/* Painel de sessões abertas */}
+      {sessionsPanelOpen && (
+        <OpenSessionsPanel
+          sessions={[
+            // Sessão no foreground (se houver)
+            ...(activeSessionId ? [{ id: activeSessionId, type: activeSessionType, patient: currentPatient, startedAt: null }] : []),
+            // Sessões em background
+            ...backgroundSessions,
+          ]}
+          foregroundId={activeSessionId}
+          onResume={handleResumeBackgroundSession}
+          onEnd={handleEndBackgroundById}
+          onStartNew={pendingNewSessionAction || null}
+          onClose={() => { setSessionsPanelOpen(false); setPendingNewSessionAction(null) }}
+        />
+      )}
 
       {/* Pickers & modals */}
       <PatientPicker

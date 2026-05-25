@@ -1,5 +1,3 @@
-import { confirm } from './ConfirmDialog'
-
 const days = ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado']
 const months = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro']
 
@@ -33,13 +31,9 @@ export default function Topbar({
   onHamburger,
   onAiOpen,
   currentUser,
-  // Session background alert
-  sessionInBackground,
-  activeSessionPatient,
-  activeSessionType,
-  activeSessionId,
-  onReturnToSession,
-  onEndBackgroundSession,
+  // Multi-session badge
+  openSessionsCount,   // número total de sessões abertas (fundo + foreground)
+  onSessionsBadgeClick, // () → abre o painel de sessões
 }) {
 
   const now = new Date()
@@ -55,99 +49,8 @@ export default function Topbar({
     ? currentUser.name.split(' ').filter(Boolean).slice(0, 2).map(w => w[0]).join('').toUpperCase()
     : 'DR'
 
-  const typeLabel = activeSessionType === 'canvas' ? 'Canvas' : 'Texto'
-
   return (
     <>
-      {/* ── Alerta de sessão em background ──────────────────────────────── */}
-      {sessionInBackground && (
-        <div style={{
-          position: 'sticky', top: 0, zIndex: 200,
-          background: 'linear-gradient(90deg, #92400e 0%, #b45309 100%)',
-          borderBottom: '1px solid rgba(255,255,255,0.12)',
-          padding: '0 20px',
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          gap: '12px', flexWrap: 'wrap',
-          minHeight: '44px',
-          animation: 'slideDown 0.2s ease',
-        }}>
-          {/* Indicador pulsando + texto */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <span style={{
-              width: 8, height: 8, borderRadius: '50%',
-              background: '#fbbf24',
-              boxShadow: '0 0 0 0 rgba(251,191,36,0.7)',
-              animation: 'pulse-dot 1.8s ease-in-out infinite',
-              flexShrink: 0,
-              display: 'inline-block',
-            }} />
-            <span style={{ fontSize: '12.5px', color: 'rgba(255,255,255,0.85)', fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0, maxWidth: '240px' }}>
-              Sessão ativa
-              {activeSessionPatient && (
-                <> — <strong style={{ color: '#fff' }}>{activeSessionPatient}</strong></>
-              )}
-              <span style={{
-                marginLeft: '8px',
-                fontSize: '10px', fontWeight: 600, letterSpacing: '0.5px',
-                padding: '1px 7px', borderRadius: '20px',
-                background: 'rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.6)',
-                textTransform: 'uppercase',
-              }}>{typeLabel}</span>
-              {activeSessionId && (
-                <span style={{ marginLeft: '8px', fontSize: '10px', color: 'rgba(255,255,255,0.3)', fontFamily: 'monospace' }}>
-                  #{activeSessionId.slice(-6)}
-                </span>
-              )}
-            </span>
-          </div>
-
-          {/* Botões de ação */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <button
-              onClick={onReturnToSession}
-              style={{
-                padding: '5px 14px', borderRadius: '7px',
-                background: 'rgba(255,255,255,0.18)', border: '1px solid rgba(255,255,255,0.25)',
-                color: '#fff', fontSize: '12px', fontWeight: 600,
-                cursor: 'pointer', fontFamily: "'DM Sans', sans-serif",
-                display: 'flex', alignItems: 'center', gap: '6px',
-                transition: 'background 0.15s',
-              }}
-              onMouseOver={e => e.currentTarget.style.background = 'rgba(255,255,255,0.22)'}
-              onMouseOut={e => e.currentTarget.style.background = 'rgba(255,255,255,0.15)'}
-            >
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                <polyline points="15 18 9 12 15 6"/>
-              </svg>
-              Voltar à sessão
-            </button>
-            <button
-              onClick={async () => {
-                const ok = await confirm({
-                  title: 'Encerrar sessão?',
-                  message: `A sessão de ${activeSessionPatient || 'paciente'} será encerrada sem análise IA. As anotações autosalvas serão mantidas no prontuário.`,
-                  confirmLabel: 'Encerrar',
-                  cancelLabel: 'Cancelar',
-                  danger: true,
-                })
-                if (ok) onEndBackgroundSession?.()
-              }}
-              style={{
-                padding: '5px 12px', borderRadius: '7px',
-                background: 'transparent', border: '1px solid rgba(255,255,255,0.12)',
-                color: 'rgba(255,255,255,0.45)', fontSize: '12px',
-                cursor: 'pointer', fontFamily: "'DM Sans', sans-serif",
-                transition: 'all 0.15s',
-              }}
-              onMouseOver={e => { e.currentTarget.style.borderColor = 'rgba(239,68,68,0.4)'; e.currentTarget.style.color = '#fca5a5' }}
-              onMouseOut={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.12)'; e.currentTarget.style.color = 'rgba(255,255,255,0.45)' }}
-            >
-              Encerrar
-            </button>
-          </div>
-        </div>
-      )}
-
       {/* ── Topbar principal ────────────────────────────────────────────── */}
       <div className="topbar">
         <button className="hamburger" onClick={onHamburger} aria-label="Menu">
@@ -164,6 +67,37 @@ export default function Topbar({
           <p>{sub}</p>
         </div>
         <div className="tb-right">
+          {/* Badge de sessões abertas — aparece quando há ≥1 sessão em andamento */}
+          {openSessionsCount > 0 && (
+            <button
+              onClick={onSessionsBadgeClick}
+              title={`${openSessionsCount} sessão(ões) em andamento`}
+              style={{
+                display: 'flex', alignItems: 'center', gap: '5px',
+                padding: '5px 10px 5px 8px',
+                background: 'rgba(255,107,44,0.10)',
+                border: '1.5px solid rgba(255,107,44,0.35)',
+                borderRadius: '20px',
+                color: '#D94F00',
+                cursor: 'pointer',
+                fontSize: '12px', fontWeight: 700,
+                fontFamily: "'DM Sans', sans-serif",
+                transition: 'background 0.15s',
+                animation: 'pulse-border 2s ease-in-out infinite',
+              }}
+              onMouseOver={e => e.currentTarget.style.background = 'rgba(255,107,44,0.18)'}
+              onMouseOut={e => e.currentTarget.style.background = 'rgba(255,107,44,0.10)'}
+            >
+              <span style={{
+                width: 7, height: 7, borderRadius: '50%',
+                background: '#FF6B2C',
+                animation: 'pulse-dot 1.8s ease-in-out infinite',
+                flexShrink: 0,
+                display: 'inline-block',
+              }} />
+              {openSessionsCount}
+            </button>
+          )}
           <button className="tb-btn" onClick={onAiOpen} title="Análise IA">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
               <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
