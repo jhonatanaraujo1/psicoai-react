@@ -24,6 +24,7 @@ import Login from './views/Login'
 import Dashboard from './views/Dashboard'
 import Pacientes from './views/Pacientes'
 import Paciente from './views/Paciente'
+import ProntuarioView from './views/ProntuarioView'
 // Lazy: excalidraw é ~1.8MB — só carrega quando o canvas é aberto
 const CanvasSession = lazy(() => import('./views/CanvasSession'))
 import TextSession from './views/TextSession'
@@ -571,7 +572,7 @@ export default function App() {
     switch (currentView) {
       case 'dashboard':    return <Dashboard setCurrentView={handleSetView} currentUser={currentUser} />
       case 'pacientes':   return <Pacientes setCurrentView={handleSetView} onNovoCadastro={() => setCadastroOpen(true)} />
-      case 'paciente':    return <Paciente patient={currentPatient} setCurrentView={handleSetView} onSessao={() => setBriefingOpen(true)} onQuickNote={() => setQuickNoteOpen(true)} onReopenSession={handleReopenSession} />
+      case 'paciente':    return <ProntuarioView patient={currentPatient} onClose={() => setCurrentView('pacientes')} onNewAnnotation={() => setBriefingOpen(true)} onOpenCanvas={handleOpenCanvasFromHistory} onReopenSession={handleReopenSession} />
       case 'agenda':      return <Agenda currentUser={currentUser} />
       case 'insights':    return <Insights onGoToPatient={(patient) => handleSetView('paciente', patient)} />
       case 'financeiro':  return <Financeiro />

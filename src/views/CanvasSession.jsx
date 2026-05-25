@@ -115,6 +115,45 @@ async function blobToBase64(blob) {
   })
 }
 
+// ── Página A4 padrão — mostrada quando não há rascunho salvo ─────────────────
+// Proporção A4: 210×297mm → ~794×1123px a 96 DPI. Usamos 800×1131.
+const DEFAULT_PAGE_ELEMENT = {
+  id: 'psicoai-page',
+  type: 'rectangle',
+  x: 0, y: 0,
+  width: 800, height: 1131,
+  angle: 0,
+  strokeColor: '#d0ccc7',
+  backgroundColor: '#ffffff',
+  fillStyle: 'solid',
+  strokeWidth: 1,
+  strokeStyle: 'solid',
+  roughness: 0,
+  opacity: 100,
+  groupIds: [],
+  frameId: null,
+  roundness: null,
+  seed: 1234567890,
+  version: 1,
+  versionNonce: 1,
+  isDeleted: false,
+  boundElements: null,
+  updated: 1,
+  link: null,
+  locked: true,   // não pode ser arrastado acidentalmente
+}
+
+const DEFAULT_PAGE_DATA = {
+  elements: [DEFAULT_PAGE_ELEMENT],
+  appState: {
+    viewBackgroundColor: '#EDEAE4',
+    scrollX: 120,
+    scrollY: 60,
+    zoom: { value: 0.85 },
+  },
+  files: {},
+}
+
 // ── Main component ────────────────────────────────────────────────────────────
 const BACKEND_AUTOSAVE_INTERVAL_MS = 30_000  // sync pro backend a cada 30s
 
@@ -128,8 +167,8 @@ export default function CanvasSession({
   sessionId,
   initialCanvasData,   // JSON string — for reopening a previous session
 }) {
-  const [secs, setSecs]               = useState(0)
-  const [exporting, setExporting]     = useState(false)
+  const [isDirty, setIsDirty]           = useState(false)
+  const [exporting, setExporting]       = useState(false)
   const [showEndModal, setShowEndModal] = useState(false)
   // syncStatus via DOM ref — sem useState para não re-renderizar o canvas a cada sync
   const syncLabelRef = useRef(null)
@@ -143,36 +182,26 @@ export default function CanvasSession({
   const sessionIdRef     = useRef(sessionId)
   const patientIdRef     = useRef(patient?.id)
   const onAutosaveRef    = useRef(onAutosave)
-  const timerRef         = useRef(null)
 
   // Keep refs in sync
   useEffect(() => { sessionIdRef.current  = sessionId },   [sessionId])
   useEffect(() => { patientIdRef.current  = patient?.id }, [patient?.id])
   useEffect(() => { onAutosaveRef.current = onAutosave },  [onAutosave])
 
-  // When session opens: load saved state and start timer
+  // When annotation opens: load saved state
   useEffect(() => {
-    if (!isOpen) {
-      clearInterval(timerRef.current)
-      return
-    }
-    // Restaura tempo real desde o início da sessão (sobrevive ao refresh)
-    const stored = (() => { try { return JSON.parse(localStorage.getItem('psicoai_active_session') || 'null') } catch { return null } })()
-    const elapsed = stored?.startedAt ? Math.max(0, Math.floor((Date.now() - stored.startedAt) / 1000)) : 0
-    setSecs(elapsed)
+    if (!isOpen) return
     setShowEndModal(false)
-    timerRef.current = setInterval(() => setSecs(s => s + 1), 1000)
+    setIsDirty(false)
 
-    // Load canvas data from localStorage (or prop)
+    // Load canvas data from localStorage (or prop), fallback to default page
     if (patient?.id) {
       const saved = loadCanvas(patient.id, sessionId, initialCanvasData)
-      setInitialData(saved)
+      setInitialData(saved || DEFAULT_PAGE_DATA)
     } else {
-      setInitialData(null)
+      setInitialData(DEFAULT_PAGE_DATA)
     }
     setCanvasReady(false)
-
-    return () => clearInterval(timerRef.current)
   }, [isOpen, patient?.id, sessionId]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Força save imediato (sem debounce) — usado em visibilitychange / pagehide
@@ -242,7 +271,7 @@ export default function CanvasSession({
         await fn(sid, { canvasDataJson, canvasTextContent })
         lastElementCountRef.current = elements.length
         setSyncLabel('✓ Salvo')
-        // Apaga o label após 3s para não poluir a UI
+        setIsDirty(false)
         setTimeout(() => setSyncLabel(''), 3000)
       } catch {
         setSyncLabel('Só local', '#F39C12')
@@ -275,24 +304,19 @@ export default function CanvasSession({
 
   // Debounced localStorage save on every canvas change (debounce reduzido para 800ms)
   const handleChange = useCallback(() => {
+    setIsDirty(true)
     clearTimeout(saveTimerRef.current)
     saveTimerRef.current = setTimeout(() => {
       saveCanvas(patientIdRef.current, sessionIdRef.current, apiRef.current)
     }, 800)
   }, [])
 
-  const fmt = (s) => {
-    const m  = Math.floor(s / 60).toString().padStart(2, '0')
-    const ss = (s % 60).toString().padStart(2, '0')
-    return `${m}:${ss}`
-  }
-
   const exportCanvas = async () => {
     let imageBase64      = null
     let canvasDataJson   = null
     let canvasTextContent = null
     try {
-      if (apiRef.current && exportToBlobFn) {
+      if (apiRef.current && exportToBlob) {
         const elements = apiRef.current.getSceneElements()
         const appState = apiRef.current.getAppState()
         const files    = apiRef.current.getFiles()
@@ -335,8 +359,9 @@ export default function CanvasSession({
     const { canvasDataJson, canvasTextContent } = await exportCanvas()
     setExporting(false)
     setShowEndModal(false)
+    setIsDirty(false)
     clearDraft(patient?.id, sessionId)
-    onClose({ duration: secs, canvasDataJson, canvasTextContent })
+    onClose({ duration: 0, canvasDataJson, canvasTextContent })
   }
 
   const handleEndWithAI = async () => {
@@ -344,26 +369,26 @@ export default function CanvasSession({
     const { imageBase64, canvasDataJson, canvasTextContent } = await exportCanvas()
     setExporting(false)
     setShowEndModal(false)
+    setIsDirty(false)
     clearDraft(patient?.id, sessionId)
-    onAnalyze({ imageBase64, duration: secs, canvasDataJson, canvasTextContent })
+    onAnalyze({ imageBase64, duration: 0, canvasDataJson, canvasTextContent })
   }
 
   if (!isOpen) return null
 
   const patientName = patient?.name || 'Paciente'
-  const sessionNum  = (patient?.sessions || 0) + 1
 
   return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 300, display: 'flex', flexDirection: 'column', background: '#F7F4EF' }}>
+    <div style={{ position: 'fixed', inset: 0, zIndex: 300, display: 'flex', flexDirection: 'column', background: '#EDEAE4' }}>
 
       {/* Topbar */}
       <div className="cs-topbar">
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          {/* Botão minimizar — volta ao app sem encerrar sessão */}
+          {/* Botão voltar — minimiza sem encerrar */}
           {onMinimize && (
             <button
               onClick={onMinimize}
-              title="Minimizar sessão"
+              title="Voltar ao app"
               style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 width: 32, height: 32, borderRadius: '8px',
@@ -380,12 +405,7 @@ export default function CanvasSession({
             </button>
           )}
           <div className="cs-logo">Ψ</div>
-          <div className="cs-patient" title={patientName}>{patientName} · Sessão {sessionNum}</div>
-          <span style={{
-            fontSize: '10px', fontWeight: 600, padding: '2px 8px', borderRadius: '20px',
-            background: 'rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.6)',
-            letterSpacing: '0.5px', textTransform: 'uppercase',
-          }}>Canvas</span>
+          <div className="cs-patient" title={patientName}>{patientName}</div>
           {/* Sync status — atualizado via DOM ref, sem re-render React */}
           <span
             ref={syncLabelRef}
@@ -397,11 +417,27 @@ export default function CanvasSession({
             </span>
           )}
         </div>
-        <div className="cs-timer">{fmt(secs)}</div>
         <button className="cs-end-btn" onClick={() => setShowEndModal(true)}>
-          Encerrar Sessão
+          Salvar anotação
         </button>
       </div>
+
+      {/* Banner de rascunho não salvo */}
+      {isDirty && (
+        <div style={{
+          background: 'rgba(243,156,18,0.12)',
+          borderBottom: '1px solid rgba(243,156,18,0.3)',
+          padding: '6px 16px',
+          display: 'flex', alignItems: 'center', gap: '8px',
+          fontSize: '11px', color: '#B7770D', fontWeight: 600,
+          fontFamily: "'DM Sans', sans-serif",
+        }}>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+            <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+          </svg>
+          Rascunho não salvo — clique em "Salvar anotação" para finalizar
+        </div>
+      )}
 
       {/* Canvas area */}
       <div style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
@@ -467,10 +503,10 @@ export default function CanvasSession({
           }}>
             <div style={{ padding: '24px 24px 20px' }}>
               <div style={{ fontFamily: "'Fraunces', serif", fontSize: '20px', fontWeight: 400, color: '#1C1C1C', marginBottom: '8px' }}>
-                Encerrar sessão
+                Salvar anotação
               </div>
               <div style={{ fontSize: '13px', color: '#8B8B8B', lineHeight: 1.6 }}>
-                Duração: <strong style={{ color: '#1C1C1C' }}>{fmt(secs)}</strong> · {patientName} · Sessão {sessionNum}
+                {patientName} · O canvas ficará salvo no prontuário
               </div>
             </div>
 
@@ -527,7 +563,7 @@ export default function CanvasSession({
                 onClick={() => setShowEndModal(false)}
                 style={{ background: 'none', border: 'none', color: 'var(--gr4)', fontSize: '12px', cursor: 'pointer', padding: '4px', fontFamily: "'DM Sans', sans-serif" }}
               >
-                ← Continuar sessão
+                ← Continuar anotando
               </button>
             </div>
           </div>

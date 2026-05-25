@@ -34,7 +34,7 @@ function Excerpt({ text, query }) {
   if (!text) return <span style={{ color: 'var(--gr3)', fontStyle: 'italic' }}>Sem anotações de texto</span>
   const h = highlight(text, query)
   if (typeof h === 'string') {
-    return <span>{h.slice(0, 160)}{h.length > 160 ? '…' : ''}</span>
+    return <span>{h.slice(0, 400)}{h.length > 400 ? '…' : ''}</span>
   }
   return (
     <span>
@@ -120,7 +120,7 @@ function AnnotationCard({ session, query, onPatientClick, onOpenCanvas, expanded
               </span>
             )}
           </div>
-          <div style={{ fontSize: '12px', color: 'var(--gr5)', lineHeight: 1.5, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: expanded ? 'unset' : 2, WebkitBoxOrient: 'vertical' }}>
+          <div style={{ fontSize: '12px', color: 'var(--gr5)', lineHeight: 1.5, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: expanded ? 'unset' : 5, WebkitBoxOrient: 'vertical' }}>
             <Excerpt text={session.textContent} query={query} />
           </div>
         </div>

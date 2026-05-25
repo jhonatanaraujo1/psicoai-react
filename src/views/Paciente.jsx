@@ -104,11 +104,6 @@ export default function Paciente({ patient: propPatient, setCurrentView, onSessa
   const p = summary?.patient || propPatient
   if (!p && !loading && !error) return null
 
-  // Latest analysis — real data from API
-  const latestAnalysis = analyses[0] || null
-  const latestPatterns   = parseJson(latestAnalysis?.patterns)
-  const latestHypotheses = parseJson(latestAnalysis?.hypotheses)
-
   // Build timeline from sessions
   const timelineDots = sessions.map(s => ({
     evolution: s.evolution,
@@ -134,11 +129,6 @@ export default function Paciente({ patient: propPatient, setCurrentView, onSessa
     'Evolução':   { bg: 'var(--g50)',       color: 'var(--g600)' },
     'Aberta':     { bg: '#EBF3FD',          color: '#2980B9'     },
   }[statusLabel] || { bg: 'var(--gr1)', color: 'var(--gr5)' })
-
-  // Gather patterns/hypotheses from all analyses in sessions that have them
-  const allPatterns = sessions
-    .filter(s => s.hasAnalysis)
-    .flatMap(() => []) // filled by analysis fetch — using hardcoded fallback from status
 
   const hasAnalysis = analyses.length > 0
 
@@ -283,120 +273,6 @@ export default function Paciente({ patient: propPatient, setCurrentView, onSessa
           </div>
         </div>
       )}
-
-      {/* Cards row */}
-      <div className="three-col">
-        {/* Clinical data */}
-        <div className="card">
-          <div className="card-header"><div className="card-title">Dados Clínicos</div></div>
-          <div className="card-body">
-            {loading
-              ? Array.from({ length: 5 }).map((_, i) => (
-                  <div key={i} className="data-row">
-                    <Skeleton style={{ height: 12, width: 60 }} />
-                    <Skeleton style={{ height: 12, width: '65%' }} />
-                  </div>
-                ))
-              : [
-                  ['Queixa', p.complaint || '—'],
-                  ['Histórico', p.history || '—'],
-                  ['Medicação', p.medication || 'Nenhuma'],
-                  ['Abordagem', p.approach || '—'],
-                  ['Frequência', p.frequency || '—'],
-                  ['Valor da sessão', p.sessionValue ? `R$ ${p.sessionValue},00` : 'Convênio/Gratuito'],
-                  ['Início', fmtDate(p.createdAt)],
-                ].map(([k, v]) => (
-                  <div key={k} className="data-row">
-                    <div className="data-key">{k}</div>
-                    <div className="data-val">{v}</div>
-                  </div>
-                ))
-            }
-          </div>
-        </div>
-
-        {/* Patterns from analysis */}
-        <div className="card">
-          <div className="card-header">
-            <div className="card-title">Padrões Detectados</div>
-            <span className={`card-badge ${hasAnalysis ? 'badge-green' : 'badge-gray'}`}>IA</span>
-          </div>
-          <div className="card-body">
-            {!hasAnalysis ? (
-              <div style={{ textAlign: 'center', padding: '20px 0' }}>
-                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--gr3)" strokeWidth="1.2" style={{ margin: '0 auto 10px', display: 'block' }}>
-                  <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
-                </svg>
-                <div style={{ fontSize: '12px', color: 'var(--gr4)', lineHeight: 1.5 }}>Nenhuma análise IA gerada ainda.<br/>Encerre uma sessão para analisar.</div>
-              </div>
-            ) : latestPatterns.length === 0 ? (
-              <div style={{ fontSize: '12px', color: 'var(--gr4)', textAlign: 'center', padding: '12px 0' }}>Padrões não disponíveis nesta análise.</div>
-            ) : (
-              <>
-                {latestPatterns.map((pat) => {
-                  const SEV_COLOR = { high: 'var(--danger)', medium: 'var(--warn)', low: 'var(--g500)' }
-                  const PAT_LABELS = {
-                    avoidance: 'Evitação comportamental', rumination: 'Ruminação cognitiva',
-                    hypervigilance: 'Hipervigilância', catastrophizing: 'Catastrofização',
-                    dissociation: 'Dissociação', isolation: 'Isolamento social',
-                  }
-                  const label = PAT_LABELS[pat.type] || pat.type
-                  const color = SEV_COLOR[pat.severity] || SEV_COLOR.low
-                  return (
-                    <div key={pat.type} className="prog-item">
-                      <div className="prog-label">
-                        <span className="prog-name">{label}</span>
-                        <span style={{ fontSize: '10px', fontWeight: 600, color, textTransform: 'uppercase', letterSpacing: '0.4px' }}>{pat.severity}</span>
-                      </div>
-                      <div className="prog-track"><div className="prog-fill" style={{ width: pat.severity === 'high' ? '85%' : pat.severity === 'medium' ? '55%' : '30%', background: `linear-gradient(90deg, ${color}, ${color}bb)` }} /></div>
-                      {pat.description && <div style={{ fontSize: '11px', color: 'var(--gr5)', marginTop: 4, lineHeight: 1.4 }}>{pat.description}</div>}
-                    </div>
-                  )
-                })}
-                <div style={{ fontSize: '11px', color: 'var(--gr4)', marginTop: '12px' }}>
-                  Última análise · {fmtDate(latestAnalysis?.createdAt)}
-                </div>
-              </>
-            )}
-          </div>
-        </div>
-
-        {/* Hypotheses */}
-        <div className="card">
-          <div className="card-header">
-            <div className="card-title">Hipóteses Diagnósticas</div>
-            <span className={`card-badge ${hasAnalysis ? 'badge-green' : 'badge-gray'}`}>DSM-5 / CID-11</span>
-          </div>
-          <div className="card-body">
-            {!hasAnalysis ? (
-              <div style={{ textAlign: 'center', padding: '20px 0' }}>
-                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--gr3)" strokeWidth="1.2" style={{ margin: '0 auto 10px', display: 'block' }}>
-                  <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
-                </svg>
-                <div style={{ fontSize: '12px', color: 'var(--gr4)', lineHeight: 1.5 }}>Hipóteses aparecem após a primeira análise IA.</div>
-              </div>
-            ) : latestHypotheses.length === 0 ? (
-              <div style={{ fontSize: '12px', color: 'var(--gr4)', textAlign: 'center', padding: '12px 0' }}>Hipóteses não disponíveis nesta análise.</div>
-            ) : (
-              <>
-                {latestHypotheses.map((h) => (
-                  <div key={h.code} className="hyp-item">
-                    <div className="hyp-prob">{h.probability}%</div>
-                    <div className="hyp-info">
-                      <div className="hyp-name">{h.label || h.name}</div>
-                      <div className="hyp-code">{h.code}{h.system ? ` · ${h.system}` : ''}</div>
-                      <div className="hyp-bar"><div className="hyp-fill" style={{ width: `${h.probability}%` }} /></div>
-                    </div>
-                  </div>
-                ))}
-                <div style={{ fontSize: '11px', color: 'var(--warn)', background: 'var(--warn-l)', padding: '8px 10px', borderRadius: '6px', marginTop: '12px', lineHeight: 1.4 }}>
-                  ⚠ Hipóteses de apoio ao raciocínio clínico. Diagnóstico é responsabilidade do psicólogo.
-                </div>
-              </>
-            )}
-          </div>
-        </div>
-      </div>
 
       {/* Sessions table */}
       <div className="card">
