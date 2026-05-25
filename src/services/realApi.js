@@ -286,11 +286,23 @@ export const api = {
   },
 
   async finishSession(sessionId, data) {
-    return post(`/api/v1/sessions/${sessionId}/finish`, data)
+    // Backend field is `canvasData`; frontend sessions send `canvasDataJson` — normalize before POST
+    const payload = { ...data }
+    if (payload.canvasDataJson !== undefined) {
+      payload.canvasData = payload.canvasDataJson
+      delete payload.canvasDataJson
+    }
+    return post(`/api/v1/sessions/${sessionId}/finish`, payload)
   },
 
   async autosaveSession(sessionId, data) {
-    return patch(`/api/v1/sessions/${sessionId}/autosave`, data)
+    // Same normalization as finishSession
+    const payload = { ...data }
+    if (payload.canvasDataJson !== undefined) {
+      payload.canvasData = payload.canvasDataJson
+      delete payload.canvasDataJson
+    }
+    return patch(`/api/v1/sessions/${sessionId}/autosave`, payload)
   },
 
   async deleteSession(sessionId) {
@@ -353,8 +365,8 @@ export const api = {
   },
 
   async deleteFinancialEvent(id) {
-    // backend não expõe DELETE /financial — soft-delete via patch
-    return patch(`/api/v1/financial/${id}`, { deleted: true })
+    // backend não expõe DELETE /financial — soft-delete via status:'cancelled'
+    return patch(`/api/v1/financial/${id}`, { status: 'cancelled' })
   },
 
   // Forms
