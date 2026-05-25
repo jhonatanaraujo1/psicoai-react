@@ -163,6 +163,17 @@ export default function App() {
 
 
   // ── QuickNote persistence — localStorage + URL ?nota=<patientId> ─────────
+  // DECLARADO ANTES do useEffect para evitar TDZ na dependency array [quickNoteOpen]
+  // Inicializa do localStorage/URL — sobrevive refresh igual ao canvas
+  const [quickNoteOpen, setQuickNoteOpen] = useState(() => {
+    try {
+      const params = new URLSearchParams(window.location.search)
+      if (params.has('nota')) return true
+      const qn = JSON.parse(localStorage.getItem('psicoai_quicknote_state') || 'null')
+      return qn?.open === true && !!qn?.patientId
+    } catch { return false }
+  })
+
   // Mesmo padrão do canvas: sobrevive refresh, fechar aba e redeploy do Vercel.
   // O rascunho do texto já é persistido por psicoai_quicknote_<id> no próprio modal.
   useEffect(() => {
@@ -190,15 +201,7 @@ export default function App() {
   // ── Session modals ────────────────────────────────────────────────────────
   const [briefingOpen, setBriefingOpen] = useState(false)
   const [pickerOpen, setPickerOpen] = useState(false)
-  // Inicializa do localStorage/URL — sobrevive refresh igual ao canvas
-  const [quickNoteOpen, setQuickNoteOpen] = useState(() => {
-    try {
-      const params = new URLSearchParams(window.location.search)
-      if (params.has('nota')) return true
-      const qn = JSON.parse(localStorage.getItem('psicoai_quicknote_state') || 'null')
-      return qn?.open === true && !!qn?.patientId
-    } catch { return false }
-  })
+  // quickNoteOpen foi movido para antes do useEffect de persistência (evitar TDZ)
   const [pickerMode, setPickerMode] = useState('live') // 'live' | 'quicknote'
   const [textOpen, setTextOpen] = useState(false)
   // Inicializa do localStorage — sobrevive refresh, deploy do Vercel, fechar aba
