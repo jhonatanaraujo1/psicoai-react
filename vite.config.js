@@ -32,6 +32,29 @@ export default defineConfig({
     // @tldraw/tldraw: pacote pesado, melhor pré-bundled
     include: ['@excalidraw/excalidraw', '@tldraw/tldraw'],
   },
+  build: {
+    rollupOptions: {
+      output: {
+        // recharts v3 usa d3-* internamente. d3 sub-packages têm circular deps
+        // que causam TDZ no Rollup production bundle quando ficam no mesmo chunk
+        // que o código da app. Isolar em chunk próprio resolve o problema.
+        manualChunks(id) {
+          if (id.includes('/node_modules/')) {
+            if (
+              id.includes('/recharts/') ||
+              id.includes('/d3-') ||
+              id.includes('/d3/') ||
+              id.includes('/victory-vendor/') ||
+              id.includes('/internmap/') ||
+              id.includes('/robust-predicates/')
+            ) {
+              return 'vendor-recharts'
+            }
+          }
+        },
+      },
+    },
+  },
   server: {
     proxy: {
       '/api': {
