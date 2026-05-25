@@ -1,382 +1,359 @@
+/**
+ * CanvasSession — Anotação em folha A4, estilo leitor de PDF.
+ *
+ * Layout:
+ *   • Header fixo (← voltar, nome, salvar)
+ *   • Sidebar esquerda: miniaturas de páginas + botão nova página
+ *   • Área central: scroll vertical de folhas A4 brancas (canvas HTML nativo)
+ *   • Toolbar inferior: caneta, borracha, cores, espessura
+ *
+ * Canvas HTML nativo com PointerEvents → suporte a Apple Pencil / stylus.
+ * Cada página é um <canvas> 794×1123px (A4 a 96dpi × 2 para retina).
+ * Sem dependência de bibliotecas externas de canvas.
+ */
+
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { Excalidraw, MainMenu, exportToBlob } from '@excalidraw/excalidraw'
-import '@excalidraw/excalidraw/index.css'
 
-// ── LocalStorage helpers ──────────────────────────────────────────────────────
-const STORAGE_VERSION = 2  // bump quando mudar a estrutura do schema
-const STORAGE_MAX_BYTES = 4 * 1024 * 1024  // 4 MB — limite seguro (localStorage ≈ 5 MB/origem)
-const STORAGE_TTL_MS    = 12 * 3600 * 1000  // 12 horas — rascunho antigo descartado
+// ── Dimensões A4 ──────────────────────────────────────────────────────────────
+const PAGE_W   = 794    // px A4 largura (96 dpi)
+const PAGE_H   = 1123   // px A4 altura
+const SCALE    = 2      // multiplicador HiDPI / retina
 
-const draftKey = (patientId)  => `psicoai_canvas_draft_p${patientId}`
-const sessKey  = (sessionId)  => `psicoai_canvas_session_s${sessionId}`
+// ── Cores de caneta disponíveis ───────────────────────────────────────────────
+const COLORS = ['#1C1C1C', '#2D6A4F', '#7B5E3A', '#C0392B', '#2471A3', '#7D3C98']
 
-function saveCanvas(patientId, sessionId, api) {
-  if (!api || !patientId) return
+// ── LocalStorage ──────────────────────────────────────────────────────────────
+const lsKey = (patientId) => `psicoai_canvas2_p${patientId}`
+
+function loadPages(patientId) {
   try {
-    const elements = api.getSceneElements()
-    const appState = api.getAppState()
-    const files    = api.getFiles()
-    const payload = {
-      v:            STORAGE_VERSION,
-      savedAt:      Date.now(),
-      patientId,
-      sessionId:    sessionId || null,
-      elementCount: elements.length,
-      elements,
-      appState: { viewBackgroundColor: appState.viewBackgroundColor || '#F7F4EF' },
-      files,
-    }
-    const data = JSON.stringify(payload)
-
-    // Guard de tamanho — evita corromper o localStorage inteiro
-    if (data.length > STORAGE_MAX_BYTES) {
-      console.warn(`[PsicoAI] Canvas muito grande (${Math.round(data.length / 1024)} KB) — salvamento local ignorado para não corromper o storage.`)
-      return
-    }
-
-    try {
-      localStorage.setItem(draftKey(patientId), data)
-      if (sessionId) localStorage.setItem(sessKey(sessionId), data)
-    } catch (quotaErr) {
-      if (quotaErr.name === 'QuotaExceededError') {
-        // Tenta liberar espaço removendo rascunhos antigos antes de desistir
-        const oldKeys = []
-        for (let i = 0; i < localStorage.length; i++) {
-          const k = localStorage.key(i)
-          if (k?.startsWith('psicoai_canvas_')) oldKeys.push(k)
-        }
-        // Remove o mais antigo (heurística: menor savedAt no valor)
-        oldKeys.forEach(k => { try { localStorage.removeItem(k) } catch {} })
-        // Segunda tentativa
-        try {
-          localStorage.setItem(draftKey(patientId), data)
-          if (sessionId) localStorage.setItem(sessKey(sessionId), data)
-        } catch { console.error('[PsicoAI] localStorage cheio — rascunho do canvas não salvo.') }
-      }
-    }
-  } catch (e) {
-    console.warn('[PsicoAI] canvas save localStorage failed:', e)
-  }
-}
-
-function loadCanvas(patientId, sessionId, initialCanvasData) {
-  const tryParse = (raw) => {
+    const raw = localStorage.getItem(lsKey(patientId))
     if (!raw) return null
-    try {
-      const d = JSON.parse(raw)
-      if (!d) return null
+    const parsed = JSON.parse(raw)
+    if (!Array.isArray(parsed) || parsed.length === 0) return null
+    return parsed // array de { id, dataUrl }
+  } catch { return null }
+}
 
-      // Verifica pertencimento — rejeita se for rascunho de outro paciente
-      if (d.patientId && patientId && d.patientId !== patientId) {
-        console.warn('[PsicoAI] Rascunho descartado — pertence a outro paciente.')
-        return null
-      }
+function savePages(patientId, pages) {
+  try {
+    const data = JSON.stringify(pages.map(p => ({ id: p.id, dataUrl: p.dataUrl || null })))
+    if (data.length < 4 * 1024 * 1024) {
+      localStorage.setItem(lsKey(patientId), data)
+    }
+  } catch { /* quota exceeded — silencioso */ }
+}
 
-      // Verifica staleness — rascunho mais velho que TTL é descartado
-      if (d.savedAt && (Date.now() - d.savedAt) > STORAGE_TTL_MS) {
-        console.warn('[PsicoAI] Rascunho expirado (>12h) — descartado.')
-        return null
-      }
+// ── Novo ID de página ─────────────────────────────────────────────────────────
+let _pid = 0
+const newPageId = () => `pg-${Date.now()}-${_pid++}`
 
-      // Migração de versão anterior (sem campo v)
-      if (!d.v) {
-        console.info('[PsicoAI] Migrando rascunho de schema legado.')
-        d.v = STORAGE_VERSION
-      }
+// ── Sub-componente: uma folha A4 ──────────────────────────────────────────────
+function A4Page({ page, isActive, toolRef, colorRef, sizeRef, onStrokeEnd, onClick }) {
+  const canvasRef = useRef(null)
+  const isDrawing = useRef(false)
+  const lastPos   = useRef({ x: 0, y: 0 })
 
-      return d
-    } catch {
-      return null
+  // Expõe o canvas element via page.canvasRef
+  useEffect(() => {
+    page.canvasRef.current = canvasRef.current
+  })
+
+  // Carrega dataUrl salva (restaura conteúdo ao montar)
+  useEffect(() => {
+    const canvas = canvasRef.current
+    if (!canvas) return
+    const ctx = canvas.getContext('2d')
+
+    // Limpa e preenche de branco
+    ctx.fillStyle = '#ffffff'
+    ctx.fillRect(0, 0, canvas.width, canvas.height)
+
+    if (page.dataUrl) {
+      const img = new Image()
+      img.onload = () => ctx.drawImage(img, 0, 0)
+      img.src = page.dataUrl
+    }
+  }, [page.id]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const getPos = (e) => {
+    const canvas = canvasRef.current
+    const rect   = canvas.getBoundingClientRect()
+    const scaleX = canvas.width  / rect.width
+    const scaleY = canvas.height / rect.height
+    return {
+      x: (e.clientX - rect.left) * scaleX,
+      y: (e.clientY - rect.top)  * scaleY,
     }
   }
 
-  // Prioridade: chave de sessão → rascunho do paciente → prop inicial
-  if (sessionId) {
-    const v = tryParse(localStorage.getItem(sessKey(sessionId)))
-    if (v) return v
-  }
-  const d = tryParse(localStorage.getItem(draftKey(patientId)))
-  if (d) return d
-  if (initialCanvasData) return tryParse(typeof initialCanvasData === 'string' ? initialCanvasData : JSON.stringify(initialCanvasData))
-  return null
+  const onPointerDown = useCallback((e) => {
+    if (e.button !== undefined && e.button > 0) return // ignora clique direito
+    e.preventDefault()
+    canvasRef.current?.setPointerCapture(e.pointerId)
+    isDrawing.current = true
+    lastPos.current = getPos(e)
+
+    // Ponto único (tap)
+    const ctx    = canvasRef.current?.getContext('2d')
+    const tool   = toolRef.current
+    const color  = colorRef.current
+    const size   = sizeRef.current
+    if (!ctx) return
+
+    ctx.save()
+    ctx.globalCompositeOperation = tool === 'eraser' ? 'destination-out' : 'source-over'
+    ctx.fillStyle = tool === 'eraser' ? 'rgba(0,0,0,1)' : color
+    ctx.beginPath()
+    ctx.arc(lastPos.current.x, lastPos.current.y, (size * SCALE) / 2, 0, Math.PI * 2)
+    ctx.fill()
+    ctx.restore()
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const onPointerMove = useCallback((e) => {
+    if (!isDrawing.current) return
+    e.preventDefault()
+
+    const ctx   = canvasRef.current?.getContext('2d')
+    const tool  = toolRef.current
+    const color = colorRef.current
+    const size  = sizeRef.current
+    if (!ctx) return
+
+    const pos = getPos(e)
+    // Pressure support (Apple Pencil): e.pressure = 0..1, default 0.5
+    const pressure = (e.pointerType === 'pen' && e.pressure > 0) ? e.pressure : 0.5
+    const lineW    = (size * SCALE) * (0.4 + pressure * 1.2)
+
+    ctx.save()
+    ctx.globalCompositeOperation = tool === 'eraser' ? 'destination-out' : 'source-over'
+    ctx.strokeStyle  = tool === 'eraser' ? 'rgba(0,0,0,1)' : color
+    ctx.lineWidth    = lineW
+    ctx.lineCap      = 'round'
+    ctx.lineJoin     = 'round'
+
+    ctx.beginPath()
+    ctx.moveTo(lastPos.current.x, lastPos.current.y)
+    ctx.lineTo(pos.x, pos.y)
+    ctx.stroke()
+    ctx.restore()
+
+    lastPos.current = pos
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const onPointerUp = useCallback((e) => {
+    if (!isDrawing.current) return
+    isDrawing.current = false
+    e.preventDefault()
+    // Notifica pai para capturar thumbnail e salvar
+    onStrokeEnd(page.id)
+  }, [page.id, onStrokeEnd])
+
+  return (
+    <div
+      id={`page-${page.id}`}
+      onClick={onClick}
+      style={{
+        flexShrink: 0,
+        width: PAGE_W,
+        height: PAGE_H,
+        background: '#fff',
+        boxShadow: isActive
+          ? '0 0 0 2.5px #5C8F6A, 0 8px 40px rgba(0,0,0,0.22)'
+          : '0 4px 32px rgba(0,0,0,0.18)',
+        borderRadius: 2,
+        overflow: 'hidden',
+        cursor: 'crosshair',
+        touchAction: 'none',  // crítico para pointer events no touch/stylus
+      }}
+    >
+      <canvas
+        ref={canvasRef}
+        width={PAGE_W * SCALE}
+        height={PAGE_H * SCALE}
+        style={{ width: PAGE_W, height: PAGE_H, display: 'block' }}
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerUp}
+        onPointerCancel={onPointerUp}
+      />
+    </div>
+  )
 }
 
-function clearDraft(patientId, sessionId) {
-  if (patientId) localStorage.removeItem(draftKey(patientId))
-  if (sessionId) localStorage.removeItem(sessKey(sessionId))
-}
-
-async function blobToBase64(blob) {
-  return new Promise((resolve, reject) => {
-    const r = new FileReader()
-    r.onload  = () => resolve(r.result.split(',')[1])
-    r.onerror = reject
-    r.readAsDataURL(blob)
-  })
-}
-
-// ── Página A4 padrão — mostrada quando não há rascunho salvo ─────────────────
-// Proporção A4: 210×297mm → ~794×1123px a 96 DPI. Usamos 800×1131.
-const DEFAULT_PAGE_ELEMENT = {
-  id: 'psicoai-page',
-  type: 'rectangle',
-  x: 0, y: 0,
-  width: 800, height: 1131,
-  angle: 0,
-  strokeColor: '#C8C4BC',
-  backgroundColor: '#ffffff',
-  fillStyle: 'solid',
-  strokeWidth: 1,
-  strokeStyle: 'solid',
-  roughness: 0,
-  opacity: 100,
-  groupIds: [],
-  frameId: null,
-  roundness: null,
-  seed: 1234567890,
-  version: 1,
-  versionNonce: 1,
-  isDeleted: false,
-  boundElements: null,
-  updated: 1,
-  link: null,
-  locked: true,
-}
-
-const DEFAULT_PAGE_DATA = {
-  elements: [DEFAULT_PAGE_ELEMENT],
-  appState: {
-    viewBackgroundColor: '#CFCBC3',   // cinza médio — contraste claro com a folha branca
-    currentItemStrokeColor: '#1C1C1C',
-    currentItemBackgroundColor: 'transparent',
-    currentItemFillStyle: 'solid',
-    currentItemStrokeWidth: 1,
-    currentItemStrokeStyle: 'solid',
-    currentItemRoughness: 0,
-    currentItemOpacity: 100,
-    activeTool: { type: 'freedraw', customType: null, locked: false, lastActiveTool: null },
-  },
-  files: {},
-}
-
-// ── Main component ────────────────────────────────────────────────────────────
-const BACKEND_AUTOSAVE_INTERVAL_MS = 30_000  // sync pro backend a cada 30s
-
+// ── Componente principal ──────────────────────────────────────────────────────
 export default function CanvasSession({
   patient,
   isOpen,
   onClose,
-  onMinimize,          // () → minimiza para background sem encerrar a sessão
+  onMinimize,
   onAnalyze,
-  onAutosave,          // (sessionId, { canvasDataJson, canvasTextContent }) → Promise — sync pro backend
+  onAutosave,
   sessionId,
-  initialCanvasData,   // JSON string — for reopening a previous session
+  initialCanvasData,
 }) {
-  const [isDirty, setIsDirty]           = useState(false)
-  const [exporting, setExporting]       = useState(false)
+  // Páginas: array de { id, canvasRef: {current}, dataUrl }
+  const [pages, setPages]             = useState(() => [{ id: newPageId(), canvasRef: { current: null }, dataUrl: null }])
+  const [activePage, setActivePage]   = useState(0)
+  const [tool, setTool]               = useState('pen')
+  const [color, setColor]             = useState('#1C1C1C')
+  const [size, setSize]               = useState(3)
+  const [isDirty, setIsDirty]         = useState(false)
   const [showEndModal, setShowEndModal] = useState(false)
-  // syncStatus via DOM ref — sem useState para não re-renderizar o canvas a cada sync
-  const syncLabelRef = useRef(null)
+  const [saving, setSaving]           = useState(false)
 
-  // Canvas state
-  const [canvasReady, setCanvasReady] = useState(false)
-  const [initialData, setInitialData] = useState(null)
-  const apiRef           = useRef(null)
-  const saveTimerRef     = useRef(null)
-  const backendSyncRef   = useRef(null)
-  const sessionIdRef     = useRef(sessionId)
-  const patientIdRef     = useRef(patient?.id)
-  const onAutosaveRef    = useRef(onAutosave)
+  // Refs para acesso sem re-render nos handlers de pointer
+  const toolRef  = useRef(tool)
+  const colorRef = useRef(color)
+  const sizeRef  = useRef(size)
+  useEffect(() => { toolRef.current = tool },   [tool])
+  useEffect(() => { colorRef.current = color }, [color])
+  useEffect(() => { sizeRef.current = size },   [size])
 
-  // Keep refs in sync
-  useEffect(() => { sessionIdRef.current  = sessionId },   [sessionId])
-  useEffect(() => { patientIdRef.current  = patient?.id }, [patient?.id])
-  useEffect(() => { onAutosaveRef.current = onAutosave },  [onAutosave])
+  const mainScrollRef = useRef(null)
+  const sidebarRef    = useRef(null)
+  const sessionIdRef  = useRef(sessionId)
+  useEffect(() => { sessionIdRef.current = sessionId }, [sessionId])
 
-  // When annotation opens: load saved state
+  // ── Inicializa / restaura ao abrir ─────────────────────────────────────────
   useEffect(() => {
-    if (!isOpen) return
-    setShowEndModal(false)
+    if (!isOpen || !patient?.id) return
     setIsDirty(false)
+    setShowEndModal(false)
+    setActivePage(0)
 
-    // Load canvas data from localStorage (or prop), fallback to default page
-    if (patient?.id) {
-      const saved = loadCanvas(patient.id, sessionId, initialCanvasData)
-      setInitialData(saved || DEFAULT_PAGE_DATA)
+    const saved = loadPages(patient.id)
+    if (saved && saved.length > 0) {
+      setPages(saved.map(p => ({ id: p.id, canvasRef: { current: null }, dataUrl: p.dataUrl })))
     } else {
-      setInitialData(DEFAULT_PAGE_DATA)
+      setPages([{ id: newPageId(), canvasRef: { current: null }, dataUrl: null }])
     }
-    setCanvasReady(false)
-  }, [isOpen, patient?.id, sessionId]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [isOpen, patient?.id])
 
-  // Força save imediato (sem debounce) — usado em visibilitychange / pagehide
-  const saveNow = useCallback(() => {
-    clearTimeout(saveTimerRef.current)
-    saveCanvas(patientIdRef.current, sessionIdRef.current, apiRef.current)
-  }, [])
-
-  // Salva ao trocar de aba, minimizar, Ctrl+R, fechar janela — captura tudo que o debounce perderia
-  useEffect(() => {
-    if (!isOpen) return
-    const onHide = () => { if (document.visibilityState === 'hidden') saveNow() }
-    document.addEventListener('visibilitychange', onHide)
-    window.addEventListener('pagehide', saveNow)
-    return () => {
-      document.removeEventListener('visibilitychange', onHide)
-      window.removeEventListener('pagehide', saveNow)
-    }
-  }, [isOpen, saveNow])
-
-  // ── Backend autosave — sync periódico a cada 30s ──────────────────────────
-  // Redundância crítica: se o localStorage for limpo (Safari ITP, cache clear),
-  // o backend tem a última versão conhecida.
-  //
-  // PERFORMANCE: usa requestIdleCallback para rodar APENAS quando o browser está
-  // ocioso entre frames. Nunca bloqueia input do usuário ou animação do canvas.
-  // O status de sync vai pro DOM direto via ref — sem setState, sem re-render.
-  const lastElementCountRef = useRef(0)
-
-  const setSyncLabel = useCallback((text, color = 'rgba(255,255,255,0.45)') => {
-    if (syncLabelRef.current) {
-      syncLabelRef.current.textContent = text
-      syncLabelRef.current.style.color = color
-    }
-  }, [])
-
-  const syncToBackend = useCallback(() => {
-    const sid = sessionIdRef.current
-    const fn  = onAutosaveRef.current
-    if (!sid || !fn || !apiRef.current) return
-
-    // Serialização pesada — roda em idle para não bloquear o canvas
-    const doWork = async () => {
-      try {
-        const elements = apiRef.current?.getSceneElements()
-        if (!elements) return
-
-        // Não sincroniza se nada mudou desde o último sync
-        if (elements.length === lastElementCountRef.current && elements.length === 0) return
-
-        setSyncLabel('Sincronizando…')
-
-        const canvasTextContent = elements
-          .filter(el => el.type === 'text' && el.text?.trim())
-          .sort((a, b) => a.y - b.y || a.x - b.x)
-          .map(el => el.text.trim())
-          .join('\n') || null
-
-        const canvasDataJson = JSON.stringify({
-          v: STORAGE_VERSION,
-          savedAt: Date.now(),
-          elements,
-          appState: { viewBackgroundColor: apiRef.current.getAppState()?.viewBackgroundColor || '#F7F4EF' },
-          files: apiRef.current.getFiles(),
-        })
-
-        await fn(sid, { canvasDataJson, canvasTextContent })
-        lastElementCountRef.current = elements.length
-        setSyncLabel('✓ Salvo')
-        setIsDirty(false)
-        setTimeout(() => setSyncLabel(''), 3000)
-      } catch {
-        setSyncLabel('Só local', '#F39C12')
-      }
-    }
-
-    if (typeof requestIdleCallback !== 'undefined') {
-      requestIdleCallback(() => doWork(), { timeout: 8000 })
-    } else {
-      // Fallback para Safari que não tem requestIdleCallback
-      setTimeout(doWork, 0)
-    }
-  }, [setSyncLabel])
-
-  useEffect(() => {
-    if (!isOpen) {
-      clearInterval(backendSyncRef.current)
-      return
-    }
-    // Primeiro sync após 20s (tempo para o sessionId chegar do backend)
-    const firstSync = setTimeout(() => {
-      syncToBackend()
-      backendSyncRef.current = setInterval(syncToBackend, BACKEND_AUTOSAVE_INTERVAL_MS)
-    }, 20_000)
-    return () => {
-      clearTimeout(firstSync)
-      clearInterval(backendSyncRef.current)
-    }
-  }, [isOpen, syncToBackend])
-
-  // Debounced localStorage save on every canvas change (debounce reduzido para 800ms)
-  const handleChange = useCallback(() => {
+  // ── Captura thumbnail após cada traço ──────────────────────────────────────
+  const handleStrokeEnd = useCallback((pageId) => {
     setIsDirty(true)
-    clearTimeout(saveTimerRef.current)
-    saveTimerRef.current = setTimeout(() => {
-      saveCanvas(patientIdRef.current, sessionIdRef.current, apiRef.current)
-    }, 800)
-  }, [])
+    setPages(prev => {
+      const updated = prev.map(p => {
+        if (p.id !== pageId) return p
+        const dataUrl = p.canvasRef.current?.toDataURL('image/png') || p.dataUrl
+        return { ...p, dataUrl }
+      })
+      // Salva no localStorage (fire-and-forget)
+      if (patient?.id) savePages(patient.id, updated)
+      return updated
+    })
+  }, [patient?.id])
 
-  const exportCanvas = async () => {
-    let imageBase64      = null
-    let canvasDataJson   = null
-    let canvasTextContent = null
+  // ── Nova página ────────────────────────────────────────────────────────────
+  const addPage = useCallback(() => {
+    const newPage = { id: newPageId(), canvasRef: { current: null }, dataUrl: null }
+    setPages(prev => {
+      const next = [...prev, newPage]
+      if (patient?.id) savePages(patient.id, next)
+      return next
+    })
+    setActivePage(p => p + 1) // vai para a nova página
+    // Scroll até a nova página
+    setTimeout(() => {
+      const container = mainScrollRef.current
+      if (container) container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' })
+    }, 80)
+  }, [patient?.id])
+
+  // ── Scroll da área principal → atualiza página ativa ──────────────────────
+  const handleScroll = useCallback(() => {
+    const container = mainScrollRef.current
+    if (!container) return
+    const midY = container.scrollTop + container.clientHeight / 2
+    // Encontra qual página está no centro
+    let closest = 0
+    let minDist = Infinity
+    pages.forEach((p, i) => {
+      const el = document.getElementById(`page-${p.id}`)
+      if (!el) return
+      const elTop = el.offsetTop
+      const elMid = elTop + PAGE_H / 2
+      const dist  = Math.abs(elMid - midY)
+      if (dist < minDist) { minDist = dist; closest = i }
+    })
+    setActivePage(closest)
+  }, [pages])
+
+  // ── Sidebar scroll para acompanhar página ativa ───────────────────────────
+  useEffect(() => {
+    const sb = sidebarRef.current
+    if (!sb) return
+    const el = sb.querySelector(`[data-thumb="${activePage}"]`)
+    el?.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
+  }, [activePage])
+
+  // ── Scroll da sidebar → scroll da área principal ──────────────────────────
+  const scrollToPage = (idx) => {
+    const container = mainScrollRef.current
+    if (!container) return
+    const el = document.getElementById(`page-${pages[idx]?.id}`)
+    if (!el) return
+    const topOffset = el.offsetTop - 32
+    container.scrollTo({ top: topOffset, behavior: 'smooth' })
+    setActivePage(idx)
+  }
+
+  // ── Export para salvar / analisar ──────────────────────────────────────────
+  const exportData = async () => {
+    // Atualiza dataUrls de todos os canvas
+    const snapshots = pages.map(p => ({
+      id: p.id,
+      dataUrl: p.canvasRef.current?.toDataURL('image/png') || p.dataUrl || null,
+    }))
+
+    // Combina todas as páginas verticalmente numa imagem única para a IA
+    let imageBase64 = null
     try {
-      if (apiRef.current && exportToBlob) {
-        const elements = apiRef.current.getSceneElements()
-        const appState = apiRef.current.getAppState()
-        const files    = apiRef.current.getFiles()
+      const totalH = snapshots.length * PAGE_H * SCALE
+      const combined = document.createElement('canvas')
+      combined.width  = PAGE_W * SCALE
+      combined.height = totalH
+      const ctx = combined.getContext('2d')
+      ctx.fillStyle = '#fff'
+      ctx.fillRect(0, 0, combined.width, combined.height)
 
-        canvasDataJson = JSON.stringify({
-          elements,
-          appState: { viewBackgroundColor: appState.viewBackgroundColor || '#F7F4EF' },
-          files,
+      for (let i = 0; i < snapshots.length; i++) {
+        if (!snapshots[i].dataUrl) continue
+        await new Promise(resolve => {
+          const img = new Image()
+          img.onload = () => {
+            ctx.drawImage(img, 0, i * PAGE_H * SCALE)
+            resolve()
+          }
+          img.src = snapshots[i].dataUrl
         })
-
-        // Extrai texto exato de todos os elementos de texto do canvas.
-        // Enviado junto com a imagem para a IA ter fidelidade total ao conteúdo escrito
-        // (elimina erros de OCR que aconteceriam se a IA precisasse "ler" a imagem sozinha).
-        const textParts = elements
-          .filter(el => el.type === 'text' && el.text?.trim())
-          .sort((a, b) => a.y - b.y || a.x - b.x)  // ordem de leitura: top-bottom, left-right
-          .map(el => el.text.trim())
-        if (textParts.length > 0) {
-          canvasTextContent = textParts.join('\n')
-        }
-
-        if (elements.length > 0) {
-          const blob = await exportToBlob({
-            elements,
-            mimeType: 'image/png',
-            appState: { ...appState, exportWithDarkMode: false, exportBackground: true },
-            files,
-          })
-          imageBase64 = await blobToBase64(blob)
-        }
       }
+      imageBase64 = combined.toDataURL('image/png').split(',')[1]
     } catch (e) {
-      console.warn('[PsicoAI] exportCanvas failed:', e)
+      console.warn('[CanvasSession] export failed:', e)
     }
-    return { imageBase64, canvasDataJson, canvasTextContent }
+
+    const canvasDataJson = JSON.stringify({ pages: snapshots })
+    return { imageBase64, canvasDataJson, canvasTextContent: null }
   }
 
-  const handleEndWithoutAI = async () => {
-    setExporting(true)
-    const { canvasDataJson, canvasTextContent } = await exportCanvas()
-    setExporting(false)
+  const handleSave = async () => {
+    setSaving(true)
+    const data = await exportData()
+    setSaving(false)
     setShowEndModal(false)
     setIsDirty(false)
-    clearDraft(patient?.id, sessionId)
-    onClose({ duration: 0, canvasDataJson, canvasTextContent })
+    onClose({ duration: 0, ...data })
   }
 
-  const handleEndWithAI = async () => {
-    setExporting(true)
-    const { imageBase64, canvasDataJson, canvasTextContent } = await exportCanvas()
-    setExporting(false)
+  const handleAnalyze = async () => {
+    setSaving(true)
+    const data = await exportData()
+    setSaving(false)
     setShowEndModal(false)
     setIsDirty(false)
-    clearDraft(patient?.id, sessionId)
-    onAnalyze({ imageBase64, duration: 0, canvasDataJson, canvasTextContent })
+    onAnalyze({ duration: 0, ...data })
   }
 
   if (!isOpen) return null
@@ -384,219 +361,330 @@ export default function CanvasSession({
   const patientName = patient?.name || 'Paciente'
 
   return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 300, display: 'flex', flexDirection: 'column', background: '#EDEAE4' }}>
+    <div style={{
+      position: 'fixed', inset: 0, zIndex: 300,
+      display: 'flex', flexDirection: 'column',
+      fontFamily: "'DM Sans', sans-serif",
+      background: '#1E1E1E',
+    }}>
 
-      {/* Topbar */}
-      <div className="cs-topbar">
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          {/* Botão voltar — minimiza sem encerrar */}
-          {onMinimize && (
-            <button
-              onClick={onMinimize}
-              title="Voltar ao app"
-              style={{
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                width: 32, height: 32, borderRadius: '8px',
-                background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)',
-                color: 'rgba(255,255,255,0.7)', cursor: 'pointer', flexShrink: 0,
-                transition: 'background 0.15s',
-              }}
-              onMouseOver={e => e.currentTarget.style.background = 'rgba(255,255,255,0.15)'}
-              onMouseOut={e => e.currentTarget.style.background = 'rgba(255,255,255,0.08)'}
-            >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                <polyline points="15 18 9 12 15 6"/>
-              </svg>
-            </button>
-          )}
-          <div className="cs-logo">Ψ</div>
-          <div className="cs-patient" title={patientName}>{patientName}</div>
-          {/* Sync status — atualizado via DOM ref, sem re-render React */}
-          <span
-            ref={syncLabelRef}
-            style={{ fontSize: '10px', color: 'rgba(255,255,255,0.45)', transition: 'color 0.3s' }}
-          />
-          {!navigator.onLine && (
-            <span style={{ fontSize: '10px', fontWeight: 600, padding: '2px 8px', borderRadius: '20px', background: 'rgba(243,156,18,0.2)', color: '#F39C12' }}>
-              Offline
+      {/* ── Header ──────────────────────────────────────────────────────── */}
+      <div style={{
+        height: 52, flexShrink: 0,
+        background: '#2D4A38',
+        display: 'flex', alignItems: 'center',
+        padding: '0 16px', gap: 12,
+        borderBottom: '1px solid rgba(255,255,255,0.08)',
+      }}>
+        {onMinimize && (
+          <button
+            onClick={onMinimize}
+            style={{
+              width: 32, height: 32, borderRadius: 8,
+              background: 'rgba(255,255,255,0.08)',
+              border: '1px solid rgba(255,255,255,0.12)',
+              color: 'rgba(255,255,255,0.7)', cursor: 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              flexShrink: 0, transition: 'background 0.15s',
+            }}
+            onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.15)'}
+            onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.08)'}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <polyline points="15 18 9 12 15 6"/>
+            </svg>
+          </button>
+        )}
+
+        <div style={{ fontSize: 14, color: '#fff', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span style={{ opacity: 0.5 }}>Ψ</span>
+          {patientName}
+          {pages.length > 1 && (
+            <span style={{ fontSize: 11, background: 'rgba(255,255,255,0.12)', padding: '2px 8px', borderRadius: 20, color: 'rgba(255,255,255,0.6)' }}>
+              pág. {activePage + 1} / {pages.length}
             </span>
           )}
         </div>
-        <button className="cs-end-btn" onClick={() => setShowEndModal(true)}>
-          Salvar anotação
-        </button>
-      </div>
 
-      {/* Banner de rascunho não salvo */}
-      {isDirty && (
-        <div style={{
-          background: 'rgba(243,156,18,0.12)',
-          borderBottom: '1px solid rgba(243,156,18,0.3)',
-          padding: '6px 16px',
-          display: 'flex', alignItems: 'center', gap: '8px',
-          fontSize: '11px', color: '#B7770D', fontWeight: 600,
-          fontFamily: "'DM Sans', sans-serif",
-        }}>
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-            <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
-          </svg>
-          Rascunho não salvo — clique em "Salvar anotação" para finalizar
-        </div>
-      )}
-
-      {/* Canvas area */}
-      <div style={{ flex: 1, position: 'relative', overflow: 'hidden', background: '#CFCBC3' }}>
-        {/* Loading — mostrado enquanto initialData não chegou ou canvas ainda não montou */}
-        {(!initialData || !canvasReady) && (
-          <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px', fontSize: '14px', color: '#7A7672', flexDirection: 'column', background: '#CFCBC3', zIndex: 2 }}>
-            <span style={{ width: 24, height: 24, border: '2px solid #A8A49E', borderTopColor: '#4A7C59', borderRadius: '50%', display: 'inline-block', animation: 'spin 0.8s linear infinite' }} />
-            Carregando...
-          </div>
+        {isDirty && (
+          <span style={{ fontSize: 11, color: '#F0A500', display: 'flex', alignItems: 'center', gap: 4 }}>
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+            </svg>
+            Rascunho não salvo
+          </span>
         )}
 
-        {/* Só monta o Excalidraw quando initialData estiver pronto — garante que a folha A4 aparece */}
-        {initialData && (
-          <Excalidraw
-            key={`exc-${patient?.id || 'x'}`}
-            initialData={initialData}
-            excalidrawAPI={(api) => {
-              apiRef.current = api
-              setCanvasReady(true)
-              // Centraliza a folha A4 no viewport + ativa ferramenta caneta
-              setTimeout(() => {
-                try {
-                  // Calcula posição central da folha no container
-                  const container = document.querySelector('.excalidraw-container')
-                  const vw = container?.clientWidth  || window.innerWidth
-                  const vh = container?.clientHeight || window.innerHeight
-                  // Folha: 800×1131 com zoom 0.9 → 720×1018px
-                  const zoom  = 0.9
-                  const pageW = 800 * zoom
-                  const pageH = 1131 * zoom
-                  const scrollX = (vw - pageW) / 2 / zoom
-                  const scrollY = Math.max(40, (vh - pageH) / 2 / zoom)
-                  api.updateScene({
-                    appState: {
-                      zoom: { value: zoom },
-                      scrollX,
-                      scrollY,
-                      activeTool: { type: 'freedraw', customType: null, locked: false, lastActiveTool: null },
-                    },
-                  })
-                } catch (e) {
-                  console.warn('[PsicoAI] scroll center failed:', e)
-                }
-              }, 80)
+        <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
+          <button
+            onClick={() => setShowEndModal(true)}
+            style={{
+              padding: '7px 18px', background: '#4A7C59',
+              border: 'none', borderRadius: 8,
+              color: '#fff', fontSize: 13, fontWeight: 700,
+              cursor: 'pointer', transition: 'background 0.15s',
             }}
-            onChange={handleChange}
-            langCode="pt-BR"
-            theme="light"
-            UIOptions={{
-              canvasActions: {
-                changeViewBackgroundColor: false,
-                export: { saveFileToDisk: false },
-                loadScene: false,
-              },
-              tools: { image: false },
-            }}
+            onMouseEnter={e => e.currentTarget.style.background = '#3D6B4A'}
+            onMouseLeave={e => e.currentTarget.style.background = '#4A7C59'}
           >
-            <MainMenu>
-              <MainMenu.DefaultItems.ClearCanvas />
-              <MainMenu.DefaultItems.SaveAsImage />
-              <MainMenu.DefaultItems.Help />
-            </MainMenu>
-          </Excalidraw>
-        )}
-
-        {/* Auto-save indicator */}
-        {canvasReady && (
-          <div style={{
-            position: 'absolute', bottom: 12, left: 16, zIndex: 5,
-            display: 'flex', alignItems: 'center', gap: '5px',
-            fontSize: '10px', color: 'rgba(0,0,0,0.35)',
-            pointerEvents: 'none',
-            fontFamily: "'DM Sans', sans-serif",
-          }}>
-            <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#27AE60', display: 'inline-block' }} />
-            Salvo localmente
-          </div>
-        )}
+            Salvar anotação
+          </button>
+        </div>
       </div>
 
-      {/* End session modal */}
+      {/* ── Body: sidebar + páginas ──────────────────────────────────────── */}
+      <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
+
+        {/* Sidebar */}
+        <div
+          ref={sidebarRef}
+          style={{
+            width: 120, flexShrink: 0,
+            background: '#161616',
+            overflowY: 'auto', overflowX: 'hidden',
+            display: 'flex', flexDirection: 'column',
+            alignItems: 'center',
+            padding: '12px 0 16px',
+            gap: 0,
+          }}
+        >
+          {pages.map((p, i) => (
+            <button
+              key={p.id}
+              data-thumb={i}
+              onClick={() => scrollToPage(i)}
+              style={{
+                width: '100%', border: 'none', cursor: 'pointer',
+                background: activePage === i ? 'rgba(74,124,89,0.3)' : 'transparent',
+                borderLeft: `2px solid ${activePage === i ? '#5C8F6A' : 'transparent'}`,
+                padding: '8px 0',
+                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
+                transition: 'background 0.15s',
+              }}
+              onMouseEnter={e => { if (activePage !== i) e.currentTarget.style.background = 'rgba(255,255,255,0.06)' }}
+              onMouseLeave={e => { if (activePage !== i) e.currentTarget.style.background = 'transparent' }}
+            >
+              {/* Miniatura A4 */}
+              <div style={{
+                width: 72, height: 102,
+                background: '#fff',
+                border: `1.5px solid ${activePage === i ? '#5C8F6A' : 'rgba(255,255,255,0.15)'}`,
+                borderRadius: 2, overflow: 'hidden', flexShrink: 0,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>
+                {p.dataUrl
+                  ? <img src={p.dataUrl} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="" />
+                  : <div style={{ width: '100%', height: '100%', background: '#fff' }} />
+                }
+              </div>
+              <span style={{ fontSize: 10, color: activePage === i ? '#9DC4A8' : 'rgba(255,255,255,0.35)' }}>
+                {i + 1}
+              </span>
+            </button>
+          ))}
+
+          {/* Botão nova página */}
+          <button
+            onClick={addPage}
+            title="Nova página"
+            style={{
+              marginTop: 8,
+              width: 72, height: 36,
+              border: '1.5px dashed rgba(255,255,255,0.2)',
+              borderRadius: 4, background: 'transparent',
+              color: 'rgba(255,255,255,0.35)', cursor: 'pointer',
+              fontSize: 20, display: 'flex', alignItems: 'center', justifyContent: 'center',
+              transition: 'all 0.15s',
+            }}
+            onMouseEnter={e => { e.currentTarget.style.borderColor = '#5C8F6A'; e.currentTarget.style.color = '#5C8F6A' }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)'; e.currentTarget.style.color = 'rgba(255,255,255,0.35)' }}
+          >
+            +
+          </button>
+        </div>
+
+        {/* Área principal de páginas */}
+        <div
+          ref={mainScrollRef}
+          onScroll={handleScroll}
+          style={{
+            flex: 1, overflowY: 'auto', overflowX: 'auto',
+            background: '#2A2A2A',
+            display: 'flex', flexDirection: 'column',
+            alignItems: 'center',
+            padding: '32px 24px 80px', gap: 32,
+          }}
+        >
+          {pages.map((p, i) => (
+            <A4Page
+              key={p.id}
+              page={p}
+              isActive={activePage === i}
+              toolRef={toolRef}
+              colorRef={colorRef}
+              sizeRef={sizeRef}
+              onStrokeEnd={handleStrokeEnd}
+              onClick={() => setActivePage(i)}
+            />
+          ))}
+        </div>
+      </div>
+
+      {/* ── Toolbar ──────────────────────────────────────────────────────── */}
+      <div style={{
+        height: 52, flexShrink: 0,
+        background: '#1A1A1A',
+        borderTop: '1px solid rgba(255,255,255,0.08)',
+        display: 'flex', alignItems: 'center',
+        justifyContent: 'center', gap: 8, padding: '0 16px',
+      }}>
+        {/* Caneta */}
+        <ToolBtn active={tool === 'pen'} onClick={() => setTool('pen')} title="Caneta">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M12 19l7-7 3 3-7 7-3-3z"/>
+            <path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/>
+            <path d="M2 2l7.586 7.586"/><circle cx="11" cy="11" r="2"/>
+          </svg>
+        </ToolBtn>
+
+        {/* Borracha */}
+        <ToolBtn active={tool === 'eraser'} onClick={() => setTool('eraser')} title="Borracha">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M20 20H7L3 16l10-10 7 7-1.5 1.5"/>
+            <path d="M6.0001 20l-3-3 10-10"/>
+          </svg>
+        </ToolBtn>
+
+        <div style={{ width: 1, height: 24, background: 'rgba(255,255,255,0.1)', margin: '0 4px' }} />
+
+        {/* Cores */}
+        {COLORS.map(c => (
+          <button
+            key={c}
+            onClick={() => { setColor(c); setTool('pen') }}
+            title={c}
+            style={{
+              width: 22, height: 22, borderRadius: '50%',
+              background: c, border: 'none', cursor: 'pointer', flexShrink: 0,
+              boxShadow: color === c && tool === 'pen'
+                ? `0 0 0 2px #1A1A1A, 0 0 0 3.5px ${c}`
+                : 'none',
+              transition: 'box-shadow 0.15s',
+            }}
+          />
+        ))}
+
+        <div style={{ width: 1, height: 24, background: 'rgba(255,255,255,0.1)', margin: '0 4px' }} />
+
+        {/* Espessura */}
+        {[2, 4, 8].map(s => (
+          <button
+            key={s}
+            onClick={() => setSize(s)}
+            title={`Espessura ${s}`}
+            style={{
+              width: 36, height: 36, borderRadius: 8, border: 'none',
+              background: size === s ? 'rgba(255,255,255,0.12)' : 'transparent',
+              cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+              transition: 'background 0.15s',
+            }}
+            onMouseEnter={e => { if (size !== s) e.currentTarget.style.background = 'rgba(255,255,255,0.06)' }}
+            onMouseLeave={e => { if (size !== s) e.currentTarget.style.background = 'transparent' }}
+          >
+            <div style={{ width: s * 2.5, height: s * 2.5, maxWidth: 20, maxHeight: 20, borderRadius: '50%', background: color, transition: 'all 0.15s' }} />
+          </button>
+        ))}
+
+        <div style={{ width: 1, height: 24, background: 'rgba(255,255,255,0.1)', margin: '0 4px' }} />
+
+        {/* Desfazer / Refazer — placeholder (TODO: implementar history) */}
+        <ToolBtn active={false} onClick={() => document.execCommand?.('undo')} title="Desfazer (Ctrl+Z)">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/>
+          </svg>
+        </ToolBtn>
+
+        <div style={{ marginLeft: 'auto', display: 'flex', gap: 6 }}>
+          <ToolBtn active={false} onClick={addPage} title="Nova página">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+              <polyline points="14 2 14 8 20 8"/>
+              <line x1="12" y1="11" x2="12" y2="17"/><line x1="9" y1="14" x2="15" y2="14"/>
+            </svg>
+          </ToolBtn>
+        </div>
+      </div>
+
+      {/* ── Modal salvar / analisar ──────────────────────────────────────── */}
       {showEndModal && (
         <div style={{
-          position: 'absolute', inset: 0, zIndex: 10,
-          background: 'rgba(0,0,0,0.5)',
+          position: 'fixed', inset: 0, zIndex: 10,
+          background: 'rgba(0,0,0,0.6)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          padding: '16px', touchAction: 'none', overscrollBehavior: 'none',
+          padding: 16,
         }}>
           <div style={{
-            background: '#fff', borderRadius: '16px',
-            width: '100%', maxWidth: '440px',
-            boxShadow: '0 24px 64px rgba(0,0,0,0.28)', overflow: 'hidden',
+            background: '#fff', borderRadius: 16,
+            width: '100%', maxWidth: 440,
+            boxShadow: '0 24px 64px rgba(0,0,0,0.4)', overflow: 'hidden',
           }}>
             <div style={{ padding: '24px 24px 20px' }}>
-              <div style={{ fontFamily: "'Fraunces', serif", fontSize: '20px', fontWeight: 400, color: '#1C1C1C', marginBottom: '8px' }}>
+              <div style={{ fontFamily: "'Fraunces', serif", fontSize: 20, color: '#1C1C1C', marginBottom: 6 }}>
                 Salvar anotação
               </div>
-              <div style={{ fontSize: '13px', color: '#8B8B8B', lineHeight: 1.6 }}>
-                {patientName} · O canvas ficará salvo no prontuário
+              <div style={{ fontSize: 13, color: '#8B8B8B', lineHeight: 1.6 }}>
+                {patientName} · {pages.length} página{pages.length > 1 ? 's' : ''}
               </div>
             </div>
 
-            <div style={{ padding: '0 24px 24px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              {/* Com IA */}
+            <div style={{ padding: '0 24px 24px', display: 'flex', flexDirection: 'column', gap: 10 }}>
               <button
-                onClick={handleEndWithAI}
-                disabled={exporting}
+                onClick={handleAnalyze}
+                disabled={saving}
                 style={{
-                  width: '100%', padding: '16px', border: '2px solid var(--g300)',
-                  borderRadius: '12px', background: 'var(--g50)', cursor: exporting ? 'wait' : 'pointer',
-                  textAlign: 'left', fontFamily: "'DM Sans', sans-serif",
-                  transition: 'all 0.15s', opacity: exporting ? 0.7 : 1,
+                  width: '100%', padding: 16, border: '2px solid var(--g300)',
+                  borderRadius: 12, background: 'var(--g50)', cursor: saving ? 'wait' : 'pointer',
+                  textAlign: 'left', fontFamily: "'DM Sans', sans-serif", opacity: saving ? 0.7 : 1,
+                  transition: 'all 0.15s',
                 }}
-                onMouseOver={e => { if (!exporting) { e.currentTarget.style.background = 'var(--g100)'; e.currentTarget.style.borderColor = 'var(--g400)' }}}
-                onMouseOut={e => { e.currentTarget.style.background = 'var(--g50)'; e.currentTarget.style.borderColor = 'var(--g300)' }}
+                onMouseEnter={e => { if (!saving) { e.currentTarget.style.background = 'var(--g100)'; e.currentTarget.style.borderColor = 'var(--g400)' }}}
+                onMouseLeave={e => { e.currentTarget.style.background = 'var(--g50)'; e.currentTarget.style.borderColor = 'var(--g300)' }}
               >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '6px' }}>
-                  {exporting ? (
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--g600)" strokeWidth="2" style={{ animation: 'spin 0.8s linear infinite', flexShrink: 0 }}>
-                      <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
-                    </svg>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+                  {saving ? (
+                    <span style={{ width: 16, height: 16, border: '2px solid var(--g300)', borderTopColor: 'var(--g600)', borderRadius: '50%', display: 'inline-block', animation: 'cs-spin 0.8s linear infinite', flexShrink: 0 }} />
                   ) : (
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--g600)" strokeWidth="2" style={{ flexShrink: 0 }}>
                       <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
                     </svg>
                   )}
-                  <span style={{ fontSize: '14px', fontWeight: 700, color: 'var(--g700)' }}>
-                    {exporting ? 'Exportando canvas...' : 'Gerar reflexão clínica com IA'}
+                  <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--g700)' }}>
+                    {saving ? 'Exportando…' : 'Gerar reflexão clínica com IA'}
                   </span>
                 </div>
-                <div style={{ fontSize: '12px', color: 'var(--g600)', lineHeight: 1.5, paddingLeft: '26px' }}>
-                  A IA lê o que você desenhou e escreveu — devolve hipóteses, padrões e conexões com sessões anteriores.
+                <div style={{ fontSize: 12, color: 'var(--g600)', lineHeight: 1.5, paddingLeft: 26 }}>
+                  A IA lê o que você escreveu e devolve hipóteses, padrões e conexões com anotações anteriores.
                 </div>
               </button>
 
-              {/* Sem IA */}
               <button
-                onClick={handleEndWithoutAI}
-                disabled={exporting}
+                onClick={handleSave}
+                disabled={saving}
                 style={{
                   width: '100%', padding: '14px 16px', border: '1px solid var(--gr2)',
-                  borderRadius: '12px', background: 'var(--w)', cursor: 'pointer',
+                  borderRadius: 12, background: 'var(--w)', cursor: 'pointer',
                   textAlign: 'left', fontFamily: "'DM Sans', sans-serif", transition: 'all 0.15s',
                 }}
-                onMouseOver={e => e.currentTarget.style.background = 'var(--ow)'}
-                onMouseOut={e => e.currentTarget.style.background = 'var(--w)'}
+                onMouseEnter={e => e.currentTarget.style.background = 'var(--ow)'}
+                onMouseLeave={e => e.currentTarget.style.background = 'var(--w)'}
               >
-                <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--d)', marginBottom: '3px' }}>Encerrar e salvar</div>
-                <div style={{ fontSize: '12px', color: 'var(--gr5)' }}>Salva o canvas no prontuário. Você pode analisar com IA depois.</div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--d)', marginBottom: 3 }}>Só salvar</div>
+                <div style={{ fontSize: 12, color: 'var(--gr5)' }}>Salva no prontuário. Você pode analisar com IA depois.</div>
               </button>
 
               <button
                 onClick={() => setShowEndModal(false)}
-                style={{ background: 'none', border: 'none', color: 'var(--gr4)', fontSize: '12px', cursor: 'pointer', padding: '4px', fontFamily: "'DM Sans', sans-serif" }}
+                style={{ background: 'none', border: 'none', color: 'var(--gr4)', fontSize: 12, cursor: 'pointer', padding: 4, fontFamily: "'DM Sans', sans-serif" }}
               >
                 ← Continuar anotando
               </button>
@@ -604,6 +692,31 @@ export default function CanvasSession({
           </div>
         </div>
       )}
+
+      <style>{`
+        @keyframes cs-spin { to { transform: rotate(360deg) } }
+      `}</style>
     </div>
+  )
+}
+
+// ── Botão de ferramenta ────────────────────────────────────────────────────────
+function ToolBtn({ active, onClick, title, children }) {
+  return (
+    <button
+      onClick={onClick}
+      title={title}
+      style={{
+        width: 36, height: 36, borderRadius: 8, border: 'none',
+        background: active ? 'rgba(255,255,255,0.18)' : 'transparent',
+        color: active ? '#fff' : 'rgba(255,255,255,0.55)',
+        cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+        transition: 'all 0.15s', flexShrink: 0,
+      }}
+      onMouseEnter={e => { if (!active) { e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; e.currentTarget.style.color = 'rgba(255,255,255,0.85)' }}}
+      onMouseLeave={e => { if (!active) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'rgba(255,255,255,0.55)' }}}
+    >
+      {children}
+    </button>
   )
 }
