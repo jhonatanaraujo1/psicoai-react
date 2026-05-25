@@ -340,6 +340,17 @@ export default function App() {
     else setCanvasOpen(true)
   }
 
+  // Abre canvas histórico (sessão já encerrada) para visualização/edição
+  const handleOpenCanvasFromHistory = (session) => {
+    const patient = { id: session.patientId, name: session.patientName }
+    setCurrentPatient(patient)
+    setCanvasInitialData(session.canvasDataJson || null)
+    // Abre canvas com ID da sessão histórica — sem novo timer de sessão ativa
+    setSession(session.id)
+    setActiveSessionType('canvas')
+    setCanvasOpen(true)
+  }
+
   // Volta para a sessão em background — reabre a view sem criar nova sessão
   const handleReturnToSession = () => {
     if (activeSessionType === 'canvas') setCanvasOpen(true)
@@ -487,7 +498,7 @@ export default function App() {
       case 'financeiro':  return <Financeiro />
       case 'lembretes':   return <Lembretes />
       case 'formularios': return <Formularios />
-      case 'anotacoes':   return <Anotacoes setCurrentView={handleSetView} />
+      case 'anotacoes':   return <Anotacoes setCurrentView={handleSetView} onOpenCanvas={handleOpenCanvasFromHistory} />
       case 'teleatendimento': return <Teleatendimento />
       case 'configuracoes': return <Configuracoes currentUser={currentUser} onProfileUpdate={(data) => setCurrentUser(u => ({ ...u, ...data }))} onOpenOnboarding={() => setOnboardingOpen(true)} />
       default:            return <Dashboard setCurrentView={handleSetView} currentUser={currentUser} />

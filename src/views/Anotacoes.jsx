@@ -45,7 +45,7 @@ function Excerpt({ text, query }) {
   )
 }
 
-function AnnotationCard({ session, query, onPatientClick, expanded, onToggle }) {
+function AnnotationCard({ session, query, onPatientClick, onOpenCanvas, expanded, onToggle }) {
   const hasText = !!session.textContent
   const hasAi = session.hasAnalysis
   // Canvas badge only when actual canvas data exists — type alone is not enough
@@ -161,9 +161,32 @@ function AnnotationCard({ session, query, onPatientClick, expanded, onToggle }) 
                 {session.textContent}
               </div>
             ) : hasCanvas ? (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '14px', background: 'var(--w)', borderRadius: 'var(--r)', border: '1px solid var(--gr2)', color: 'var(--gr5)', fontSize: '13px' }}>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--gr4)" strokeWidth="1.8"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/></svg>
-                Sessão feita no Canvas — clique em "Ir para o paciente" para ver a timeline completa.
+              <div style={{ background: 'var(--w)', borderRadius: 'var(--r)', border: '1px solid var(--gr2)', overflow: 'hidden' }}>
+                {/* Preview textual do canvas */}
+                {session.canvasTextContent && (
+                  <div style={{ padding: '14px 16px', fontSize: '13px', color: 'var(--gr5)', lineHeight: 1.7, borderBottom: '1px solid var(--gr1)' }}>
+                    <span style={{ fontSize: '11px', fontWeight: 600, color: '#7D3C98', textTransform: 'uppercase', letterSpacing: '0.4px', display: 'block', marginBottom: '6px' }}>
+                      Resumo do canvas
+                    </span>
+                    {session.canvasTextContent}
+                  </div>
+                )}
+                {/* Aviso + botão abrir */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 16px', color: 'var(--gr4)', fontSize: '12.5px' }}>
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--gr4)" strokeWidth="1.8"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/></svg>
+                  Sessão registrada no Canvas
+                  {onOpenCanvas && (
+                    <button
+                      onClick={e => { e.stopPropagation(); onOpenCanvas(session) }}
+                      style={{ marginLeft: 'auto', fontSize: '12px', padding: '5px 12px', borderRadius: '7px', border: '1px solid #D7BDE2', background: '#F0EBF8', color: '#7D3C98', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", fontWeight: 600, display: 'flex', alignItems: 'center', gap: '5px', transition: 'background 0.12s', flexShrink: 0 }}
+                      onMouseEnter={e => e.currentTarget.style.background = '#E8D5F5'}
+                      onMouseLeave={e => e.currentTarget.style.background = '#F0EBF8'}
+                    >
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/></svg>
+                      Abrir canvas
+                    </button>
+                  )}
+                </div>
               </div>
             ) : (
               <div style={{ color: 'var(--gr4)', fontSize: '13px', textAlign: 'center', padding: '12px' }}>
@@ -197,7 +220,7 @@ function AnnotationCard({ session, query, onPatientClick, expanded, onToggle }) 
   )
 }
 
-export default function Anotacoes({ setCurrentView }) {
+export default function Anotacoes({ setCurrentView, onOpenCanvas }) {
   const [sessions, setSessions] = useState([])
   const [patients, setPatients] = useState([])
   const [loading, setLoading] = useState(true)
@@ -319,6 +342,7 @@ export default function Anotacoes({ setCurrentView }) {
               session={s}
               query={debouncedSearch}
               onPatientClick={handlePatientClick}
+              onOpenCanvas={onOpenCanvas}
               expanded={expandedId === s.id}
               onToggle={() => setExpandedId(expandedId === s.id ? null : s.id)}
             />
