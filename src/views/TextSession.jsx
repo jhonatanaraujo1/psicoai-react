@@ -25,7 +25,7 @@ const GUIDE_ITEMS = [
 // ── LocalStorage key for text draft ──────────────────────────────────────────
 const textDraftKey = (patientId) => `psicoai_text_draft_p${patientId}`
 
-export default function TextSession({ patient, isOpen, onClose, onAnalyze, sessionId, onAutosave, initialHtml = '' }) {
+export default function TextSession({ patient, isOpen, onClose, onMinimize, onAnalyze, sessionId, onAutosave, initialHtml = '' }) {
   const [secs, setSecs] = useState(0)
   const [showEndModal, setShowEndModal] = useState(false)
   const [showGuide, setShowGuide] = useState(true)
@@ -153,6 +153,26 @@ export default function TextSession({ patient, isOpen, onClose, onAnalyze, sessi
       {/* Topbar */}
       <div className="cs-topbar">
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          {/* Botão minimizar — volta ao app sem encerrar sessão */}
+          {onMinimize && (
+            <button
+              onClick={onMinimize}
+              title="Minimizar sessão"
+              style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                width: 32, height: 32, borderRadius: '8px',
+                background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)',
+                color: 'rgba(255,255,255,0.7)', cursor: 'pointer', flexShrink: 0,
+                transition: 'background 0.15s',
+              }}
+              onMouseOver={e => e.currentTarget.style.background = 'rgba(255,255,255,0.15)'}
+              onMouseOut={e => e.currentTarget.style.background = 'rgba(255,255,255,0.08)'}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <polyline points="15 18 9 12 15 6"/>
+              </svg>
+            </button>
+          )}
           <div className="cs-logo">Ψ</div>
           <div className="cs-patient">{patientName} · Sessão {sessionNum}</div>
           <span style={{

@@ -516,6 +516,7 @@ export default function App() {
             isOpen={canvasOpen}
             sessionId={activeSessionId}
             onClose={handleSessionClose}
+            onMinimize={() => setCanvasOpen(false)}
             onAnalyze={handleAnalyze}
             onAutosave={(id, data) => api.autosaveSession?.(id, data)}
             initialCanvasData={canvasInitialData}
@@ -594,6 +595,7 @@ export default function App() {
         sessionId={activeSessionId}
         onAutosave={(id, data) => api.autosaveSession?.(id, data)}
         onClose={handleSessionClose}
+        onMinimize={() => setTextOpen(false)}
         onAnalyze={handleAnalyze}
         initialHtml={textInitialHtml}
       />
@@ -604,6 +606,7 @@ export default function App() {
           isOpen={canvasOpen}
           sessionId={activeSessionId}
           onClose={handleSessionClose}
+          onMinimize={() => setCanvasOpen(false)}
           onAnalyze={handleAnalyze}
           onAutosave={(id, data) => api.autosaveSession?.(id, data)}
           initialCanvasData={canvasInitialData}
