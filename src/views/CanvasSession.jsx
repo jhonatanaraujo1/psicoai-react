@@ -123,7 +123,7 @@ const DEFAULT_PAGE_ELEMENT = {
   x: 0, y: 0,
   width: 800, height: 1131,
   angle: 0,
-  strokeColor: '#d0ccc7',
+  strokeColor: '#C8C4BC',
   backgroundColor: '#ffffff',
   fillStyle: 'solid',
   strokeWidth: 1,
@@ -140,16 +140,21 @@ const DEFAULT_PAGE_ELEMENT = {
   boundElements: null,
   updated: 1,
   link: null,
-  locked: true,   // não pode ser arrastado acidentalmente
+  locked: true,
 }
 
 const DEFAULT_PAGE_DATA = {
   elements: [DEFAULT_PAGE_ELEMENT],
   appState: {
-    viewBackgroundColor: '#EDEAE4',
-    scrollX: 120,
-    scrollY: 60,
-    zoom: { value: 0.85 },
+    viewBackgroundColor: '#CFCBC3',   // cinza médio — contraste claro com a folha branca
+    currentItemStrokeColor: '#1C1C1C',
+    currentItemBackgroundColor: 'transparent',
+    currentItemFillStyle: 'solid',
+    currentItemStrokeWidth: 1,
+    currentItemStrokeStyle: 'solid',
+    currentItemRoughness: 0,
+    currentItemOpacity: 100,
+    activeTool: { type: 'freedraw', customType: null, locked: false, lastActiveTool: null },
   },
   files: {},
 }
@@ -440,47 +445,77 @@ export default function CanvasSession({
       )}
 
       {/* Canvas area */}
-      <div style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
-        {!canvasReady && (
-          <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px', fontSize: '14px', color: 'var(--gr4)', flexDirection: 'column', background: '#F7F4EF', zIndex: 2 }}>
-            <span style={{ width: 24, height: 24, border: '2px solid var(--gr2)', borderTopColor: 'var(--g500)', borderRadius: '50%', display: 'inline-block', animation: 'spin 0.8s linear infinite' }} />
-            Carregando canvas...
+      <div style={{ flex: 1, position: 'relative', overflow: 'hidden', background: '#CFCBC3' }}>
+        {/* Loading — mostrado enquanto initialData não chegou ou canvas ainda não montou */}
+        {(!initialData || !canvasReady) && (
+          <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px', fontSize: '14px', color: '#7A7672', flexDirection: 'column', background: '#CFCBC3', zIndex: 2 }}>
+            <span style={{ width: 24, height: 24, border: '2px solid #A8A49E', borderTopColor: '#4A7C59', borderRadius: '50%', display: 'inline-block', animation: 'spin 0.8s linear infinite' }} />
+            Carregando...
           </div>
         )}
-        <Excalidraw
-          key={`exc-${patient?.id || 'x'}-${sessionId || 'draft'}`}
-          initialData={initialData || undefined}
-          excalidrawAPI={(api) => {
-            apiRef.current = api
-            setCanvasReady(true)
-          }}
-          onChange={handleChange}
-          langCode="pt-BR"
-          theme="light"
-          UIOptions={{
-            canvasActions: {
-              changeViewBackgroundColor: false,
-              export: { saveFileToDisk: false },
-              loadScene: false,
-            },
-            tools: { image: false },
-          }}
-        >
-          {/* Menu customizado — remove links do Excalidraw (GitHub, Discord, X) */}
-          <MainMenu>
-            <MainMenu.DefaultItems.ClearCanvas />
-            <MainMenu.DefaultItems.SaveAsImage />
-            <MainMenu.DefaultItems.Help />
-          </MainMenu>
-        </Excalidraw>
+
+        {/* Só monta o Excalidraw quando initialData estiver pronto — garante que a folha A4 aparece */}
+        {initialData && (
+          <Excalidraw
+            key={`exc-${patient?.id || 'x'}`}
+            initialData={initialData}
+            excalidrawAPI={(api) => {
+              apiRef.current = api
+              setCanvasReady(true)
+              // Centraliza a folha A4 no viewport + ativa ferramenta caneta
+              setTimeout(() => {
+                try {
+                  // Calcula posição central da folha no container
+                  const container = document.querySelector('.excalidraw-container')
+                  const vw = container?.clientWidth  || window.innerWidth
+                  const vh = container?.clientHeight || window.innerHeight
+                  // Folha: 800×1131 com zoom 0.9 → 720×1018px
+                  const zoom  = 0.9
+                  const pageW = 800 * zoom
+                  const pageH = 1131 * zoom
+                  const scrollX = (vw - pageW) / 2 / zoom
+                  const scrollY = Math.max(40, (vh - pageH) / 2 / zoom)
+                  api.updateScene({
+                    appState: {
+                      zoom: { value: zoom },
+                      scrollX,
+                      scrollY,
+                      activeTool: { type: 'freedraw', customType: null, locked: false, lastActiveTool: null },
+                    },
+                  })
+                } catch (e) {
+                  console.warn('[PsicoAI] scroll center failed:', e)
+                }
+              }, 80)
+            }}
+            onChange={handleChange}
+            langCode="pt-BR"
+            theme="light"
+            UIOptions={{
+              canvasActions: {
+                changeViewBackgroundColor: false,
+                export: { saveFileToDisk: false },
+                loadScene: false,
+              },
+              tools: { image: false },
+            }}
+          >
+            <MainMenu>
+              <MainMenu.DefaultItems.ClearCanvas />
+              <MainMenu.DefaultItems.SaveAsImage />
+              <MainMenu.DefaultItems.Help />
+            </MainMenu>
+          </Excalidraw>
+        )}
 
         {/* Auto-save indicator */}
         {canvasReady && (
           <div style={{
-            position: 'absolute', bottom: 12, left: 12, zIndex: 5,
+            position: 'absolute', bottom: 12, left: 16, zIndex: 5,
             display: 'flex', alignItems: 'center', gap: '5px',
-            fontSize: '10px', color: 'rgba(0,0,0,0.28)',
+            fontSize: '10px', color: 'rgba(0,0,0,0.35)',
             pointerEvents: 'none',
+            fontFamily: "'DM Sans', sans-serif",
           }}>
             <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#27AE60', display: 'inline-block' }} />
             Salvo localmente
