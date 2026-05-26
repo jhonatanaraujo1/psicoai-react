@@ -25,9 +25,8 @@ import Dashboard from './views/Dashboard'
 import Pacientes from './views/Pacientes'
 import Paciente from './views/Paciente'
 import ProntuarioView from './views/ProntuarioView'
-// Lazy: excalidraw é ~1.8MB — só carrega quando o canvas é aberto
-const CanvasSession = lazy(() => import('./views/CanvasSession'))
-import TextSession from './views/TextSession'
+// Lazy: carrega apenas quando uma sessão é aberta
+const AnnotationSession = lazy(() => import('./views/AnnotationSession'))
 import Agenda from './views/Agenda'
 import Insights from './views/Insights'
 import Financeiro from './views/Financeiro'
@@ -597,12 +596,13 @@ export default function App() {
     return (
       <>
         <Suspense fallback={
-          <div style={{ position: 'fixed', inset: 0, background: '#F7F4EF', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '12px', fontSize: '14px', color: '#8B8B8B' }}>
-            <span style={{ width: 24, height: 24, border: '2px solid #E8E5E0', borderTopColor: '#4A7C59', borderRadius: '50%', display: 'inline-block', animation: 'spin 0.8s linear infinite' }} />
+          <div style={{ position: 'fixed', inset: 0, background: '#1C1C1C', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '12px', fontSize: '14px', color: '#8B8B8B' }}>
+            <span style={{ width: 24, height: 24, border: '2px solid #333', borderTopColor: '#4A7C59', borderRadius: '50%', display: 'inline-block', animation: 'spin 0.8s linear infinite' }} />
             Carregando canvas...
           </div>
         }>
-          <CanvasSession
+          <AnnotationSession
+            type="canvas"
             patient={currentPatient}
             isOpen={canvasOpen}
             sessionId={activeSessionId}
@@ -677,27 +677,17 @@ export default function App() {
       />
 
       {/* Sessions */}
-      <TextSession
-        patient={currentPatient}
-        isOpen={textOpen}
-        sessionId={activeSessionId}
-        onAutosave={(id, data) => api.autosaveSession?.(id, data)}
-        onClose={handleSessionClose}
-        onMinimize={handleMinimizeText}
-        onAnalyze={handleAnalyze}
-        initialHtml={textInitialHtml}
-      />
-
       <Suspense fallback={null}>
-        <CanvasSession
+        <AnnotationSession
+          type="text"
           patient={currentPatient}
-          isOpen={canvasOpen}
+          isOpen={textOpen}
           sessionId={activeSessionId}
-          onClose={handleSessionClose}
-          onMinimize={handleMinimizeCanvas}
-          onAnalyze={handleAnalyze}
           onAutosave={(id, data) => api.autosaveSession?.(id, data)}
-          initialCanvasData={canvasInitialData}
+          onClose={handleSessionClose}
+          onMinimize={handleMinimizeText}
+          onAnalyze={handleAnalyze}
+          initialHtml={textInitialHtml}
         />
       </Suspense>
 
