@@ -372,6 +372,15 @@ export default function AnnotationSession({
     document.execCommand('insertText', false, (editor.innerText.trim() ? '\n\n' : '') + label + ': ')
   }
 
+  // ── Undo/Redo por página — declarado ANTES de handleStrokeEnd para evitar TDZ na dep array ──
+  const pushUndo = useCallback((pageId, dataUrl) => {
+    const stack = undoStackRef.current
+    if (!stack[pageId]) stack[pageId] = []
+    stack[pageId].push(dataUrl)
+    if (stack[pageId].length > 40) stack[pageId].shift()
+    redoStackRef.current[pageId] = [] // ação nova limpa redo
+  }, [])
+
   // ── Canvas: thumbnail após traço ──────────────────────────────────────────
   const handleStrokeEnd = useCallback((pageId, prevDataUrl) => {
     setIsDirty(true)
@@ -443,15 +452,6 @@ export default function AnnotationSession({
     document.addEventListener('pointerdown', handler, true)
     return () => document.removeEventListener('pointerdown', handler, true)
   }, [showAddMenu])
-
-  // ── Undo/Redo por página ──────────────────────────────────────────────────
-  const pushUndo = useCallback((pageId, dataUrl) => {
-    const stack = undoStackRef.current
-    if (!stack[pageId]) stack[pageId] = []
-    stack[pageId].push(dataUrl)
-    if (stack[pageId].length > 40) stack[pageId].shift()
-    redoStackRef.current[pageId] = [] // ação nova limpa redo
-  }, [])
 
   const handleUndo = useCallback(() => {
     const page = pages[activePage]
