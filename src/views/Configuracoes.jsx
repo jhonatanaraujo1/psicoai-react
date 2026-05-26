@@ -108,10 +108,10 @@ function TabPerfil({ profile, onSaved }) {
 
 // ────────────────────────────────────────────────────────────────────────────
 function TabPlano({ profile }) {
-  const isClinico = profile?.plan === 'clinico'
+  const isClinico = true // plano único — todos têm acesso completo
   const used = profile?.analysesUsedThisMonth || 0
-  const remaining = profile?.analysesRemaining || 0
-  const total = isClinico ? 20 : used + remaining
+  const remaining = profile?.analysesRemaining ?? 5
+  const total = 5 // 5 análises incluídas/mês no plano único
   const [billingLoading, setBillingLoading] = useState(false)
   const [coupon, setCoupon] = useState('')
   const [couponState, setCouponState] = useState(null)
@@ -164,10 +164,10 @@ function TabPlano({ profile }) {
       <div style={{ background: 'var(--g700)', borderRadius: 'var(--r2)', padding: '24px', marginBottom: '16px', position: 'relative', overflow: 'hidden' }}>
         <div style={{ position: 'absolute', top: '-40px', right: '-40px', width: '140px', height: '140px', borderRadius: '50%', background: 'rgba(255,255,255,0.04)' }} />
         <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '1px', color: 'var(--g300)', textTransform: 'uppercase', marginBottom: '5px' }}>Plano ativo</div>
-        <div style={{ fontFamily: "'Fraunces', serif", fontSize: '26px', color: '#fff', fontWeight: 300, marginBottom: '3px' }}>{isClinico ? 'Plano Clínico' : 'Plano Base'}</div>
-        <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.5)', marginBottom: '18px' }}>{isClinico ? 'Plano completo · análises IA incluídas por mês' : 'Plano essencial · análises IA disponíveis sob demanda'}</div>
+        <div style={{ fontFamily: "'Fraunces', serif", fontSize: '26px', color: '#fff', fontWeight: 300, marginBottom: '3px' }}>PsicoAI — R$79/mês</div>
+        <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.5)', marginBottom: '18px' }}>Tudo incluído · 5 análises IA/mês · extras por R$4,90</div>
         <div style={{ display: 'flex', gap: '7px', flexWrap: 'wrap' }}>
-          {['Prontuário ilimitado', 'Canvas de anotações', 'Agenda integrada', 'Linha do tempo'].concat(isClinico ? ['20 análises IA/mês', 'Relatórios PDF', 'Prioridade no suporte'] : []).map(f => (
+          {['Prontuário ilimitado', 'Canvas de anotações', 'Agenda integrada', 'Linha do tempo', '5 análises IA/mês'].map(f => (
             <span key={f} style={{ fontSize: '11px', background: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.75)', padding: '3px 10px', borderRadius: '20px' }}>✓ {f}</span>
           ))}
         </div>
@@ -178,7 +178,7 @@ function TabPlano({ profile }) {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
             <div>
               <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--d)' }}>Créditos de análise IA este mês</div>
-              <div style={{ fontSize: '11.5px', color: 'var(--gr5)', marginTop: '2px' }}>Incluídos no plano · análises extras disponíveis</div>
+              <div style={{ fontSize: '11.5px', color: 'var(--gr5)', marginTop: '2px' }}>Incluídas no plano · extras por R$4,90/análise</div>
             </div>
             <div style={{ fontFamily: "'Fraunces', serif", fontSize: '24px', color: 'var(--g600)' }}>{remaining}<span style={{ fontSize: '13px', color: 'var(--gr4)', fontFamily: "'DM Sans', sans-serif" }}>/{total}</span></div>
           </div>
@@ -194,10 +194,10 @@ function TabPlano({ profile }) {
         Análises IA acionadas por você — nunca automáticas. Consulte os planos disponíveis para ver os pacotes de análise.
       </div>
 
-      {!isClinico && (
+      {false && (
         <div style={{ background: 'var(--ow)', border: '1px solid var(--gr2)', borderRadius: 'var(--r2)', padding: '20px', marginBottom: '16px' }}>
-          <div style={{ fontFamily: "'Fraunces', serif", fontSize: '17px', color: 'var(--d)', marginBottom: '5px' }}>Evoluir para o Plano Clínico</div>
-          <div style={{ fontSize: '13px', color: 'var(--gr5)', marginBottom: '14px', lineHeight: 1.6 }}>Inclui 20 análises IA/mês, relatórios de evolução e exportação PDF de prontuário.</div>
+          <div style={{ fontFamily: "'Fraunces', serif", fontSize: '17px', color: 'var(--d)', marginBottom: '5px' }}>Precisa de mais análises?</div>
+          <div style={{ fontSize: '13px', color: 'var(--gr5)', marginBottom: '14px', lineHeight: 1.6 }}>Análises extras disponíveis por R$4,90/análise, acionadas sob demanda.</div>
 
           {/* Coupon */}
           <div style={{ marginBottom: '14px' }}>
@@ -238,7 +238,7 @@ function TabPlano({ profile }) {
             )}
           </div>
 
-          <button onClick={handleUpgrade} disabled={billingLoading} style={{ padding: '10px 20px', background: 'var(--g600)', color: '#fff', border: 'none', borderRadius: 'var(--r)', fontSize: '13px', fontWeight: 600, cursor: billingLoading ? 'default' : 'pointer', opacity: billingLoading ? 0.7 : 1, fontFamily: "'DM Sans', sans-serif" }}>{billingLoading ? 'Redirecionando…' : 'Assinar Plano Clínico → R$299/mês'}</button>
+          <button onClick={handleUpgrade} disabled={billingLoading} style={{ padding: '10px 20px', background: 'var(--g600)', color: '#fff', border: 'none', borderRadius: 'var(--r)', fontSize: '13px', fontWeight: 600, cursor: billingLoading ? 'default' : 'pointer', opacity: billingLoading ? 0.7 : 1, fontFamily: "'DM Sans', sans-serif" }}>{billingLoading ? 'Redirecionando…' : 'Comprar análises extras'}</button>
         </div>
       )}
 

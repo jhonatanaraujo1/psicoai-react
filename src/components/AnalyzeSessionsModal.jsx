@@ -30,13 +30,9 @@ function estimatePagesFromPending(pending) {
   return Math.max(1, Math.ceil(text.length / CHARS_PER_PAGE))
 }
 
-function calcPrice(totalPages) {
-  if (totalPages <= 30)  return { price: 4.90,  tier: 'base',    color: 'var(--g600)',  label: null }
-  if (totalPages <= 60)  return { price: 9.90,  tier: 'medio',   color: 'var(--warn)',  label: '+R$5,00 · volume médio' }
-  if (totalPages <= 100) return { price: 19.90, tier: 'alto',    color: '#E67E22',      label: '+R$15,00 · volume alto' }
-  const extraBlocks = Math.ceil((totalPages - 100) / 10)
-  const price = +(19.90 + extraBlocks * 2.90).toFixed(2)
-  return { price, tier: 'muito-alto', color: 'var(--danger)', label: `+R$${(price - 4.90).toFixed(2).replace('.', ',')} · volume extenso` }
+function calcPrice(_totalPages) {
+  // Preço fixo por análise — simples e previsível
+  return { price: 4.90, tier: 'base', color: 'var(--g600)', label: null }
 }
 
 function pageBarColor(totalPages) {
