@@ -70,9 +70,10 @@ function saveCanvasPages(patientId, pages) {
 
 // ── A4 canvas page (modo canvas) ──────────────────────────────────────────────
 function CanvasPage({ page, isActive, toolRef, colorRef, sizeRef, onStrokeEnd, onClick }) {
-  const canvasRef  = useRef(null)
-  const isDrawing  = useRef(false)
-  const lastPos    = useRef({ x: 0, y: 0 })
+  const canvasRef    = useRef(null)
+  const isDrawing    = useRef(false)
+  const lastPos      = useRef({ x: 0, y: 0 })
+  const prevDataUrl  = useRef(null) // snapshot antes do traço comecar
 
   useEffect(() => { page.canvasRef.current = canvasRef.current })
 
@@ -102,6 +103,7 @@ function CanvasPage({ page, isActive, toolRef, colorRef, sizeRef, onStrokeEnd, o
     e.preventDefault()
     canvasRef.current?.setPointerCapture(e.pointerId)
     isDrawing.current = true
+    prevDataUrl.current = canvasRef.current?.toDataURL('image/png') || null
     lastPos.current = getPos(e)
     const ctx  = canvasRef.current?.getContext('2d')
     if (!ctx) return
@@ -138,7 +140,8 @@ function CanvasPage({ page, isActive, toolRef, colorRef, sizeRef, onStrokeEnd, o
     if (!isDrawing.current) return
     isDrawing.current = false
     e.preventDefault()
-    onStrokeEnd(page.id)
+    onStrokeEnd(page.id, prevDataUrl.current)
+    prevDataUrl.current = null
   }, [page.id, onStrokeEnd])
 
   return (
@@ -263,9 +266,13 @@ export default function AnnotationSession({
   const [pages, setPages]           = useState(() => [{ id: newPageId(), pageType: 'draw', canvasRef: { current: null }, dataUrl: null, textHtml: null }])
   const [activePage, setActivePage] = useState(0)
   const [showAddMenu, setShowAddMenu] = useState(false)
+  const addMenuRef = useRef(null)
   const [tool, setTool]             = useState('pen')
   const [color, setColor]           = useState('#1C1C1C')
   const [size, setSize]             = useState(3)
+  // Undo stack: { [pageId]: string[] } — array de dataUrls
+  const undoStackRef = useRef({})
+  const redoStackRef = useRef({})
 
   const toolRef  = useRef(tool)
   const colorRef = useRef(color)
@@ -366,8 +373,9 @@ export default function AnnotationSession({
   }
 
   // ── Canvas: thumbnail após traço ──────────────────────────────────────────
-  const handleStrokeEnd = useCallback((pageId) => {
+  const handleStrokeEnd = useCallback((pageId, prevDataUrl) => {
     setIsDirty(true)
+    pushUndo(pageId, prevDataUrl || 'blank')
     setPages(prev => {
       const updated = prev.map(p => {
         if (p.id !== pageId) return p
@@ -376,7 +384,7 @@ export default function AnnotationSession({
       if (patient?.id) saveCanvasPages(patient.id, updated)
       return updated
     })
-  }, [patient?.id])
+  }, [patient?.id, pushUndo])
 
   // ── Canvas: nova página ────────────────────────────────────────────────────
   const addPage = useCallback((pageType = 'draw') => {
@@ -424,6 +432,86 @@ export default function AnnotationSession({
     if (!sb || !isCanvas) return
     sb.querySelector(`[data-thumb="${activePage}"]`)?.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
   }, [activePage, isCanvas])
+
+  // ── Click-outside fecha menu "+" ──────────────────────────────────────────
+  useEffect(() => {
+    if (!showAddMenu) return
+    const handler = (e) => {
+      if (addMenuRef.current && !addMenuRef.current.contains(e.target))
+        setShowAddMenu(false)
+    }
+    document.addEventListener('pointerdown', handler, true)
+    return () => document.removeEventListener('pointerdown', handler, true)
+  }, [showAddMenu])
+
+  // ── Undo/Redo por página ──────────────────────────────────────────────────
+  const pushUndo = useCallback((pageId, dataUrl) => {
+    const stack = undoStackRef.current
+    if (!stack[pageId]) stack[pageId] = []
+    stack[pageId].push(dataUrl)
+    if (stack[pageId].length > 40) stack[pageId].shift()
+    redoStackRef.current[pageId] = [] // ação nova limpa redo
+  }, [])
+
+  const handleUndo = useCallback(() => {
+    const page = pages[activePage]
+    if (!page || page.pageType !== 'draw') return
+    const stack = undoStackRef.current[page.id] || []
+    if (stack.length === 0) return
+    const prev = stack.pop()
+    const canvas = page.canvasRef.current
+    if (!canvas) return
+    const ctx = canvas.getContext('2d')
+    const rStack = redoStackRef.current
+    if (!rStack[page.id]) rStack[page.id] = []
+    rStack[page.id].push(canvas.toDataURL('image/png'))
+    if (prev === 'blank') {
+      ctx.fillStyle = '#fff'
+      ctx.fillRect(0, 0, canvas.width, canvas.height)
+    } else {
+      const img = new Image()
+      img.onload = () => {
+        ctx.clearRect(0, 0, canvas.width, canvas.height)
+        ctx.drawImage(img, 0, 0)
+      }
+      img.src = prev
+    }
+    setPages(pr => pr.map(p => p.id === page.id ? { ...p, dataUrl: prev === 'blank' ? null : prev } : p))
+    setIsDirty(true)
+  }, [pages, activePage])
+
+  const handleRedo = useCallback(() => {
+    const page = pages[activePage]
+    if (!page || page.pageType !== 'draw') return
+    const rStack = redoStackRef.current[page.id] || []
+    if (rStack.length === 0) return
+    const next = rStack.pop()
+    const canvas = page.canvasRef.current
+    if (!canvas) return
+    const ctx = canvas.getContext('2d')
+    const stack = undoStackRef.current
+    if (!stack[page.id]) stack[page.id] = []
+    stack[page.id].push(canvas.toDataURL('image/png'))
+    const img = new Image()
+    img.onload = () => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height)
+      ctx.drawImage(img, 0, 0)
+    }
+    img.src = next
+    setPages(pr => pr.map(p => p.id === page.id ? { ...p, dataUrl: next } : p))
+    setIsDirty(true)
+  }, [pages, activePage])
+
+  // Keyboard undo/redo (Ctrl+Z / Ctrl+Y / Ctrl+Shift+Z)
+  useEffect(() => {
+    if (!isOpen || !isCanvas) return
+    const onKey = (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) { e.preventDefault(); handleUndo() }
+      if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.key === 'z' && e.shiftKey))) { e.preventDefault(); handleRedo() }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [isOpen, isCanvas, handleUndo, handleRedo])
 
   const scrollToPage = (idx) => {
     const c  = mainScrollRef.current
@@ -497,6 +585,39 @@ export default function AnnotationSession({
   const patientName = patient?.name || 'Paciente'
 
   // ── Sidebar content ────────────────────────────────────────────────────────
+  // Menu de tipo de página (reutilizado na sidebar e na toolbar)
+  const AddPageMenu = () => (
+    <div style={{
+      background: '#242424',
+      background: '#242424', border: '1px solid rgba(255,255,255,0.12)',
+      borderRadius: 8, overflow: 'hidden',
+      boxShadow: '0 8px 24px rgba(0,0,0,0.5)',
+      display: 'flex', flexDirection: 'column',
+      minWidth: 130, zIndex: 50,
+    }}>
+      {[
+        { type: 'draw', label: 'Desenho', icon: <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/></svg> },
+        { type: 'text', label: 'Texto',   icon: <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/></svg> },
+      ].map((opt, i) => (
+        <button key={opt.type} onClick={() => addPage(opt.type)}
+          style={{
+            background: 'transparent', border: 'none', cursor: 'pointer',
+            padding: '10px 14px', textAlign: 'left',
+            color: 'rgba(255,255,255,0.8)', fontSize: 12,
+            fontFamily: "'DM Sans', sans-serif",
+            display: 'flex', alignItems: 'center', gap: 8,
+            borderTop: i > 0 ? '1px solid rgba(255,255,255,0.06)' : 'none',
+            transition: 'background 0.12s',
+          }}
+          onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.08)'}
+          onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+        >
+          {opt.icon} {opt.label}
+        </button>
+      ))}
+    </div>
+  )
+
   const SidebarContent = () => {
     if (isCanvas) {
       return (
@@ -539,7 +660,7 @@ export default function AnnotationSession({
             </button>
           ))}
           {/* Add page button + mini-menu */}
-          <div style={{ position: 'relative', marginTop: 8 }}>
+          <div ref={addMenuRef} style={{ position: 'relative', marginTop: 8 }}>
             <button
               onClick={() => setShowAddMenu(p => !p)} title="Nova página"
               style={{
@@ -555,58 +676,9 @@ export default function AnnotationSession({
               onMouseEnter={e => { if (!showAddMenu) { e.currentTarget.style.borderColor = '#5C8F6A'; e.currentTarget.style.color = '#5C8F6A' } }}
               onMouseLeave={e => { if (!showAddMenu) { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)'; e.currentTarget.style.color = 'rgba(255,255,255,0.35)' } }}
             >+</button>
-
             {showAddMenu && (
-              <div style={{
-                position: 'absolute', bottom: '100%', left: '50%',
-                transform: 'translateX(-50%)',
-                marginBottom: 6,
-                background: '#242424', border: '1px solid rgba(255,255,255,0.12)',
-                borderRadius: 8, overflow: 'hidden',
-                boxShadow: '0 8px 24px rgba(0,0,0,0.5)',
-                display: 'flex', flexDirection: 'column',
-                minWidth: 130, zIndex: 50,
-              }}>
-                <button
-                  onClick={() => addPage('draw')}
-                  style={{
-                    background: 'transparent', border: 'none', cursor: 'pointer',
-                    padding: '10px 14px', textAlign: 'left',
-                    color: 'rgba(255,255,255,0.8)', fontSize: 12,
-                    fontFamily: "'DM Sans', sans-serif",
-                    display: 'flex', alignItems: 'center', gap: 8,
-                    transition: 'background 0.12s',
-                  }}
-                  onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.08)'}
-                  onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                >
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M12 19l7-7 3 3-7 7-3-3z"/>
-                    <path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/>
-                  </svg>
-                  Desenho
-                </button>
-                <button
-                  onClick={() => addPage('text')}
-                  style={{
-                    background: 'transparent', border: 'none', cursor: 'pointer',
-                    padding: '10px 14px', textAlign: 'left',
-                    color: 'rgba(255,255,255,0.8)', fontSize: 12,
-                    fontFamily: "'DM Sans', sans-serif",
-                    display: 'flex', alignItems: 'center', gap: 8,
-                    borderTop: '1px solid rgba(255,255,255,0.06)',
-                    transition: 'background 0.12s',
-                  }}
-                  onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.08)'}
-                  onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                >
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                    <polyline points="14 2 14 8 20 8"/>
-                    <line x1="9" y1="13" x2="15" y2="13"/>
-                  </svg>
-                  Texto
-                </button>
+              <div style={{ position: 'absolute', bottom: '100%', left: '50%', transform: 'translateX(-50%)', marginBottom: 6 }}>
+                <AddPageMenu />
               </div>
             )}
           </div>
@@ -643,7 +715,43 @@ export default function AnnotationSession({
   }
 
   // ── Toolbar content ────────────────────────────────────────────────────────
+  // Página ativa é de texto? (sessão canvas com página de tipo texto)
+  const activePageIsText = isCanvas && pages[activePage]?.pageType === 'text'
+
   const ToolbarContent = () => {
+    // Canvas mode: toolbar muda conforme o tipo da página ativa
+    if (isCanvas && activePageIsText) {
+      // Toolbar de formatação para página de texto dentro de uma sessão canvas
+      return (
+        <>
+          <button title="Negrito"
+            onMouseDown={e => { e.preventDefault(); document.execCommand('bold') }}
+            style={{ width: 36, height: 36, border: 'none', borderRadius: 8, background: 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, color: 'rgba(255,255,255,0.6)', transition: 'all 0.12s', flexShrink: 0 }}
+            onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.1)'; e.currentTarget.style.color = '#fff' }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'rgba(255,255,255,0.6)' }}
+          ><strong style={{ fontFamily: 'inherit' }}>B</strong></button>
+          <button title="Itálico"
+            onMouseDown={e => { e.preventDefault(); document.execCommand('italic') }}
+            style={{ width: 36, height: 36, border: 'none', borderRadius: 8, background: 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, color: 'rgba(255,255,255,0.6)', transition: 'all 0.12s', flexShrink: 0 }}
+            onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.1)'; e.currentTarget.style.color = '#fff' }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'rgba(255,255,255,0.6)' }}
+          ><em style={{ fontFamily: 'inherit' }}>I</em></button>
+          <Sep />
+          {/* Botão de nova página no canto direito */}
+          <div ref={addMenuRef} style={{ marginLeft: 'auto', display: 'flex', gap: 6, position: 'relative' }}>
+            <TBtn active={showAddMenu} onClick={() => setShowAddMenu(p => !p)} title="Nova página">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                <polyline points="14 2 14 8 20 8"/>
+                <line x1="12" y1="11" x2="12" y2="17"/><line x1="9" y1="14" x2="15" y2="14"/>
+              </svg>
+            </TBtn>
+            {showAddMenu && <AddPageMenu />}
+          </div>
+        </>
+      )
+    }
+
     if (isCanvas) {
       return (
         <>
@@ -689,7 +797,21 @@ export default function AnnotationSession({
             </button>
           ))}
 
-          <div style={{ marginLeft: 'auto', display: 'flex', gap: 6, position: 'relative' }}>
+          <Sep />
+
+          {/* Undo/Redo */}
+          <TBtn active={false} onClick={handleUndo} title="Desfazer (Ctrl+Z)">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <polyline points="9 14 4 9 9 4"/><path d="M20 20v-7a4 4 0 0 0-4-4H4"/>
+            </svg>
+          </TBtn>
+          <TBtn active={false} onClick={handleRedo} title="Refazer (Ctrl+Y)">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <polyline points="15 14 20 9 15 4"/><path d="M4 20v-7a4 4 0 0 1 4-4h12"/>
+            </svg>
+          </TBtn>
+
+          <div ref={addMenuRef} style={{ marginLeft: 'auto', display: 'flex', gap: 6, position: 'relative' }}>
             <TBtn active={showAddMenu} onClick={() => setShowAddMenu(p => !p)} title="Nova página">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
@@ -697,58 +819,7 @@ export default function AnnotationSession({
                 <line x1="12" y1="11" x2="12" y2="17"/><line x1="9" y1="14" x2="15" y2="14"/>
               </svg>
             </TBtn>
-            {showAddMenu && (
-              <div style={{
-                position: 'absolute', bottom: '100%', right: 0,
-                marginBottom: 8,
-                background: '#242424', border: '1px solid rgba(255,255,255,0.12)',
-                borderRadius: 8, overflow: 'hidden',
-                boxShadow: '0 8px 24px rgba(0,0,0,0.5)',
-                display: 'flex', flexDirection: 'column',
-                minWidth: 130, zIndex: 50,
-              }}>
-                <button
-                  onClick={() => addPage('draw')}
-                  style={{
-                    background: 'transparent', border: 'none', cursor: 'pointer',
-                    padding: '10px 14px', textAlign: 'left',
-                    color: 'rgba(255,255,255,0.8)', fontSize: 12,
-                    fontFamily: "'DM Sans', sans-serif",
-                    display: 'flex', alignItems: 'center', gap: 8,
-                    transition: 'background 0.12s',
-                  }}
-                  onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.08)'}
-                  onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                >
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M12 19l7-7 3 3-7 7-3-3z"/>
-                    <path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/>
-                  </svg>
-                  Desenho
-                </button>
-                <button
-                  onClick={() => addPage('text')}
-                  style={{
-                    background: 'transparent', border: 'none', cursor: 'pointer',
-                    padding: '10px 14px', textAlign: 'left',
-                    color: 'rgba(255,255,255,0.8)', fontSize: 12,
-                    fontFamily: "'DM Sans', sans-serif",
-                    display: 'flex', alignItems: 'center', gap: 8,
-                    borderTop: '1px solid rgba(255,255,255,0.06)',
-                    transition: 'background 0.12s',
-                  }}
-                  onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.08)'}
-                  onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                >
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                    <polyline points="14 2 14 8 20 8"/>
-                    <line x1="9" y1="13" x2="15" y2="13"/>
-                  </svg>
-                  Texto
-                </button>
-              </div>
-            )}
+            {showAddMenu && <AddPageMenu />}
           </div>
         </>
       )
