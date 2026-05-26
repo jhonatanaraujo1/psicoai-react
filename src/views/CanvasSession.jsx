@@ -215,20 +215,24 @@ export default function CanvasSession({
   const sessionIdRef  = useRef(sessionId)
   useEffect(() => { sessionIdRef.current = sessionId }, [sessionId])
 
-  // ── Sidebar colapsável (tablet/mobile) ─────────────────────────────────────
-  const [sidebarOpen, setSidebarOpen] = useState(() => window.innerWidth > 900)
+  // ── Sidebar: inline (desktop) vs overlay (tablet/mobile) ──────────────────
+  const [sidebarOpen, setSidebarOpen]     = useState(() => window.innerWidth > 900)
+  const [isOverlaySidebar, setIsOverlay]  = useState(() => window.innerWidth <= 900)
 
   useEffect(() => {
     const mq = window.matchMedia('(max-width: 900px)')
-    const handler = (e) => setSidebarOpen(!e.matches)
-    setSidebarOpen(!mq.matches)
+    const handler = (e) => {
+      setIsOverlay(e.matches)
+      // Ao entrar em desktop, garante que sidebar abre; ao entrar em mobile, fecha
+      setSidebarOpen(!e.matches)
+    }
     mq.addEventListener('change', handler)
     return () => mq.removeEventListener('change', handler)
   }, [])
 
-  // Detecta toque/caneta vs mouse — ajusta UX
+  // Detecta toque/caneta vs mouse — armazenado em ref (não causa re-render)
   const isTouch = useRef(window.matchMedia('(hover: none) and (pointer: coarse)').matches)
-  // Detecta orientação para decidir posição da toolbar
+  // Detecta orientação
   const [isLandscape, setIsLandscape] = useState(() => window.innerWidth > window.innerHeight)
   useEffect(() => {
     const mq = window.matchMedia('(orientation: landscape)')
@@ -476,12 +480,37 @@ export default function CanvasSession({
       </div>
 
       {/* ── Body: sidebar + páginas ──────────────────────────────────────── */}
-      <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
+      <div style={{ flex: 1, display: 'flex', overflow: 'hidden', position: 'relative' }}>
 
-        {/* Sidebar — colapsável */}
+        {/* Backdrop — fecha sidebar overlay ao clicar fora (só mobile/tablet) */}
+        {isOverlaySidebar && sidebarOpen && (
+          <div
+            onClick={() => setSidebarOpen(false)}
+            style={{
+              position: 'absolute', inset: 0, zIndex: 15,
+              background: 'rgba(0,0,0,0.45)',
+              backdropFilter: 'blur(1px)',
+            }}
+          />
+        )}
+
+        {/* Sidebar — overlay em mobile/tablet, inline em desktop */}
         <div
           ref={sidebarRef}
-          style={{
+          style={isOverlaySidebar ? {
+            // OVERLAY: flutua sobre o canvas, não encolhe a área de escrita
+            position: 'absolute', left: 0, top: 0, bottom: 0,
+            width: 120, zIndex: 20,
+            background: '#161616',
+            overflowY: 'auto', overflowX: 'hidden',
+            display: 'flex', flexDirection: 'column',
+            alignItems: 'center',
+            padding: '12px 0 16px',
+            transform: sidebarOpen ? 'translateX(0)' : 'translateX(-100%)',
+            transition: 'transform 0.22s cubic-bezier(0.4,0,0.2,1)',
+            boxShadow: sidebarOpen ? '4px 0 24px rgba(0,0,0,0.5)' : 'none',
+          } : {
+            // INLINE: empurra a área de canvas (desktop)
             width: sidebarOpen ? 120 : 0,
             flexShrink: 0,
             background: '#161616',
