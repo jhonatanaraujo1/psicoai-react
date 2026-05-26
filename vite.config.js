@@ -33,7 +33,6 @@ export default defineConfig({
     include: ['@excalidraw/excalidraw', '@tldraw/tldraw'],
   },
   build: {
-    sourcemap: true, // TEMPORÁRIO — para diagnóstico do TDZ
     rollupOptions: {
       output: {
         // recharts v3 usa d3-* internamente. d3 sub-packages têm circular deps
