@@ -171,10 +171,10 @@ export default function TextSession({ patient, isOpen, onClose, onMinimize, onAn
       </div>
 
       {/* Toolbar de formatação */}
-      <div style={{
+      <div className="ts-toolbar" style={{
         background: '#fff', borderBottom: '1px solid #E8E5E0',
-        padding: '8px 24px', display: 'flex', alignItems: 'center', gap: '2px',
-        flexShrink: 0,
+        padding: '8px 16px', display: 'flex', alignItems: 'center', gap: '2px',
+        flexShrink: 0, overflowX: 'auto',
       }}>
         {TOOLS.map((t, i) =>
           t.cmd === 'separator' ? (
@@ -199,14 +199,14 @@ export default function TextSession({ patient, isOpen, onClose, onMinimize, onAn
         )}
         <div style={{ flex: 1 }} />
         {/* Offline / local save indicator */}
-        <span style={{ fontSize: '10px', color: savedIndicator ? '#27AE60' : (!navigator.onLine ? '#F39C12' : '#A0A0A0'), display: 'flex', alignItems: 'center', gap: '4px', transition: 'color 0.3s', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0, flexShrink: 1 }}>
-          <span style={{ width: 5, height: 5, borderRadius: '50%', background: 'currentColor', display: 'inline-block' }} />
-          {!navigator.onLine ? 'Offline — salvo localmente' : savedIndicator ? 'Salvo localmente' : 'Ctrl+B negrito · Ctrl+I itálico'}
+        <span className="ts-save-hint" style={{ fontSize: '10px', color: savedIndicator ? '#27AE60' : (!navigator.onLine ? '#F39C12' : '#A0A0A0'), display: 'flex', alignItems: 'center', gap: '4px', transition: 'color 0.3s', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0, flexShrink: 1 }}>
+          <span style={{ width: 5, height: 5, borderRadius: '50%', background: 'currentColor', display: 'inline-block', flexShrink: 0 }} />
+          {!navigator.onLine ? 'Offline — salvo localmente' : savedIndicator ? 'Salvo' : <span className="ts-kbd-hint">Ctrl+B negrito · Ctrl+I itálico</span>}
         </span>
       </div>
 
       {/* Área de escrita */}
-      <div style={{ flex: 1, overflowY: 'auto', display: 'flex', justifyContent: 'center', padding: '32px 24px' }}>
+      <div className="ts-write-area" style={{ flex: 1, overflowY: 'auto', display: 'flex', justifyContent: 'center', padding: '32px 24px' }}>
         <div style={{ width: '100%', maxWidth: '720px' }}>
 
           {/* Cabeçalho da nota */}
@@ -415,11 +415,28 @@ export default function TextSession({ patient, isOpen, onClose, onMinimize, onAn
           padding-left: 20px;
           margin: 8px 0;
         }
-        [contenteditable] li {
-          margin-bottom: 4px;
-        }
+        [contenteditable] li { margin-bottom: 4px; }
         [contenteditable] strong { font-weight: 700; }
         [contenteditable] em { font-style: italic; }
+
+        /* ── Mobile first ───────────────────────────────────────────── */
+        .ts-toolbar::-webkit-scrollbar { display: none }
+
+        /* Em touch, esconde o hint de teclado (sem sentido com toque) */
+        @media (hover: none) {
+          .ts-kbd-hint { display: none }
+        }
+
+        /* Área de escrita: padding menor em mobile */
+        @media (max-width: 640px) {
+          .ts-write-area { padding: 20px 16px !important; }
+          .ts-write-area > div:first-child { max-width: 100% !important; }
+        }
+
+        /* Botões da toolbar: aumenta área de toque em touch */
+        @media (hover: none) and (pointer: coarse) {
+          .ts-toolbar button { width: 40px !important; height: 40px !important; }
+        }
       `}</style>
     </div>
   )

@@ -14,10 +14,21 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { api } from '../services'
 
 // ── Proporções A4 ──────────────────────────────────────────────────────────────
-const A4_W      = 680                       // px — largura da página A4 na área principal
+const A4_W      = 680                       // px — largura máxima da página A4
 const A4_H      = Math.round(A4_W * 1.414) // 961px
 const THUMB_W   = 88                        // px — miniatura na sidebar
 const THUMB_H   = Math.round(THUMB_W * 1.414) // 124px
+
+// Largura real da página A4 calculada dinamicamente (responsivo)
+function useA4Width() {
+  const [w, setW] = useState(() => Math.min(A4_W, window.innerWidth - 48))
+  useEffect(() => {
+    const update = () => setW(Math.min(A4_W, window.innerWidth - 48))
+    window.addEventListener('resize', update)
+    return () => window.removeEventListener('resize', update)
+  }, [])
+  return w
+}
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -127,16 +138,18 @@ function CanvasPlaceholder({ onOpen, canvasTextContent }) {
 }
 
 /** Uma página A4 do prontuário */
-function A4Page({ session: s, onOpen, pageRef, active }) {
+function A4Page({ session: s, onOpen, pageRef, active, pageWidth }) {
   const date    = formatDate(s.finishedAt || s.createdAt)
   const isCanvas = s.type === 'canvas'
+  const w = pageWidth || A4_W
+  const contentPad = w < 500 ? '16px 20px 28px' : '32px 48px 48px'
 
   return (
     <div
       ref={pageRef}
       data-session-id={s.id}
       style={{
-        width: A4_W, minHeight: A4_H,
+        width: w, minHeight: Math.round(w * 1.414),
         background: '#fff',
         boxShadow: active
           ? '0 0 0 2px #5C8F6A, 0 6px 40px rgba(0,0,0,0.14)'
@@ -210,8 +223,8 @@ function A4Page({ session: s, onOpen, pageRef, active }) {
 
       {/* ── Conteúdo da página ───────────────────────────────────────────── */}
       <div style={{
-        flex: 1, padding: '32px 48px 48px',
-        minHeight: `calc(${A4_H}px - 57px)`,
+        flex: 1, padding: contentPad,
+        minHeight: `calc(${Math.round(w * 1.414)}px - 57px)`,
       }}>
         {isCanvas ? (
           s.imageBase64 ? (
@@ -381,10 +394,20 @@ export default function ProntuarioView({
   const [loading, setLoading]     = useState(true)
   const [activeTab, setActiveTab] = useState('all')   // 'all' | 'text' | 'canvas'
   const [activePage, setActivePage] = useState(null)  // session.id da página visível
+  const [sidebarOpen, setSidebarOpen] = useState(() => window.innerWidth > 768)
 
   const pageRefs  = useRef({})   // { [sessionId]: DOMElement }
   const mainRef   = useRef(null)
   const sidebarRef = useRef(null)
+  const pageWidth = useA4Width()
+
+  // Ajusta sidebar ao resize
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 768px)')
+    const handler = (e) => { if (e.matches) setSidebarOpen(false) }
+    mq.addEventListener('change', handler)
+    return () => mq.removeEventListener('change', handler)
+  }, [])
 
   // ── Buscar sessões do paciente ───────────────────────────────────────────
   useEffect(() => {
@@ -489,6 +512,27 @@ export default function ProntuarioView({
         display: 'flex', alignItems: 'center',
         padding: '0 16px', gap: 12,
       }}>
+        {/* Sidebar toggle */}
+        <button
+          onClick={() => setSidebarOpen(p => !p)}
+          title={sidebarOpen ? 'Ocultar miniaturas' : 'Mostrar miniaturas'}
+          style={{
+            width: 36, height: 36, borderRadius: 8,
+            background: sidebarOpen ? 'rgba(255,255,255,0.16)' : 'rgba(255,255,255,0.06)',
+            border: '1px solid rgba(255,255,255,0.12)',
+            color: 'rgba(255,255,255,0.8)', cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            flexShrink: 0, transition: 'all 0.15s',
+          }}
+          onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.22)'}
+          onMouseLeave={e => e.currentTarget.style.background = sidebarOpen ? 'rgba(255,255,255,0.16)' : 'rgba(255,255,255,0.06)'}
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <rect x="3" y="3" width="18" height="18" rx="2"/>
+            <line x1="9" y1="3" x2="9" y2="21"/>
+          </svg>
+        </button>
+
         {/* Voltar */}
         <button
           onClick={onClose}
@@ -524,10 +568,7 @@ export default function ProntuarioView({
         </div>
 
         {/* Abas */}
-        <div style={{
-          display: 'flex', gap: 2, marginLeft: 'auto',
-          background: 'rgba(255,255,255,0.10)', borderRadius: 8, padding: 3,
-        }}>
+        <div className="prontuario-tabs" style={{ marginLeft: 'auto' }}>
           {[
             { key: 'all',    label: `Todas (${sessions.length})` },
             { key: 'text',   label: `Texto (${textCount})` },
@@ -537,9 +578,9 @@ export default function ProntuarioView({
               key={tab.key}
               onClick={() => setActiveTab(tab.key)}
               style={{
-                padding: '4px 12px', borderRadius: 6,
+                padding: '4px 10px', borderRadius: 6,
                 border: 'none', cursor: 'pointer',
-                fontSize: 12.5, fontWeight: 500,
+                fontSize: 12, fontWeight: 500, whiteSpace: 'nowrap',
                 transition: 'all 0.15s', fontFamily: 'inherit',
                 background: activeTab === tab.key ? 'rgba(255,255,255,0.22)' : 'transparent',
                 color:      activeTab === tab.key ? '#fff' : 'rgba(255,255,255,0.55)',
@@ -558,31 +599,36 @@ export default function ProntuarioView({
             display: 'flex', alignItems: 'center', gap: 5,
             background: 'rgba(255,255,255,0.14)',
             border: '1px solid rgba(255,255,255,0.22)',
-            color: '#fff', padding: '6px 14px',
+            color: '#fff', padding: '6px 12px',
             borderRadius: 8, fontSize: 13, fontWeight: 600,
             cursor: 'pointer', transition: 'background 0.15s',
-            fontFamily: 'inherit',
+            fontFamily: 'inherit', minWidth: 36, minHeight: 36,
+            justifyContent: 'center',
           }}
           onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.24)' }}
           onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.14)' }}
         >
-          + Nova anotação
+          +<span className="pron-new-label"> Nova anotação</span>
         </button>
       </div>
 
       {/* ── Body: sidebar + área de páginas ─────────────────────────────── */}
       <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
 
-        {/* Sidebar */}
+        {/* Sidebar — colapsável */}
         <div
           ref={sidebarRef}
           className="prontuario-sidebar"
           style={{
-            width: 136, flexShrink: 0,
+            width: sidebarOpen ? 136 : 0,
+            flexShrink: 0,
             background: '#1C2820',
-            overflowY: 'auto', overflowX: 'hidden',
+            overflowY: sidebarOpen ? 'auto' : 'hidden',
+            overflowX: 'hidden',
             display: 'flex', flexDirection: 'column',
-            paddingTop: 8, paddingBottom: 16,
+            paddingTop: sidebarOpen ? 8 : 0,
+            paddingBottom: sidebarOpen ? 16 : 0,
+            transition: 'width 0.2s ease, padding 0.2s ease',
           }}
         >
           {loading && (
@@ -608,6 +654,7 @@ export default function ProntuarioView({
         {/* Área de páginas */}
         <div
           ref={mainRef}
+          className="prontuario-pages"
           style={{
             flex: 1, overflowY: 'auto',
             padding: '32px 24px 64px',
@@ -642,6 +689,7 @@ export default function ProntuarioView({
                 active={activePage === s.id}
                 onOpen={() => handleOpenSession(s)}
                 pageRef={el => { pageRefs.current[s.id] = el }}
+                pageWidth={pageWidth}
               />
             ))
           )}
@@ -670,16 +718,28 @@ export default function ProntuarioView({
         .prontuario-html-content strong { font-weight: 700 }
         .prontuario-html-content em { font-style: italic }
 
-        /* Responsividade: esconde sidebar e ajusta página em mobile */
-        @media (max-width: 768px) {
-          .prontuario-sidebar { display: none !important }
+        /* Sidebar: scrollbar minimalista */
+        .prontuario-sidebar { min-width: 0 }
+
+        /* Header: tabs com scroll horizontal em telas pequenas */
+        .prontuario-tabs {
+          display: flex; gap: 2px;
+          background: rgba(255,255,255,0.10); border-radius: 8px; padding: 3px;
+          overflow-x: auto; flex-shrink: 1;
         }
-        @media (max-width: 720px) {
-          /* A4 page adapts to viewport */
-          [data-session-id] {
-            width: calc(100vw - 32px) !important;
-            min-height: unset !important;
-          }
+        .prontuario-tabs::-webkit-scrollbar { display: none }
+
+        /* Nova anotação: oculta label em telas muito pequenas, mantém ícone */
+        @media (max-width: 480px) {
+          .pron-new-label { display: none }
+        }
+
+        /* Área de páginas: padding menor em mobile */
+        @media (max-width: 640px) {
+          .prontuario-pages { padding: 16px 12px 48px !important; gap: 20px !important; }
+        }
+        @media (max-width: 900px) {
+          .prontuario-pages { padding: 20px 16px 48px !important; }
         }
       `}</style>
     </div>

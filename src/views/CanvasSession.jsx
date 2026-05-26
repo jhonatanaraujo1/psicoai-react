@@ -215,6 +215,28 @@ export default function CanvasSession({
   const sessionIdRef  = useRef(sessionId)
   useEffect(() => { sessionIdRef.current = sessionId }, [sessionId])
 
+  // ── Sidebar colapsável (tablet/mobile) ─────────────────────────────────────
+  const [sidebarOpen, setSidebarOpen] = useState(() => window.innerWidth > 900)
+
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 900px)')
+    const handler = (e) => setSidebarOpen(!e.matches)
+    setSidebarOpen(!mq.matches)
+    mq.addEventListener('change', handler)
+    return () => mq.removeEventListener('change', handler)
+  }, [])
+
+  // Detecta toque/caneta vs mouse — ajusta UX
+  const isTouch = useRef(window.matchMedia('(hover: none) and (pointer: coarse)').matches)
+  // Detecta orientação para decidir posição da toolbar
+  const [isLandscape, setIsLandscape] = useState(() => window.innerWidth > window.innerHeight)
+  useEffect(() => {
+    const mq = window.matchMedia('(orientation: landscape)')
+    const handler = (e) => setIsLandscape(e.matches)
+    mq.addEventListener('change', handler)
+    return () => mq.removeEventListener('change', handler)
+  }, [])
+
   // ── Inicializa / restaura ao abrir ─────────────────────────────────────────
   useEffect(() => {
     if (!isOpen || !patient?.id) return
@@ -376,11 +398,32 @@ export default function CanvasSession({
         padding: '0 16px', gap: 12,
         borderBottom: '1px solid rgba(255,255,255,0.08)',
       }}>
+        {/* Botão sidebar toggle (sempre visível) */}
+        <button
+          onClick={() => setSidebarOpen(p => !p)}
+          title={sidebarOpen ? 'Ocultar páginas' : 'Mostrar páginas'}
+          style={{
+            width: 36, height: 36, borderRadius: 8,
+            background: sidebarOpen ? 'rgba(255,255,255,0.16)' : 'rgba(255,255,255,0.06)',
+            border: '1px solid rgba(255,255,255,0.12)',
+            color: 'rgba(255,255,255,0.8)', cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            flexShrink: 0, transition: 'all 0.15s',
+          }}
+          onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.22)'}
+          onMouseLeave={e => e.currentTarget.style.background = sidebarOpen ? 'rgba(255,255,255,0.16)' : 'rgba(255,255,255,0.06)'}
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <rect x="3" y="3" width="18" height="18" rx="2"/>
+            <line x1="9" y1="3" x2="9" y2="21"/>
+          </svg>
+        </button>
+
         {onMinimize && (
           <button
             onClick={onMinimize}
             style={{
-              width: 32, height: 32, borderRadius: 8,
+              width: 36, height: 36, borderRadius: 8,
               background: 'rgba(255,255,255,0.08)',
               border: '1px solid rgba(255,255,255,0.12)',
               color: 'rgba(255,255,255,0.7)', cursor: 'pointer',
@@ -435,17 +478,20 @@ export default function CanvasSession({
       {/* ── Body: sidebar + páginas ──────────────────────────────────────── */}
       <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
 
-        {/* Sidebar */}
+        {/* Sidebar — colapsável */}
         <div
           ref={sidebarRef}
           style={{
-            width: 120, flexShrink: 0,
+            width: sidebarOpen ? 120 : 0,
+            flexShrink: 0,
             background: '#161616',
-            overflowY: 'auto', overflowX: 'hidden',
+            overflowY: sidebarOpen ? 'auto' : 'hidden',
+            overflowX: 'hidden',
             display: 'flex', flexDirection: 'column',
             alignItems: 'center',
-            padding: '12px 0 16px',
+            padding: sidebarOpen ? '12px 0 16px' : 0,
             gap: 0,
+            transition: 'width 0.2s ease, padding 0.2s ease',
           }}
         >
           {pages.map((p, i) => (
@@ -507,6 +553,7 @@ export default function CanvasSession({
         <div
           ref={mainScrollRef}
           onScroll={handleScroll}
+          className="cs-main-area"
           style={{
             flex: 1, overflowY: 'auto', overflowX: 'auto',
             background: '#2A2A2A',
@@ -531,7 +578,7 @@ export default function CanvasSession({
       </div>
 
       {/* ── Toolbar ──────────────────────────────────────────────────────── */}
-      <div style={{
+      <div className="cs-toolbar" style={{
         height: 52, flexShrink: 0,
         background: '#1A1A1A',
         borderTop: '1px solid rgba(255,255,255,0.08)',
@@ -695,6 +742,19 @@ export default function CanvasSession({
 
       <style>{`
         @keyframes cs-spin { to { transform: rotate(360deg) } }
+
+        /* ── Mobile / tablet responsivo ──────────────────────────────── */
+        @media (max-width: 640px) {
+          /* Em mobile a área de escrita tem padding menor */
+          .cs-main-area { padding: 16px 12px 72px !important; gap: 16px !important; }
+          /* Toolbar: centralizada com scroll horizontal se necessário */
+          .cs-toolbar { overflow-x: auto; justify-content: flex-start !important; }
+          .cs-toolbar::-webkit-scrollbar { display: none }
+        }
+        @media (max-width: 900px) {
+          /* Tablet portrait: canvas ocupa quase tudo */
+          .cs-main-area { padding: 20px 16px 72px !important; }
+        }
       `}</style>
     </div>
   )
