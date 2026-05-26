@@ -58,7 +58,12 @@ function loadCanvasPages(patientId) {
 
 function saveCanvasPages(patientId, pages) {
   try {
-    const data = JSON.stringify(pages.map(p => ({ id: p.id, dataUrl: p.dataUrl || null })))
+    const data = JSON.stringify(pages.map(p => ({
+      id: p.id,
+      pageType: p.pageType || 'draw',
+      dataUrl: p.dataUrl || null,
+      textHtml: p.textHtml || null,
+    })))
     if (data.length < 4 * 1024 * 1024) localStorage.setItem(canvasKey(patientId), data)
   } catch { /* quota */ }
 }
@@ -160,6 +165,64 @@ function CanvasPage({ page, isActive, toolRef, colorRef, sizeRef, onStrokeEnd, o
   )
 }
 
+// ── A4 text page (modo canvas, página de texto) ───────────────────────────────
+function TextPage({ page, isActive, onTextChange, onClick }) {
+  const editorRef = useRef(null)
+
+  useEffect(() => {
+    if (editorRef.current)
+      editorRef.current.innerHTML = page.textHtml || ''
+  }, [page.id]) // só na montagem
+
+  return (
+    <div
+      id={`page-${page.id}`}
+      onClick={onClick}
+      style={{
+        flexShrink: 0, width: PAGE_W, minHeight: PAGE_H,
+        background: '#fff', borderRadius: 2,
+        boxShadow: isActive
+          ? '0 0 0 2.5px #5C8F6A, 0 8px 40px rgba(0,0,0,0.22)'
+          : '0 4px 32px rgba(0,0,0,0.18)',
+        overflow: 'hidden', cursor: 'text',
+        display: 'flex', flexDirection: 'column',
+      }}
+    >
+      <div style={{
+        padding: '16px 32px 8px',
+        borderBottom: '1px solid #F0EDE8',
+        display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0,
+      }}>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#B0ADA8" strokeWidth="2">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+          <polyline points="14 2 14 8 20 8"/>
+          <line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="13" y2="17"/>
+        </svg>
+        <span style={{ fontSize: 11, color: '#B0ADA8', fontFamily: "'DM Sans', sans-serif" }}>
+          Página de texto
+        </span>
+      </div>
+      <div
+        ref={editorRef}
+        contentEditable
+        suppressContentEditableWarning
+        data-placeholder="Escreva aqui..."
+        style={{
+          flex: 1, padding: '24px 40px 40px',
+          minHeight: PAGE_H - 60, outline: 'none',
+          fontSize: 15, lineHeight: 1.85,
+          color: '#1C1C1C', fontFamily: "'DM Sans', sans-serif",
+          caretColor: '#4A7C59',
+        }}
+        onInput={e => onTextChange(page.id, e.currentTarget.innerHTML)}
+        onKeyDown={e => {
+          if (e.key === 'Tab') { e.preventDefault(); document.execCommand('insertText', false, '    ') }
+        }}
+      />
+    </div>
+  )
+}
+
 // ── Componente principal ──────────────────────────────────────────────────────
 export default function AnnotationSession({
   patient,
@@ -197,8 +260,9 @@ export default function AnnotationSession({
   const isTouch = useRef(window.matchMedia('(hover: none) and (pointer: coarse)').matches)
 
   // ── Estado canvas ──────────────────────────────────────────────────────────
-  const [pages, setPages]           = useState(() => [{ id: newPageId(), canvasRef: { current: null }, dataUrl: null }])
+  const [pages, setPages]           = useState(() => [{ id: newPageId(), pageType: 'draw', canvasRef: { current: null }, dataUrl: null, textHtml: null }])
   const [activePage, setActivePage] = useState(0)
+  const [showAddMenu, setShowAddMenu] = useState(false)
   const [tool, setTool]             = useState('pen')
   const [color, setColor]           = useState('#1C1C1C')
   const [size, setSize]             = useState(3)
@@ -234,8 +298,8 @@ export default function AnnotationSession({
     if (isCanvas) {
       const saved = loadCanvasPages(patient.id)
       setPages(saved
-        ? saved.map(p => ({ id: p.id, canvasRef: { current: null }, dataUrl: p.dataUrl }))
-        : [{ id: newPageId(), canvasRef: { current: null }, dataUrl: null }]
+        ? saved.map(p => ({ id: p.id, pageType: p.pageType || 'draw', canvasRef: { current: null }, dataUrl: p.dataUrl || null, textHtml: p.textHtml || null }))
+        : [{ id: newPageId(), pageType: 'draw', canvasRef: { current: null }, dataUrl: null, textHtml: null }]
       )
     }
 
@@ -315,18 +379,29 @@ export default function AnnotationSession({
   }, [patient?.id])
 
   // ── Canvas: nova página ────────────────────────────────────────────────────
-  const addPage = useCallback(() => {
-    const newPage = { id: newPageId(), canvasRef: { current: null }, dataUrl: null }
+  const addPage = useCallback((pageType = 'draw') => {
+    const newPage = { id: newPageId(), pageType, canvasRef: { current: null }, dataUrl: null, textHtml: null }
     setPages(prev => {
       const next = [...prev, newPage]
       if (patient?.id) saveCanvasPages(patient.id, next)
       return next
     })
     setActivePage(p => p + 1)
+    setShowAddMenu(false)
     setTimeout(() => {
       const c = mainScrollRef.current
       if (c) c.scrollTo({ top: c.scrollHeight, behavior: 'smooth' })
     }, 80)
+  }, [patient?.id])
+
+  // ── Canvas: atualizar texto em página de texto ────────────────────────────
+  const handlePageTextChange = useCallback((pageId, html) => {
+    setIsDirty(true)
+    setPages(prev => {
+      const updated = prev.map(p => p.id === pageId ? { ...p, textHtml: html } : p)
+      if (patient?.id) saveCanvasPages(patient.id, updated)
+      return updated
+    })
   }, [patient?.id])
 
   // ── Canvas: scroll → página ativa ─────────────────────────────────────────
@@ -445,10 +520,17 @@ export default function AnnotationSession({
                 width: 72, height: 102, background: '#fff', borderRadius: 2, overflow: 'hidden',
                 border: `1.5px solid ${activePage === i ? '#5C8F6A' : 'rgba(255,255,255,0.15)'}`,
                 flexShrink: 0,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
               }}>
-                {p.dataUrl
-                  ? <img src={p.dataUrl} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="" />
-                  : <div style={{ width: '100%', height: '100%', background: '#fff' }} />
+                {p.pageType === 'text'
+                  ? <div style={{ display: 'flex', flexDirection: 'column', gap: 4, padding: 8, width: '100%' }}>
+                      {[60, 80, 70, 50].map((w, j) => (
+                        <div key={j} style={{ height: 3, borderRadius: 2, background: '#E8E5E0', width: `${w}%` }} />
+                      ))}
+                    </div>
+                  : p.dataUrl
+                    ? <img src={p.dataUrl} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="" />
+                    : <div style={{ width: '100%', height: '100%', background: '#fff' }} />
                 }
               </div>
               <span style={{ fontSize: 10, color: activePage === i ? '#9DC4A8' : 'rgba(255,255,255,0.35)' }}>
@@ -456,19 +538,78 @@ export default function AnnotationSession({
               </span>
             </button>
           ))}
-          <button
-            onClick={addPage} title="Nova página"
-            style={{
-              marginTop: 8, width: 72, height: 36,
-              border: '1.5px dashed rgba(255,255,255,0.2)', borderRadius: 4,
-              background: 'transparent', color: 'rgba(255,255,255,0.35)',
-              cursor: 'pointer', fontSize: 20,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              transition: 'all 0.15s',
-            }}
-            onMouseEnter={e => { e.currentTarget.style.borderColor = '#5C8F6A'; e.currentTarget.style.color = '#5C8F6A' }}
-            onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)'; e.currentTarget.style.color = 'rgba(255,255,255,0.35)' }}
-          >+</button>
+          {/* Add page button + mini-menu */}
+          <div style={{ position: 'relative', marginTop: 8 }}>
+            <button
+              onClick={() => setShowAddMenu(p => !p)} title="Nova página"
+              style={{
+                width: 72, height: 36,
+                border: `1.5px dashed ${showAddMenu ? '#5C8F6A' : 'rgba(255,255,255,0.2)'}`,
+                borderRadius: 4,
+                background: showAddMenu ? 'rgba(74,124,89,0.15)' : 'transparent',
+                color: showAddMenu ? '#5C8F6A' : 'rgba(255,255,255,0.35)',
+                cursor: 'pointer', fontSize: 20,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                transition: 'all 0.15s',
+              }}
+              onMouseEnter={e => { if (!showAddMenu) { e.currentTarget.style.borderColor = '#5C8F6A'; e.currentTarget.style.color = '#5C8F6A' } }}
+              onMouseLeave={e => { if (!showAddMenu) { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)'; e.currentTarget.style.color = 'rgba(255,255,255,0.35)' } }}
+            >+</button>
+
+            {showAddMenu && (
+              <div style={{
+                position: 'absolute', bottom: '100%', left: '50%',
+                transform: 'translateX(-50%)',
+                marginBottom: 6,
+                background: '#242424', border: '1px solid rgba(255,255,255,0.12)',
+                borderRadius: 8, overflow: 'hidden',
+                boxShadow: '0 8px 24px rgba(0,0,0,0.5)',
+                display: 'flex', flexDirection: 'column',
+                minWidth: 130, zIndex: 50,
+              }}>
+                <button
+                  onClick={() => addPage('draw')}
+                  style={{
+                    background: 'transparent', border: 'none', cursor: 'pointer',
+                    padding: '10px 14px', textAlign: 'left',
+                    color: 'rgba(255,255,255,0.8)', fontSize: 12,
+                    fontFamily: "'DM Sans', sans-serif",
+                    display: 'flex', alignItems: 'center', gap: 8,
+                    transition: 'background 0.12s',
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.08)'}
+                  onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                >
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M12 19l7-7 3 3-7 7-3-3z"/>
+                    <path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/>
+                  </svg>
+                  Desenho
+                </button>
+                <button
+                  onClick={() => addPage('text')}
+                  style={{
+                    background: 'transparent', border: 'none', cursor: 'pointer',
+                    padding: '10px 14px', textAlign: 'left',
+                    color: 'rgba(255,255,255,0.8)', fontSize: 12,
+                    fontFamily: "'DM Sans', sans-serif",
+                    display: 'flex', alignItems: 'center', gap: 8,
+                    borderTop: '1px solid rgba(255,255,255,0.06)',
+                    transition: 'background 0.12s',
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.08)'}
+                  onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                >
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                    <polyline points="14 2 14 8 20 8"/>
+                    <line x1="9" y1="13" x2="15" y2="13"/>
+                  </svg>
+                  Texto
+                </button>
+              </div>
+            )}
+          </div>
         </>
       )
     }
@@ -548,14 +689,66 @@ export default function AnnotationSession({
             </button>
           ))}
 
-          <div style={{ marginLeft: 'auto', display: 'flex', gap: 6 }}>
-            <TBtn active={false} onClick={addPage} title="Nova página">
+          <div style={{ marginLeft: 'auto', display: 'flex', gap: 6, position: 'relative' }}>
+            <TBtn active={showAddMenu} onClick={() => setShowAddMenu(p => !p)} title="Nova página">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
                 <polyline points="14 2 14 8 20 8"/>
                 <line x1="12" y1="11" x2="12" y2="17"/><line x1="9" y1="14" x2="15" y2="14"/>
               </svg>
             </TBtn>
+            {showAddMenu && (
+              <div style={{
+                position: 'absolute', bottom: '100%', right: 0,
+                marginBottom: 8,
+                background: '#242424', border: '1px solid rgba(255,255,255,0.12)',
+                borderRadius: 8, overflow: 'hidden',
+                boxShadow: '0 8px 24px rgba(0,0,0,0.5)',
+                display: 'flex', flexDirection: 'column',
+                minWidth: 130, zIndex: 50,
+              }}>
+                <button
+                  onClick={() => addPage('draw')}
+                  style={{
+                    background: 'transparent', border: 'none', cursor: 'pointer',
+                    padding: '10px 14px', textAlign: 'left',
+                    color: 'rgba(255,255,255,0.8)', fontSize: 12,
+                    fontFamily: "'DM Sans', sans-serif",
+                    display: 'flex', alignItems: 'center', gap: 8,
+                    transition: 'background 0.12s',
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.08)'}
+                  onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                >
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M12 19l7-7 3 3-7 7-3-3z"/>
+                    <path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/>
+                  </svg>
+                  Desenho
+                </button>
+                <button
+                  onClick={() => addPage('text')}
+                  style={{
+                    background: 'transparent', border: 'none', cursor: 'pointer',
+                    padding: '10px 14px', textAlign: 'left',
+                    color: 'rgba(255,255,255,0.8)', fontSize: 12,
+                    fontFamily: "'DM Sans', sans-serif",
+                    display: 'flex', alignItems: 'center', gap: 8,
+                    borderTop: '1px solid rgba(255,255,255,0.06)',
+                    transition: 'background 0.12s',
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.08)'}
+                  onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                >
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                    <polyline points="14 2 14 8 20 8"/>
+                    <line x1="9" y1="13" x2="15" y2="13"/>
+                  </svg>
+                  Texto
+                </button>
+              </div>
+            )}
           </div>
         </>
       )
@@ -779,13 +972,20 @@ export default function AnnotationSession({
         >
           {isCanvas ? (
             pages.map((p, i) => (
-              <CanvasPage
-                key={p.id} page={p}
-                isActive={activePage === i}
-                toolRef={toolRef} colorRef={colorRef} sizeRef={sizeRef}
-                onStrokeEnd={handleStrokeEnd}
-                onClick={() => setActivePage(i)}
-              />
+              p.pageType === 'text'
+                ? <TextPage
+                    key={p.id} page={p}
+                    isActive={activePage === i}
+                    onTextChange={handlePageTextChange}
+                    onClick={() => setActivePage(i)}
+                  />
+                : <CanvasPage
+                    key={p.id} page={p}
+                    isActive={activePage === i}
+                    toolRef={toolRef} colorRef={colorRef} sizeRef={sizeRef}
+                    onStrokeEnd={handleStrokeEnd}
+                    onClick={() => setActivePage(i)}
+                  />
             ))
           ) : (
             /* Folha A4 de texto */
