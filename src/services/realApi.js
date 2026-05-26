@@ -326,11 +326,12 @@ export const api = {
   // Agenda
   async getAgendaEvents({ from, to } = {}) {
     if (!from || !to) {
-      // fallback: busca do início até 3 meses à frente
-      const f = new Date(); f.setDate(1)
-      const t = new Date(); t.setMonth(t.getMonth() + 3)
-      from = f.toISOString().slice(0, 10)
-      to = t.toISOString().slice(0, 10)
+      // fallback: busca do início do mês até 3 meses à frente
+      // Backend exige ISO-8601 instant (ex: 2026-05-01T00:00:00.000Z), não só data
+      const f = new Date(); f.setDate(1); f.setHours(0, 0, 0, 0)
+      const t = new Date(); t.setMonth(t.getMonth() + 3); t.setHours(23, 59, 59, 999)
+      from = f.toISOString()
+      to = t.toISOString()
     }
     return get('/api/v1/agenda', { from, to })
   },
