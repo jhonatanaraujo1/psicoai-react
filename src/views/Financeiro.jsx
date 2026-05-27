@@ -23,14 +23,20 @@ const METHOD_LABELS = {
   corporate: 'Plano empresarial',
 }
 
-const barData = [
-  { label: 'dez', val: 5200, h: '62%' },
-  { label: 'jan', val: 5800, h: '69%' },
-  { label: 'fev', val: 6000, h: '71%' },
-  { label: 'mar', val: 6400, h: '76%' },
-  { label: 'abr', val: 6800, h: '81%' },
-  { label: 'mai ●', val: 7600, h: '100%', current: true },
-]
+const MONTHS_PT_SHORT = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez']
+
+function buildBarData() {
+  const now = new Date()
+  const months = []
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
+    const label = MONTHS_PT_SHORT[d.getMonth()] + (i === 0 ? ' ●' : '')
+    months.push({ label, val: 0, h: '0%', current: i === 0, _month: d.getMonth(), _year: d.getFullYear() })
+  }
+  return months
+}
+
+const CURRENT_MONTH_LABEL = MONTHS_PT_SHORT[new Date().getMonth()].charAt(0).toUpperCase() + MONTHS_PT_SHORT[new Date().getMonth()].slice(1) + ' ' + new Date().getFullYear()
 
 function Skeleton({ style }) {
   return <div className="skel-pulse" style={{ borderRadius: '6px', background: 'var(--gr2)', ...style }} />
@@ -43,6 +49,7 @@ export default function Financeiro() {
   const [summary, setSummary] = useState(null)
   const [loading, setLoading] = useState(true)
   const [reciboOpen, setReciboOpen] = useState(false)
+  const [barData, setBarData] = useState(buildBarData)
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
   const [lancModal, setLancModal] = useState({ open: false, mode: 'create', data: null })
@@ -56,8 +63,24 @@ export default function Financeiro() {
       api.getFinancialEvents(),
       api.getFinancialSummary(),
     ]).then(([ev, sum]) => {
-      setEvents(ev.content || [])
+      const evList = ev.content || []
+      setEvents(evList)
       setSummary(sum)
+      // Atualiza barData com dados reais agrupados por mês
+      setBarData(prev => {
+        const updated = prev.map(b => {
+          const monthRevenue = evList
+            .filter(e => {
+              if (e.direction !== 'credit' || e.status !== 'received') return false
+              const d = new Date(e.dueDate || e.paidAt || e.createdAt)
+              return d.getMonth() === b._month && d.getFullYear() === b._year
+            })
+            .reduce((acc, e) => acc + (e.amount || 0), 0)
+          return { ...b, val: monthRevenue }
+        })
+        const maxVal = Math.max(...updated.map(b => b.val), 1)
+        return updated.map(b => ({ ...b, h: `${Math.max(4, Math.round((b.val / maxVal) * 100))}%` }))
+      })
     }).finally(() => setLoading(false))
   }, [])
 
@@ -139,10 +162,10 @@ export default function Financeiro() {
       {/* Stats */}
       <div className="stats-row">
         {[
-          { icon: '<line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>', cls: 'green', val: loading ? '…' : fmtBRL(received), label: 'Receita — maio 2026', delta: '↑ 12% vs abril' },
+          { icon: '<line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>', cls: 'green', val: loading ? '…' : fmtBRL(received), label: `Receita — ${CURRENT_MONTH_LABEL}`, delta: '' },
           { icon: '<polyline points="20 6 9 17 4 12"/>', cls: 'green', val: loading ? '…' : events.filter(e => e.status === 'received' && e.direction === 'credit').length, label: 'Pagamentos recebidos', delta: `de ${events.filter(e => e.direction === 'credit').length} lançamentos`, deltaColor: 'var(--gr4)' },
           { icon: '<path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/>', cls: overdueN > 0 ? 'warn' : 'green', val: loading ? '…' : fmtBRL(pending), label: `Em aberto (${overdueN} atrasado${overdueN !== 1 ? 's' : ''})`, delta: overdueN > 0 ? 'Enviar cobrança' : 'Sem atrasos', deltaColor: overdueN > 0 ? 'var(--warn)' : 'var(--g600)' },
-          { icon: '<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>', cls: 'blue', val: 'R$190', label: 'Ticket médio estimado', delta: 'por sessão recebida' },
+          { icon: '<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>', cls: 'blue', val: loading ? '…' : (() => { const creditReceived = events.filter(e => e.direction === 'credit' && e.status === 'received' && e.amount > 0); return creditReceived.length > 0 ? fmtBRL(creditReceived.reduce((a, e) => a + e.amount, 0) / creditReceived.length) : '—' })(), label: 'Ticket médio', delta: 'por sessão recebida' },
         ].map(({ icon, cls, val, label, delta, deltaColor }, i) => (
           <div key={i} className="stat-card">
             <div className={`stat-icon ${cls}`}>
@@ -179,7 +202,7 @@ export default function Financeiro() {
         </div>
 
         <div className="card">
-          <div className="card-header"><div className="card-title">Resumo de maio</div></div>
+          <div className="card-header"><div className="card-title">Resumo de {CURRENT_MONTH_LABEL}</div></div>
           <div className="card-body" style={{ padding: '14px 16px' }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
               {loading ? (
@@ -202,8 +225,8 @@ export default function Financeiro() {
                   </div>
                   <div style={{ height: '1px', background: 'var(--gr2)' }} />
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--d)' }}>Projeção mensal</span>
-                    <span style={{ fontFamily: "'Fraunces', serif", fontSize: '20px', color: 'var(--d)' }}>{fmtBRL(8000)}</span>
+                    <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--d)' }}>Total previsto</span>
+                    <span style={{ fontFamily: "'Fraunces', serif", fontSize: '20px', color: 'var(--d)' }}>{fmtBRL(received + pending)}</span>
                   </div>
                 </>
               )}
@@ -217,7 +240,7 @@ export default function Financeiro() {
         <div className="card-header">
           <div>
             <div className="card-title">Lançamentos</div>
-            <div className="card-sub">Maio 2026 · {filtered.length} registros</div>
+            <div className="card-sub">{CURRENT_MONTH_LABEL} · {filtered.length} registros</div>
           </div>
           <div style={{ display: 'flex', gap: '8px' }}>
             <button className="btn-primary" style={{ fontSize: '12px', padding: '8px 14px' }} onClick={openCreate}>
@@ -301,11 +324,19 @@ export default function Financeiro() {
                           <button
                             className="fin-action"
                             style={row.status === 'pending' ? { color: 'var(--warn)', borderColor: '#F0D08A' } : row.status === 'overdue' ? { color: 'var(--danger)', borderColor: 'var(--danger)' } : {}}
-                            onClick={e => {
+                            onClick={async e => {
                               e.stopPropagation()
                               if (row.status !== 'received') {
+                                // Optimistic update
                                 const updated = events.map(ev => ev.id === row.id ? { ...ev, status: 'received', paidAt: new Date().toISOString() } : ev)
                                 setEvents(updated)
+                                // Persist to backend
+                                try {
+                                  await api.updateFinancialEvent(row.id, { status: 'received', paidAt: new Date().toISOString() })
+                                } catch {
+                                  // Revert on error
+                                  setEvents(events)
+                                }
                               }
                             }}
                           >
@@ -453,9 +484,9 @@ export default function Financeiro() {
           <div className="form-field"><label>DESCRIÇÃO</label><input type="text" defaultValue="Consulta de Psicologia — sessão individual" /></div>
           <div style={{ display: 'flex', gap: '10px', marginTop: '8px' }}>
             <button className="btn-outline" style={{ flex: 1 }} onClick={() => setReciboOpen(false)}>Cancelar</button>
-            <button className="btn-primary" style={{ flex: 1, justifyContent: 'center' }} onClick={() => { alert('Recibo gerado e enviado por email!'); setReciboOpen(false) }}>
+            <button className="btn-primary" style={{ flex: 1, justifyContent: 'center', opacity: 0.6, cursor: 'not-allowed' }} disabled title="Em breve">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-              Gerar PDF e enviar
+              Em breve
             </button>
           </div>
         </div>

@@ -10,6 +10,12 @@ export default defineConfig({
       includeAssets: ['icon-192.png', 'icon-512.png', 'apple-touch-icon.png'],
       manifest: false, // usamos o manifest.json manual em /public
       workbox: {
+        // Novo SW toma controle imediatamente (skipWaiting) e reivindica
+        // todos os clients abertos (clientsClaim). Combinado com o listener
+        // 'controllerchange' em main.jsx, a página recarrega automaticamente
+        // após cada novo deploy — sem precisar de Ctrl+Shift+R.
+        skipWaiting: true,
+        clientsClaim: true,
         maximumFileSizeToCacheInBytes: 5 * 1024 * 1024, // 5MB (tldraw é pesado)
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
         runtimeCaching: [

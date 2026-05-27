@@ -1,9 +1,10 @@
 import { useState } from 'react'
 import { auth } from '../services'
 import RegisterFlow from '../components/RegisterFlow'
+import TermosDeUso from './TermosDeUso'
 
 export default function Login({ onLogin }) {
-  const [mode, setMode] = useState('login') // 'login' | 'register'
+  const [mode, setMode] = useState('login') // 'login' | 'register' | 'termos'
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
@@ -12,6 +13,10 @@ export default function Login({ onLogin }) {
 
   if (mode === 'register') {
     return <RegisterFlow onLogin={onLogin} onBack={() => setMode('login')} />
+  }
+
+  if (mode === 'termos') {
+    return <TermosDeUso onClose={() => setMode('login')} />
   }
 
   const handleDemo = () => {
@@ -151,7 +156,8 @@ export default function Login({ onLogin }) {
 
           <div className="login-footer-note">
             PsicoAI não é um serviço médico e não substitui o julgamento clínico profissional.<br />
-            Conformidade CFP 09/2024 · Dados criptografados · LGPD
+            Conformidade CFP 09/2024 · Dados criptografados · LGPD<br />
+            <button type="button" onClick={() => setMode('termos')} style={{ background: 'none', border: 'none', padding: 0, color: 'inherit', opacity: 0.6, textDecoration: 'underline', cursor: 'pointer', fontSize: 'inherit', fontFamily: 'inherit' }}>Termos de Uso</button>
           </div>
         </div>
       </div>

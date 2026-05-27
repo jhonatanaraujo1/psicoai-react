@@ -299,11 +299,15 @@ export default function Formularios() {
   }
 
   useEffect(() => {
-    // Load forms for all patients p-001 and p-002 (demo data)
-    Promise.all([
-      api.getPatientForms('p-001'),
-      api.getPatientForms('p-002'),
-    ]).then(([f1, f2]) => setAllForms([...f1, ...f2]))
+    // Carrega formulários de todos os pacientes ativos (máx 50)
+    api.getPatients({ size: 50 })
+      .then(res => {
+        const patients = res.content || res.data || []
+        if (patients.length === 0) { setAllForms([]); return }
+        return Promise.all(patients.map(p => api.getPatientForms(p.id)))
+          .then(results => setAllForms(results.flat()))
+      })
+      .catch(() => setAllForms([]))
   }, [])
 
   useEffect(() => {

@@ -331,9 +331,14 @@ function TabSeguranca() {
     if (pw.next.length < 8) { setErr('A nova senha deve ter pelo menos 8 caracteres'); return }
     if (pw.next !== pw.confirm) { setErr('As senhas não coincidem'); return }
     setErr(''); setSaving(true)
-    await new Promise(r => setTimeout(r, 900))
-    setSaving(false); setPwOk(true); setPw({ current: '', next: '', confirm: '' })
-    setTimeout(() => setPwOk(false), 3000)
+    try {
+      await api.changePassword(pw.current, pw.next)
+      setSaving(false); setPwOk(true); setPw({ current: '', next: '', confirm: '' })
+      setTimeout(() => setPwOk(false), 3000)
+    } catch (e) {
+      setSaving(false)
+      setErr(e.message || 'Erro ao alterar senha. Tente novamente.')
+    }
   }
 
   const sessions = [
@@ -393,7 +398,7 @@ function TabSeguranca() {
 }
 
 // ────────────────────────────────────────────────────────────────────────────
-function TabAjuda({ onOpenOnboarding }) {
+function TabAjuda({ onOpenOnboarding, onOpenTermos }) {
   const resetTour = () => {
     localStorage.removeItem('psicoai_onboarding_seen')
     onOpenOnboarding()
@@ -455,6 +460,25 @@ function TabAjuda({ onOpenOnboarding }) {
         {FAQS.map((faq, i) => (
           <FaqItem key={i} q={faq.q} a={faq.a} />
         ))}
+      </div>
+
+      {/* Termos de Uso */}
+      <Divider title="Documentos legais" sub="Contrato de uso, privacidade e política de dados" />
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '28px' }}>
+        <div style={{ background: 'var(--ow)', border: '1px solid var(--gr2)', borderRadius: 'var(--r)', padding: '16px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '14px' }}>
+          <div>
+            <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--d)', marginBottom: '3px' }}>Termos de Uso e Contrato de Serviço</div>
+            <div style={{ fontSize: '12px', color: 'var(--gr5)', lineHeight: 1.5 }}>
+              Condições de uso, retenção de dados, encerramento de plataforma e direitos LGPD · Versão 1.0 — vigente desde 01/06/2026
+            </div>
+          </div>
+          <button onClick={onOpenTermos}
+            style={{ padding: '8px 16px', border: '1px solid var(--gr2)', borderRadius: 'var(--r)', background: 'var(--w)', fontSize: '12px', fontWeight: 500, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", color: 'var(--gr5)', whiteSpace: 'nowrap', transition: 'all 0.15s' }}
+            onMouseOver={e => { e.currentTarget.style.borderColor = 'var(--g300)'; e.currentTarget.style.color = 'var(--g600)' }}
+            onMouseOut={e => { e.currentTarget.style.borderColor = 'var(--gr2)'; e.currentTarget.style.color = 'var(--gr5)' }}>
+            Ler →
+          </button>
+        </div>
       </div>
 
       {/* Suporte */}
@@ -682,7 +706,7 @@ const TABS = [
   { id: 'ajuda', label: 'Ajuda & Guia', svg: '<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>' },
 ]
 
-export default function Configuracoes({ currentUser, onProfileUpdate, onOpenOnboarding }) {
+export default function Configuracoes({ currentUser, onProfileUpdate, onOpenOnboarding, onOpenTermos }) {
   const [tab, setTab] = useState('perfil')
   const [profile, setProfile] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -721,7 +745,7 @@ export default function Configuracoes({ currentUser, onProfileUpdate, onOpenOnbo
           {tab === 'preferencias' && <TabPreferencias profile={profile} onSaved={handleSaved} />}
           {tab === 'seguranca' && <TabSeguranca />}
           {tab === 'integracoes' && <TabIntegracoes />}
-          {tab === 'ajuda' && <TabAjuda onOpenOnboarding={onOpenOnboarding} />}
+          {tab === 'ajuda' && <TabAjuda onOpenOnboarding={onOpenOnboarding} onOpenTermos={onOpenTermos} />}
         </div>
       </div>
     </div>

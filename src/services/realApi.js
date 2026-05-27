@@ -100,6 +100,16 @@ async function req(method, path, body, opts = {}) {
     }
   }
 
+  // 403 em endpoints protegidos = conta suspensa, token revogado ou acesso negado
+  // pelo backend ao recurso do próprio usuário → deslogar imediatamente.
+  // Nota: não se aplica a /api/v1/auth/* (403 ali = credencial errada, não sessão).
+  if (res.status === 403 && !path.startsWith('/api/v1/auth/')) {
+    clearTokens()
+    window.dispatchEvent(new CustomEvent('psicoai:session-expired'))
+    window.location.replace('/')
+    return
+  }
+
   if (res.status === 204) return null
 
   if (res.status === 402) {
@@ -258,19 +268,25 @@ export const api = {
 
   async createPatient(data) {
     return post('/api/v1/patients', {
-      name: data.name,
-      birthDate: data.birthDate || null,
-      gender: data.gender || null,
-      email: data.email || null,
-      phone: data.phone || null,
-      complaint: data.complaint || null,
-      history: data.history || null,
-      medication: data.medication || null,
-      approach: data.approach || null,
-      frequency: data.frequency || null,
-      payment: data.payment || null,
-      sessionValue: data.sessionValue ? Number(data.sessionValue) : null,
-      cid: data.cid || null,
+      name:       data.name       || data.nome,
+      birthDate:  data.birthDate  || data.dataNasc  || null,
+      gender:     data.gender     || data.genero    || null,
+      email:      data.email      || null,
+      phone:      data.phone      || data.telefone  || null,
+      complaint:  data.complaint  || data.queixa    || null,
+      history:    data.history    || data.historico || null,
+      medication: data.medication || data.medicacao || null,
+      approach:   data.approach   || data.abordagem || null,
+      frequency:  data.frequency  || data.frequencia || null,
+      payment:    data.payment    || data.pagamento  || null,
+      sessionValue: data.sessionValue || (data.valor ? Number(data.valor) : null),
+      cid:        data.cid || null,
+      // Recorrência
+      recurringDayOfWeek:  data.recurringDayOfWeek  ? Number(data.recurringDayOfWeek)  : null,
+      recurringTime:       data.recurringTime        || null,
+      recurringDurationMin:data.recurringDurationMin ? Number(data.recurringDurationMin): null,
+      billingType:         data.billingType          || null,
+      monthlyValue:        data.monthlyValue         ? Number(data.monthlyValue)         : null,
     })
   },
 
@@ -324,8 +340,7 @@ export const api = {
   },
 
   async deleteSession(sessionId) {
-    // backend não expõe DELETE /sessions, operação local only
-    console.warn('deleteSession: operação não suportada no backend em produção')
+    return del(`/api/v1/sessions/${sessionId}`)
   },
 
   // Analyses
@@ -435,6 +450,10 @@ export const api = {
     const user = normalizeUser(res)
     localStorage.setItem('psicoai_user', JSON.stringify(user))
     return user
+  },
+
+  async changePassword(currentPassword, newPassword) {
+    return patch('/api/v1/me/password', { currentPassword, newPassword })
   },
 
   // Billing

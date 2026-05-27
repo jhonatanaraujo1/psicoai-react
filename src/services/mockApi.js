@@ -1074,6 +1074,12 @@ export const api = {
     return { ...DEMO_USER }
   },
 
+  async changePassword(_currentPassword, _newPassword) {
+    await delay(600)
+    // mock: aceita sempre
+    return null
+  },
+
   // Billing — mock redireciona para simulação local
   async createCheckoutSession({ planId, couponCode }) {
     await delay(400)

@@ -463,7 +463,16 @@ export default function Paciente({ patient: propPatient, setCurrentView, onSessa
                     <div style={{ background: 'var(--danger-l)', border: '1px solid #E8B4B0', borderRadius: 'var(--r)', margin: '0 20px 8px', padding: '10px 14px', display: 'flex', alignItems: 'center', gap: '10px' }}>
                       <span style={{ fontSize: '12px', color: 'var(--danger)', flex: 1 }}>Excluir sessão {s.num}? Esta ação não pode ser desfeita.</span>
                       <button onClick={() => setSessionDeleteId(null)} style={{ ...btnSt, background: 'none', border: '1px solid var(--danger)', color: 'var(--danger)', fontSize: '11px', padding: '5px 10px' }}>Cancelar</button>
-                      <button onClick={async () => { await api.deleteSession(s.id); setSessions(prev => prev.filter(x => x.id !== s.id)); setSessionDeleteId(null) }} style={{ ...btnSt, background: 'var(--danger)', color: '#fff', fontSize: '11px', padding: '5px 10px' }}>Confirmar</button>
+                      <button onClick={async () => {
+                        try {
+                          await api.deleteSession(s.id)
+                          setSessions(prev => prev.filter(x => x.id !== s.id))
+                          setSessionDeleteId(null)
+                        } catch (e) {
+                          alert('Não foi possível excluir a sessão: ' + (e.message || 'Erro desconhecido'))
+                          setSessionDeleteId(null)
+                        }
+                      }} style={{ ...btnSt, background: 'var(--danger)', color: '#fff', fontSize: '11px', padding: '5px 10px' }}>Confirmar</button>
                     </div>
                   )}
                 </div>

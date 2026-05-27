@@ -34,8 +34,10 @@ import Financeiro from './views/Financeiro'
 import Lembretes from './views/Lembretes'
 import Formularios from './views/Formularios'
 import Anotacoes from './views/Anotacoes'
+import Cadernos from './views/Cadernos'
 import Teleatendimento from './views/Teleatendimento'
 import Configuracoes from './views/Configuracoes'
+import TermosDeUso from './views/TermosDeUso'
 
 export default function App() {
   // ── Auth ──────────────────────────────────────────────────────────────────
@@ -93,7 +95,7 @@ export default function App() {
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Navigation ───────────────────────────────────────────────────────────
-  const [currentView, setCurrentView] = useState('dashboard')
+  const [currentView, setCurrentView] = useState('agenda')
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   // ── Patient context ──────────────────────────────────────────────────────
@@ -324,7 +326,8 @@ export default function App() {
     setCanvasOpen(true)
   }
 
-  // Inicia sessão: se paciente já tem anotações → abre direto; senão → picker de tipo
+  // Inicia anotação: se paciente já tem páginas → abre caderno existente;
+  // senão → abre canvas com página de texto em branco (sem picker de tipo).
   const _startNewSession = (view, patient) => {
     if (view === 'sessao' || view === 'liveSession') {
       if (patient) {
@@ -332,7 +335,7 @@ export default function App() {
         if (_hasAnnotations(patient.id)) {
           _openExistingAnnotation(patient)
         } else {
-          setTypePickerPatient(patient)
+          _openTextSession(patient) // nova página de texto — sem perguntar o tipo
         }
       } else {
         setPickerMode('live')
@@ -365,7 +368,7 @@ export default function App() {
     if (_hasAnnotations(patient.id)) {
       _openExistingAnnotation(patient)
     } else {
-      setTypePickerPatient(patient)
+      _openTextSession(patient) // nova página de texto — sem picker de tipo
     }
   }
 
@@ -582,7 +585,7 @@ export default function App() {
     if (destination === 'here') {
       handleAnalysisConfirm({ imageBase64, textContent, htmlContent, duration, sessionId: sid, canvasDataJson, canvasTextContent })
     } else if (destination === 'analyses') {
-      setCurrentView('anotacoes')
+      setCurrentView('cadernos')
       handleAnalysisConfirm({ imageBase64, textContent, htmlContent, duration, sessionId: sid, canvasDataJson, canvasTextContent })
     } else if (destination === 'later') {
       _runAnalysisInBackground({ imageBase64, textContent, htmlContent, duration, sessionId: sid, canvasDataJson, canvasTextContent })
@@ -683,7 +686,7 @@ export default function App() {
 
   const renderView = () => {
     switch (currentView) {
-      case 'dashboard':    return <Dashboard setCurrentView={handleSetView} currentUser={currentUser} />
+      case 'dashboard':    return <Agenda currentUser={currentUser} />
       case 'pacientes':   return <Pacientes setCurrentView={handleSetView} onNovoCadastro={() => setCadastroOpen(true)} />
       case 'paciente':    return <ProntuarioView patient={currentPatient} onClose={() => setCurrentView('pacientes')} onNewAnnotation={() => setBriefingOpen(true)} onOpenCanvas={handleOpenCanvasFromHistory} onReopenSession={handleReopenSession} />
       case 'agenda':      return <Agenda currentUser={currentUser} />
@@ -691,10 +694,18 @@ export default function App() {
       case 'financeiro':  return <Financeiro />
       case 'lembretes':   return <Lembretes />
       case 'formularios': return <Formularios />
+      // Cadernos: cada paciente é um caderno. Clicar abre o canvas diretamente.
+      // Paciente com páginas → recovery mode. Sem páginas → nova página de texto.
+      case 'cadernos':    return <Cadernos onOpenCanvas={(patient) => {
+        setCurrentPatient(patient)
+        if (_hasAnnotations(patient.id)) { _openExistingAnnotation(patient) }
+        else { _openTextSession(patient) }
+      }} />
       case 'anotacoes':   return <Anotacoes setCurrentView={handleSetView} onOpenCanvas={handleOpenCanvasFromHistory} />
       case 'teleatendimento': return <Teleatendimento />
-      case 'configuracoes': return <Configuracoes currentUser={currentUser} onProfileUpdate={(data) => setCurrentUser(u => ({ ...u, ...data }))} onOpenOnboarding={() => setOnboardingOpen(true)} />
-      default:            return <Dashboard setCurrentView={handleSetView} currentUser={currentUser} />
+      case 'configuracoes': return <Configuracoes currentUser={currentUser} onProfileUpdate={(data) => setCurrentUser(u => ({ ...u, ...data }))} onOpenOnboarding={() => setOnboardingOpen(true)} onOpenTermos={() => setCurrentView('termos')} />
+      case 'termos':      return <TermosDeUso onClose={() => setCurrentView('configuracoes')} />
+      default:            return <Agenda currentUser={currentUser} />
     }
   }
 
@@ -889,6 +900,27 @@ export default function App() {
 
       {/* Banner LGPD — aparece uma vez, salvo em localStorage */}
       <LgpdBanner />
+
+      {/* Banner de inadimplência em período de graça */}
+      {currentUser?.graceDaysRemaining > 0 && !paymentRequired && (
+        <div style={{
+          position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 900,
+          background: '#7C4D00', color: '#FFF3E0',
+          padding: '10px 20px', fontSize: '13px',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px',
+          boxShadow: '0 -2px 8px rgba(0,0,0,0.2)',
+        }}>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          <span>
+            Pagamento pendente — você tem ainda <strong>{currentUser.graceDaysRemaining} dia{currentUser.graceDaysRemaining !== 1 ? 's' : ''}</strong> para regularizar antes do bloqueio.
+          </span>
+          <button
+            onClick={() => setCurrentView('configuracoes')}
+            style={{ padding: '5px 14px', background: '#FF8F00', color: '#fff', border: 'none', borderRadius: '6px', fontSize: '12px', fontWeight: 600, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", whiteSpace: 'nowrap' }}>
+            Regularizar agora →
+          </button>
+        </div>
+      )}
     </>
   )
 }

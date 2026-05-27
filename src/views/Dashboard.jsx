@@ -67,14 +67,23 @@ export default function Dashboard({ setCurrentView, currentUser }) {
   const { stats, todaySessions = [], recentAlerts = [], financialSnapshot, account } = data || {}
 
   const typeColors = { session: 'green', supervision: 'blue', personal: 'gray', other: 'gray' }
-  const patientColors = {
-    'p-001': { bg: 'var(--g50)', color: 'var(--g600)', initials: 'LM' },
-    'p-002': { bg: 'var(--g100)', color: 'var(--g700)', initials: 'CS' },
-    'p-003': { bg: 'var(--warn-l)', color: 'var(--warn)', initials: 'RF' },
-    'p-004': { bg: 'var(--g50)', color: 'var(--g500)', initials: 'MC' },
-    'p-005': { bg: 'var(--gr1)', color: 'var(--gr5)', initials: 'JO' },
-    'p-006': { bg: 'var(--danger-l)', color: 'var(--danger)', initials: 'BA' },
-    'p-007': { bg: 'var(--g100)', color: 'var(--g600)', initials: 'PA' },
+
+  // Computa cor do avatar a partir do ID (não depende de IDs fixos)
+  const AVATAR_COLORS = [
+    { bg: 'var(--g50)',      color: 'var(--g600)'  },
+    { bg: '#E3F2FD',         color: '#1565C0'       },
+    { bg: '#F3E5F5',         color: '#6A1B9A'       },
+    { bg: 'var(--warn-l)',   color: 'var(--warn)'   },
+    { bg: '#FCE4EC',         color: '#880E4F'       },
+    { bg: 'var(--g100)',     color: 'var(--g700)'   },
+    { bg: '#FFF8E1',         color: '#F57F17'       },
+  ]
+  function getAvatarStyle(id = '') {
+    const idx = Math.abs(String(id).split('').reduce((a, c) => a + c.charCodeAt(0), 0)) % AVATAR_COLORS.length
+    return AVATAR_COLORS[idx]
+  }
+  function getInitials(name = '') {
+    return name ? name.split(' ').filter(Boolean).slice(0, 2).map(w => w[0]).join('').toUpperCase() : '??'
   }
 
   return (
@@ -144,7 +153,8 @@ export default function Dashboard({ setCurrentView, currentUser }) {
               <div style={{ textAlign: 'center', padding: '24px 0', color: 'var(--gr4)', fontSize: 13 }}>Nenhuma sessão agendada para hoje</div>
             )}
             {todaySessions.map((s, i) => {
-              const pc = s.patientId ? patientColors[s.patientId] : null
+              const pc = s.patientId ? getAvatarStyle(s.patientId) : null
+              const initials = s.patientInitials || getInitials(s.patientName) || (s.title || '').slice(0, 2)
               const isSoon = (() => {
                 const d = new Date(s.startAt)
                 const diff = (d - Date.now()) / 60000
@@ -155,11 +165,11 @@ export default function Dashboard({ setCurrentView, currentUser }) {
                   key={i}
                   className="session-item"
                   style={{ cursor: s.patientId ? 'pointer' : 'default' }}
-                  onClick={s.patientId ? () => setCurrentView('paciente', { id: s.patientId, name: s.patientName, initials: pc?.initials }) : undefined}
+                  onClick={s.patientId ? () => setCurrentView('paciente', { id: s.patientId, name: s.patientName, initials }) : undefined}
                 >
                   <span className={`urgency ${isSoon ? 'red' : s.type === 'session' ? 'green' : 'yellow'}`} />
                   <div className="sess-av" style={pc ? { background: pc.bg, color: pc.color } : { background: 'var(--g50)', color: 'var(--g600)' }}>
-                    {s.patientInitials || s.title.slice(0, 2)}
+                    {initials}
                   </div>
                   <div className="sess-info">
                     <div className="sess-name">{s.patientName || s.title}</div>
@@ -296,7 +306,7 @@ export default function Dashboard({ setCurrentView, currentUser }) {
             <button
               className="btn-primary"
               style={{ width: '100%', justifyContent: 'center', display: 'flex' }}
-              onClick={() => setCurrentView('sessao')}
+              onClick={() => setCurrentView('cadernos')}
             >
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
               Iniciar sessão e gerar análise

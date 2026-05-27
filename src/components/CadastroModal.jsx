@@ -4,6 +4,15 @@ const GENEROS = ['Feminino', 'Masculino', 'Não-binário', 'Prefiro não informa
 const ABORDAGENS = ['TCC', 'Psicanálise', 'Humanista', 'EMDR', 'ACT', 'DBT', 'Gestalt', 'Outra']
 const FREQUENCIAS = ['Semanal', 'Quinzenal', 'Mensal', 'Sob demanda']
 const CID_SUGESTOES = ['F32.1 — Depressão moderada', 'F33.1 — Depressão recorrente', 'F40.1 — Fobia social', 'F41.1 — TAG', 'F43.1 — TEPT', 'F60.3 — TPB', 'F90.0 — TDAH']
+const DIAS_SEMANA = [
+  { label: 'Segunda-feira', value: '1' },
+  { label: 'Terça-feira',   value: '2' },
+  { label: 'Quarta-feira',  value: '3' },
+  { label: 'Quinta-feira',  value: '4' },
+  { label: 'Sexta-feira',   value: '5' },
+  { label: 'Sábado',        value: '6' },
+  { label: 'Domingo',       value: '7' },
+]
 
 const Field = ({ label, required, children }) => (
   <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
@@ -22,7 +31,14 @@ const inputStyle = {
   width: '100%', boxSizing: 'border-box',
 }
 
-const emptyForm = { nome: '', dataNasc: '', genero: '', email: '', telefone: '', queixa: '', historico: '', medicacao: '', abordagem: '', frequencia: '', cid: '', pagamento: 'Particular', valor: '' }
+const emptyForm = {
+  nome: '', dataNasc: '', genero: '', email: '', telefone: '',
+  queixa: '', historico: '', medicacao: '', abordagem: '', frequencia: '',
+  cid: '', pagamento: 'Particular', valor: '',
+  // Recorrência
+  recurringDayOfWeek: '', recurringTime: '', recurringDurationMin: '50',
+  billingType: '', monthlyValue: '',
+}
 
 function formFromData(d) {
   if (!d) return emptyForm
@@ -32,6 +48,12 @@ function formFromData(d) {
     historico: d.history || '', medicacao: d.medication || '',
     abordagem: d.approach || '', frequencia: d.frequency || '',
     cid: d.cid || '', pagamento: d.payment || 'Particular', valor: d.sessionValue || '',
+    // Recorrência
+    recurringDayOfWeek:   d.recurringDayOfWeek   ? String(d.recurringDayOfWeek)   : '',
+    recurringTime:        d.recurringTime         || '',
+    recurringDurationMin: d.recurringDurationMin  ? String(d.recurringDurationMin) : '50',
+    billingType:          d.billingType           || '',
+    monthlyValue:         d.monthlyValue          || '',
   }
 }
 
@@ -214,6 +236,74 @@ export default function CadastroModal({ isOpen, onClose, onSave, initialData = n
               <Field label="Valor por sessão (R$)">
                 <Input field="valor" placeholder="Ex: 200" type="number" />
               </Field>
+            </div>
+          </div>
+
+          {/* Seção: Recorrência */}
+          <div>
+            <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '1px', textTransform: 'uppercase', color: 'var(--gr4)', marginBottom: '4px', paddingBottom: '8px', borderBottom: '1px solid var(--gr1)' }}>
+              Recorrência e Cobrança
+            </div>
+            <div style={{ fontSize: '11px', color: 'var(--gr4)', marginBottom: '12px' }}>
+              Defina o horário fixo do paciente. Os lembretes automáticos usam essas informações.
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <Field label="Dia da semana fixo">
+                <select
+                  value={form.recurringDayOfWeek}
+                  onChange={e => set('recurringDayOfWeek', e.target.value)}
+                  onFocus={focusStyle} onBlur={blurStyle}
+                  style={{ ...inputStyle, appearance: 'none', backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238B8B8B' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 12px center', paddingRight: '32px' }}
+                >
+                  <option value="">Não definido</option>
+                  {DIAS_SEMANA.map(d => <option key={d.value} value={d.value}>{d.label}</option>)}
+                </select>
+              </Field>
+              <Field label="Horário fixo">
+                <input
+                  type="time"
+                  value={form.recurringTime}
+                  onChange={e => set('recurringTime', e.target.value)}
+                  onFocus={focusStyle} onBlur={blurStyle}
+                  style={inputStyle}
+                />
+              </Field>
+              <Field label="Duração da sessão (min)">
+                <input
+                  type="number"
+                  value={form.recurringDurationMin}
+                  onChange={e => set('recurringDurationMin', e.target.value)}
+                  placeholder="50"
+                  onFocus={focusStyle} onBlur={blurStyle}
+                  style={inputStyle}
+                  min="10" max="240"
+                />
+              </Field>
+              <Field label="Modelo de cobrança">
+                <select
+                  value={form.billingType}
+                  onChange={e => set('billingType', e.target.value)}
+                  onFocus={focusStyle} onBlur={blurStyle}
+                  style={{ ...inputStyle, appearance: 'none', backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238B8B8B' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 12px center', paddingRight: '32px' }}
+                >
+                  <option value="">Não definido</option>
+                  <option value="per_session">Por sessão</option>
+                  <option value="monthly">Mensalidade fixa</option>
+                </select>
+              </Field>
+              {form.billingType === 'monthly' && (
+                <Field label="Valor mensal (R$)">
+                  <input
+                    type="number"
+                    value={form.monthlyValue}
+                    onChange={e => set('monthlyValue', e.target.value)}
+                    placeholder="Ex: 800"
+                    onFocus={focusStyle} onBlur={blurStyle}
+                    style={inputStyle}
+                    min="0"
+                  />
+                </Field>
+              )}
             </div>
           </div>
 
