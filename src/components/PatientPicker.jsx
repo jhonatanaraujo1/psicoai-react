@@ -49,7 +49,7 @@ export default function PatientPicker({ isOpen, onSelect, onCancel }) {
               Selecionar paciente
             </div>
             <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.5)', marginTop: '3px' }}>
-              Escolha o paciente para registrar a sessão de hoje
+              Escolha o paciente para iniciar as anotações
             </div>
           </div>
           <button

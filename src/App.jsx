@@ -565,7 +565,7 @@ export default function App() {
   const handleEndBackgroundById = async (bgSession) => {
     const ok = await confirm({
       title: 'Encerrar sessão?',
-      message: `A sessão de ${bgSession.patient?.name || 'paciente'} será encerrada. As anotações autosalvas ficam no prontuário.`,
+      message: `As anotações de ${bgSession.patient?.name || 'paciente'} serão encerradas. O conteúdo autosalvo fica no prontuário.`,
       confirmLabel: 'Encerrar',
       cancelLabel: 'Cancelar',
       danger: true,
