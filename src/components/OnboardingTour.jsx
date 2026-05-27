@@ -156,7 +156,7 @@ export default function OnboardingTour({ isOpen, onClose }) {
             height: rect.h + PAD * 2,
             borderRadius: RADIUS,
             zIndex: 798,
-            boxShadow: `0 0 0 ${spreadPx}px rgba(0,0,0,0.84)`,
+            boxShadow: `0 0 0 ${spreadPx}px rgba(0,0,0,0.60)`,
             border: '2px solid rgba(92,143,106,0.55)',
             pointerEvents: 'none',
             transition: 'left 0.28s ease, top 0.28s ease, width 0.28s ease, height 0.28s ease',
@@ -167,7 +167,7 @@ export default function OnboardingTour({ isOpen, onClose }) {
         <div
           style={{
             position: 'fixed', inset: 0, zIndex: 798,
-            background: 'rgba(0,0,0,0.84)',
+            background: 'rgba(0,0,0,0.60)',
           }}
           onClick={(e) => e.stopPropagation()}
         />
