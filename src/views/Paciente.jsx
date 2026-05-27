@@ -105,13 +105,16 @@ export default function Paciente({ patient: propPatient, setCurrentView, onSessa
   if (!p && !loading && !error) return null
 
   // Build timeline from sessions
-  const timelineDots = sessions.map(s => ({
-    evolution: s.evolution,
-    date: fmtMonthDay(s.finishedAt || s.createdAt),
-    num: s.num,
-    tip: `${s.num} — ${s.statusLabel}\n${s.summary?.slice(0, 60) || ''}`,
-    isOpen: s.status === 'open',
-  }))
+  const timelineDots = sessions.map((s, i) => {
+    const num = s.num ?? (i + 1)
+    return {
+      evolution: s.evolution,
+      date: fmtMonthDay(s.finishedAt || s.createdAt),
+      num,
+      tip: `Sessão ${num} — ${s.statusLabel || 'Finalizada'}\n${s.summary?.slice(0, 60) || ''}`,
+      isOpen: s.status === 'open',
+    }
+  })
 
   const formBadge = {
     answered: { bg: 'var(--g50)', color: 'var(--g600)', label: '✓ Preenchido' },
@@ -322,6 +325,7 @@ export default function Paciente({ patient: propPatient, setCurrentView, onSessa
               ))}
             </div>
             {sessions.map((s, i) => {
+              const sessionNum = s.num ?? (i + 1)
               const evColor = { green: '#27AE60', yellow: '#F39C12', red: '#E74C3C' }[s.evolution] || null
               const bs = badgeStyle(s.statusLabel)
               const isConfirmingDelete = sessionDeleteId === s.id
@@ -337,7 +341,7 @@ export default function Paciente({ patient: propPatient, setCurrentView, onSessa
                   >
                     <div style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
                       {evColor && <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: evColor, flexShrink: 0, display: 'inline-block' }} />}
-                      <span style={{ fontFamily: "'Fraunces', serif", fontSize: '14px', color: 'var(--d)' }}>{s.num}</span>
+                      <span style={{ fontFamily: "'Fraunces', serif", fontSize: '14px', color: 'var(--d)' }}>{sessionNum}</span>
                     </div>
                     {/* Type badge */}
                     <div>
@@ -467,7 +471,7 @@ export default function Paciente({ patient: propPatient, setCurrentView, onSessa
 
                   {isConfirmingDelete && (
                     <div style={{ background: 'var(--danger-l)', border: '1px solid #E8B4B0', borderRadius: 'var(--r)', margin: '0 20px 8px', padding: '10px 14px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                      <span style={{ fontSize: '12px', color: 'var(--danger)', flex: 1 }}>Excluir sessão {s.num}? Esta ação não pode ser desfeita.</span>
+                      <span style={{ fontSize: '12px', color: 'var(--danger)', flex: 1 }}>Excluir sessão {sessionNum}? Esta ação não pode ser desfeita.</span>
                       <button onClick={() => setSessionDeleteId(null)} style={{ ...btnSt, background: 'none', border: '1px solid var(--danger)', color: 'var(--danger)', fontSize: '11px', padding: '5px 10px' }}>Cancelar</button>
                       <button onClick={async () => {
                         try {

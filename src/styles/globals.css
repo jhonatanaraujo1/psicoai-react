@@ -11,7 +11,7 @@ button,a,label,[role=button],input,textarea,select,[contenteditable]{touch-actio
   --d:#1C1C1C;--d2:#2C2C2C;
   --gr5:#6B6B6B;--gr4:#8B8B8B;--gr2:#E8E5E0;--gr1:#F0EDE8;
   --warn:#C8860A;--warn-l:#FDF3DC;--danger:#B03A2E;--danger-l:#FDECEA;
-  --sh:0 2px 8px rgba(28,28,28,0.08);--sh2:0 6px 20px rgba(28,28,28,0.10);
+  --sh:0 2px 8px rgba(28,28,28,0.08);--sh1:0 4px 12px rgba(28,28,28,0.09);--sh2:0 6px 20px rgba(28,28,28,0.10);
   --r:10px;--r2:14px;--r3:20px;
   --sw:252px;--th:64px;
   --t:all 0.2s ease;
@@ -173,7 +173,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--ow);color:var(--d);displa
 .timeline-line{position:absolute;top:50%;left:0;right:0;height:2px;background:var(--gr2);transform:translateY(-50%)}
 .timeline-dots{display:flex;justify-content:space-between;position:relative;overflow-x:auto;gap:4px;padding-bottom:8px}
 .tl-dot{display:flex;flex-direction:column;align-items:center;gap:8px;cursor:pointer;flex-shrink:0;min-width:50px;position:relative}
-.tl-dot-circle{width:14px;height:14px;border-radius:50%;border:2px solid var(--w);box-shadow:0 0 0 2px currentColor;position:relative;z-index:1;transition:var(--t)}
+.tl-dot-circle{width:14px;height:14px;border-radius:50%;border:2px solid var(--w);box-shadow:0 0 0 2px var(--gr3);background:var(--gr3);position:relative;z-index:1;transition:var(--t)}
 .tl-dot:hover .tl-dot-circle{transform:scale(1.4)}
 .tl-dot.green .tl-dot-circle{background:#27AE60;color:#27AE60}
 .tl-dot.yellow .tl-dot-circle{background:#F39C12;color:#F39C12}
