@@ -270,6 +270,7 @@ export default function AnnotationSession({
   const [activePage, setActivePage] = useState(0)
   const [showAddMenu, setShowAddMenu] = useState(false)
   const addMenuRef = useRef(null)
+  const [sidebarTab, setSidebarTab] = useState('pages') // 'pages' | 'guide'
 
   // ── Estado do fluxo de análise ─────────────────────────────────────────────
   const [analysisStep, setAnalysisStep]         = useState('idle') // 'idle' | 'picker' | 'destination'
@@ -618,106 +619,145 @@ export default function AnnotationSession({
     if (isCanvas) {
       return (
         <>
-          {pages.map((p, i) => (
-            <button
-              key={p.id} data-thumb={i}
-              onClick={() => scrollToPage(i)}
-              style={{
-                width: '100%', border: 'none', cursor: 'pointer',
-                background: activePage === i ? 'rgba(74,124,89,0.3)' : 'transparent',
-                borderLeft: `2px solid ${activePage === i ? '#5C8F6A' : 'transparent'}`,
-                padding: '8px 0',
-                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
-                transition: 'background 0.15s',
-              }}
-              onMouseEnter={e => { if (activePage !== i) e.currentTarget.style.background = 'rgba(255,255,255,0.06)' }}
-              onMouseLeave={e => { if (activePage !== i) e.currentTarget.style.background = 'transparent' }}
-            >
-              <div style={{
-                width: 72, height: 102, background: '#fff', borderRadius: 2, overflow: 'hidden',
-                border: `1.5px solid ${activePage === i ? '#5C8F6A' : 'rgba(255,255,255,0.15)'}`,
-                flexShrink: 0,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-              }}>
-                {p.pageType === 'text'
-                  ? <div style={{ display: 'flex', flexDirection: 'column', gap: 4, padding: 8, width: '100%' }}>
-                      {[60, 80, 70, 50].map((w, j) => (
-                        <div key={j} style={{ height: 3, borderRadius: 2, background: '#E8E5E0', width: `${w}%` }} />
-                      ))}
-                    </div>
-                  : p.dataUrl
-                    ? <img src={p.dataUrl} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="" />
-                    : <div style={{ width: '100%', height: '100%', background: '#fff' }} />
-                }
-              </div>
-              <span style={{ fontSize: 10, color: activePage === i ? '#9DC4A8' : 'rgba(255,255,255,0.35)' }}>
-                {i + 1}
-              </span>
-            </button>
-          ))}
-          {/* Add page buttons — dois botões inline, sem popup, sem conflito de ref */}
-          <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
-            <button
-              onClick={() => addPage('draw')}
-              title="Nova página de desenho"
-              style={{
-                width: 44, height: 34,
-                border: '1.5px dashed rgba(255,255,255,0.2)',
-                borderRadius: 4, background: 'transparent',
-                color: 'rgba(255,255,255,0.35)', cursor: 'pointer',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                transition: 'all 0.15s', flexShrink: 0,
-              }}
-              onMouseEnter={e => { e.currentTarget.style.borderColor = '#5C8F6A'; e.currentTarget.style.color = '#5C8F6A'; e.currentTarget.style.background = 'rgba(74,124,89,0.12)' }}
-              onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)'; e.currentTarget.style.color = 'rgba(255,255,255,0.35)'; e.currentTarget.style.background = 'transparent' }}
-            >
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                <path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/>
-              </svg>
-            </button>
-            <button
-              onClick={() => addPage('text')}
-              title="Nova página de texto"
-              style={{
-                width: 44, height: 34,
-                border: '1.5px dashed rgba(255,255,255,0.2)',
-                borderRadius: 4, background: 'transparent',
-                color: 'rgba(255,255,255,0.35)', cursor: 'pointer',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                transition: 'all 0.15s', flexShrink: 0,
-              }}
-              onMouseEnter={e => { e.currentTarget.style.borderColor = '#5C8F6A'; e.currentTarget.style.color = '#5C8F6A'; e.currentTarget.style.background = 'rgba(74,124,89,0.12)' }}
-              onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)'; e.currentTarget.style.color = 'rgba(255,255,255,0.35)'; e.currentTarget.style.background = 'transparent' }}
-            >
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                <polyline points="14 2 14 8 20 8"/>
-                <line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="13" y2="17"/>
-              </svg>
-            </button>
+          {/* ── Tabs ── */}
+          <div style={{
+            display: 'flex', width: '100%', flexShrink: 0,
+            borderBottom: '1px solid rgba(255,255,255,0.08)',
+            marginBottom: 6,
+          }}>
+            {[
+              { id: 'pages', label: 'Páginas' },
+              { id: 'guide', label: 'Guia' },
+            ].map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => setSidebarTab(tab.id)}
+                style={{
+                  flex: 1, padding: '8px 0', border: 'none', cursor: 'pointer',
+                  background: 'transparent',
+                  fontSize: 10, fontWeight: 700, letterSpacing: '0.4px',
+                  color: sidebarTab === tab.id ? '#9DC4A8' : 'rgba(255,255,255,0.28)',
+                  borderBottom: `2px solid ${sidebarTab === tab.id ? '#5C8F6A' : 'transparent'}`,
+                  transition: 'color 0.15s, border-color 0.15s',
+                  fontFamily: "'DM Sans', sans-serif",
+                  textTransform: 'uppercase',
+                }}
+              >
+                {tab.label}
+              </button>
+            ))}
           </div>
-          {/* Guia de anotação — visível quando página ativa é de texto */}
-          {pages[activePage]?.pageType === 'text' && (
-            <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)', marginTop: 8, paddingTop: 8, width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, padding: '8px 6px 0' }}>
-              <div style={{ fontSize: 8, fontWeight: 700, color: 'rgba(255,255,255,0.28)', letterSpacing: '0.8px', textTransform: 'uppercase', marginBottom: 4 }}>
-                GUIA
+
+          {/* ── Tab: Páginas ── */}
+          {sidebarTab === 'pages' && (
+            <>
+              {pages.map((p, i) => (
+                <button
+                  key={p.id} data-thumb={i}
+                  onClick={() => scrollToPage(i)}
+                  style={{
+                    width: '100%', border: 'none', cursor: 'pointer',
+                    background: activePage === i ? 'rgba(74,124,89,0.3)' : 'transparent',
+                    borderLeft: `2px solid ${activePage === i ? '#5C8F6A' : 'transparent'}`,
+                    padding: '8px 0',
+                    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
+                    transition: 'background 0.15s',
+                  }}
+                  onMouseEnter={e => { if (activePage !== i) e.currentTarget.style.background = 'rgba(255,255,255,0.06)' }}
+                  onMouseLeave={e => { if (activePage !== i) e.currentTarget.style.background = 'transparent' }}
+                >
+                  <div style={{
+                    width: 72, height: 102, background: '#fff', borderRadius: 2, overflow: 'hidden',
+                    border: `1.5px solid ${activePage === i ? '#5C8F6A' : 'rgba(255,255,255,0.15)'}`,
+                    flexShrink: 0,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}>
+                    {p.pageType === 'text'
+                      ? <div style={{ display: 'flex', flexDirection: 'column', gap: 4, padding: 8, width: '100%' }}>
+                          {[60, 80, 70, 50].map((w, j) => (
+                            <div key={j} style={{ height: 3, borderRadius: 2, background: '#E8E5E0', width: `${w}%` }} />
+                          ))}
+                        </div>
+                      : p.dataUrl
+                        ? <img src={p.dataUrl} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="" />
+                        : <div style={{ width: '100%', height: '100%', background: '#fff' }} />
+                    }
+                  </div>
+                  <span style={{ fontSize: 10, color: activePage === i ? '#9DC4A8' : 'rgba(255,255,255,0.35)' }}>
+                    {i + 1}
+                  </span>
+                </button>
+              ))}
+
+              {/* Add page buttons */}
+              <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
+                <button
+                  onClick={() => addPage('draw')}
+                  title="Nova página de desenho"
+                  style={{
+                    width: 44, height: 34,
+                    border: '1.5px dashed rgba(255,255,255,0.2)',
+                    borderRadius: 4, background: 'transparent',
+                    color: 'rgba(255,255,255,0.35)', cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    transition: 'all 0.15s', flexShrink: 0,
+                  }}
+                  onMouseEnter={e => { e.currentTarget.style.borderColor = '#5C8F6A'; e.currentTarget.style.color = '#5C8F6A'; e.currentTarget.style.background = 'rgba(74,124,89,0.12)' }}
+                  onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)'; e.currentTarget.style.color = 'rgba(255,255,255,0.35)'; e.currentTarget.style.background = 'transparent' }}
+                >
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                    <path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/>
+                  </svg>
+                </button>
+                <button
+                  onClick={() => addPage('text')}
+                  title="Nova página de texto"
+                  style={{
+                    width: 44, height: 34,
+                    border: '1.5px dashed rgba(255,255,255,0.2)',
+                    borderRadius: 4, background: 'transparent',
+                    color: 'rgba(255,255,255,0.35)', cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    transition: 'all 0.15s', flexShrink: 0,
+                  }}
+                  onMouseEnter={e => { e.currentTarget.style.borderColor = '#5C8F6A'; e.currentTarget.style.color = '#5C8F6A'; e.currentTarget.style.background = 'rgba(74,124,89,0.12)' }}
+                  onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)'; e.currentTarget.style.color = 'rgba(255,255,255,0.35)'; e.currentTarget.style.background = 'transparent' }}
+                >
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                    <polyline points="14 2 14 8 20 8"/>
+                    <line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="13" y2="17"/>
+                  </svg>
+                </button>
               </div>
+            </>
+          )}
+
+          {/* ── Tab: Guia ── */}
+          {sidebarTab === 'guide' && (
+            <div style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, padding: '4px 6px 0' }}>
               {GUIDE.map(g => (
                 <button key={g.label} title={g.hint}
-                  onClick={() => { insertGuideSection(g.label); if (isOverlaySidebar) setSidebarOpen(false) }}
+                  onClick={() => {
+                    insertGuideSection(g.label)
+                    if (isOverlaySidebar) setSidebarOpen(false)
+                  }}
                   style={{
                     background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.07)',
-                    borderRadius: 6, padding: '5px 6px', cursor: 'pointer',
+                    borderRadius: 8, padding: '8px 8px', cursor: 'pointer',
                     textAlign: 'left', fontFamily: "'DM Sans', sans-serif", width: '100%',
                     transition: 'background 0.15s',
                   }}
                   onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.12)'}
                   onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
                 >
-                  <div style={{ fontSize: 11 }}>{g.icon}</div>
-                  <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.6)', lineHeight: 1.3, fontWeight: 500, marginTop: 2 }}>{g.label}</div>
+                  <div style={{ fontSize: 14, marginBottom: 3 }}>{g.icon}</div>
+                  <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.65)', lineHeight: 1.4, fontWeight: 500 }}>{g.label}</div>
                 </button>
               ))}
+              <div style={{ marginTop: 8, fontSize: 9, color: 'rgba(255,255,255,0.2)', textAlign: 'center', lineHeight: 1.5, padding: '0 4px' }}>
+                Toque num item para inserir na página de texto ativa
+              </div>
             </div>
           )}
         </>
