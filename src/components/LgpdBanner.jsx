@@ -8,9 +8,7 @@ export default function LgpdBanner() {
   useEffect(() => {
     try {
       if (!localStorage.getItem(STORAGE_KEY)) setVisible(true)
-    } catch {
-      // localStorage bloqueado (modo privado restrito) — não mostrar
-    }
+    } catch { /* localStorage bloqueado */ }
   }, [])
 
   const accept = () => {
@@ -21,73 +19,100 @@ export default function LgpdBanner() {
   if (!visible) return null
 
   return (
-    <div
-      role="dialog"
-      aria-label="Aviso de privacidade LGPD"
-      style={{
-        position: 'fixed',
-        bottom: 0,
-        left: 0,
-        right: 0,
-        zIndex: 9999,
-        background: 'var(--d)',
-        color: 'rgba(255,255,255,0.85)',
-        padding: '14px 20px',
-        display: 'flex',
-        alignItems: 'center',
-        gap: '16px',
-        flexWrap: 'wrap',
-        boxShadow: '0 -4px 24px rgba(0,0,0,0.25)',
-        fontSize: '12px',
-        lineHeight: 1.6,
-      }}
-    >
-      <div style={{ flex: 1, minWidth: '260px' }}>
-        <strong style={{ color: '#fff', display: 'block', marginBottom: '2px' }}>
-          Privacidade e proteção de dados
-        </strong>
-        Este sistema armazena dados clínicos de pacientes para fins de registro de prontuário eletrônico, conforme{' '}
-        <strong style={{ color: 'rgba(255,255,255,0.9)' }}>Resolução CFP 09/2024</strong> e{' '}
-        <strong style={{ color: 'rgba(255,255,255,0.9)' }}>LGPD (Lei 13.709/2018)</strong>.
-        O acesso é restrito ao profissional titular e os dados são criptografados em trânsito e em repouso.
-        Ao continuar, você confirma que está ciente das responsabilidades sobre os dados dos seus pacientes.
+    <>
+      <style>{`
+        @keyframes lgpd-up {
+          from { transform: translateY(100%); opacity: 0 }
+          to   { transform: translateY(0);    opacity: 1 }
+        }
+      `}</style>
+      <div
+        role="dialog"
+        aria-label="Aviso de privacidade LGPD"
+        style={{
+          position: 'fixed',
+          bottom: 0,
+          left: 0,
+          right: 0,
+          /* abaixo do OnboardingTour (z=800) mas acima do conteúdo normal */
+          zIndex: 798,
+          background: 'rgba(18, 26, 18, 0.97)',
+          backdropFilter: 'blur(12px)',
+          WebkitBackdropFilter: 'blur(12px)',
+          borderTop: '1px solid rgba(255,255,255,0.07)',
+          /* sobe acima da bottom-nav no mobile */
+          paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 56px)',
+          animation: 'lgpd-up 0.28s cubic-bezier(0.4,0,0.2,1)',
+        }}
+      >
+        {/* Container inline — single row */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 10,
+          padding: '10px 14px',
+          fontFamily: "'DM Sans', sans-serif",
+        }}>
+          {/* Lock icon */}
+          <div style={{
+            width: 28, height: 28, borderRadius: 8,
+            background: 'rgba(92,143,106,0.18)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            flexShrink: 0,
+          }}>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#5C8F6A" strokeWidth="2.2">
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+              <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+            </svg>
+          </div>
+
+          {/* Text */}
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)', lineHeight: 1.3, display: 'block' }}>
+              <strong style={{ color: 'rgba(255,255,255,0.85)', fontWeight: 600 }}>Dados protegidos</strong>
+              {' '}· CFP 09/2024 · LGPD 13.709/2018 · criptografados em trânsito e repouso
+            </span>
+          </div>
+
+          {/* Política link */}
+          <a
+            href="/politica-privacidade"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              fontSize: 10, color: 'rgba(255,255,255,0.28)',
+              textDecoration: 'underline', flexShrink: 0,
+              whiteSpace: 'nowrap',
+            }}
+          >
+            Política
+          </a>
+
+          {/* CTA */}
+          <button
+            onClick={accept}
+            style={{
+              background: '#4A7C59',
+              color: '#fff',
+              border: 'none',
+              padding: '7px 16px',
+              borderRadius: 20,
+              fontSize: 11,
+              fontWeight: 700,
+              cursor: 'pointer',
+              fontFamily: "'DM Sans', sans-serif",
+              flexShrink: 0,
+              whiteSpace: 'nowrap',
+              letterSpacing: '0.2px',
+              transition: 'background 0.15s',
+            }}
+            onMouseEnter={e => e.currentTarget.style.background = '#3D6B4A'}
+            onMouseLeave={e => e.currentTarget.style.background = '#4A7C59'}
+          >
+            Entendido
+          </button>
+        </div>
       </div>
-      <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
-        <a
-          href="/politica-privacidade"
-          target="_blank"
-          rel="noopener noreferrer"
-          style={{
-            fontSize: '11px',
-            color: 'rgba(255,255,255,0.55)',
-            textDecoration: 'underline',
-            cursor: 'pointer',
-            whiteSpace: 'nowrap',
-            alignSelf: 'center',
-          }}
-        >
-          Política de Privacidade
-        </a>
-        <button
-          onClick={accept}
-          style={{
-            background: 'var(--g500)',
-            color: '#fff',
-            border: 'none',
-            padding: '9px 20px',
-            borderRadius: 'var(--r)',
-            fontSize: '12px',
-            fontWeight: 700,
-            cursor: 'pointer',
-            fontFamily: "'DM Sans', sans-serif",
-            whiteSpace: 'nowrap',
-          }}
-          onMouseEnter={e => e.currentTarget.style.background = 'var(--g600)'}
-          onMouseLeave={e => e.currentTarget.style.background = 'var(--g500)'}
-        >
-          Entendido
-        </button>
-      </div>
-    </div>
+    </>
   )
 }

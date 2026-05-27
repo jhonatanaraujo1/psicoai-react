@@ -872,6 +872,32 @@ body{font-family:'DM Sans',sans-serif;background:var(--ow);color:var(--d);displa
 .qnm-chip:hover{background:var(--g50);border-color:var(--g200)}
 .qnm-chip:active{background:var(--g100)}
 
+/* ── Agenda: empty slot clickable ─────────────────────────────────────────── */
+.agenda-slot-empty{cursor:pointer}
+.agenda-slot-plus{
+  position:absolute;inset:0;
+  display:flex;align-items:center;justify-content:center;
+  opacity:0;transition:opacity 0.15s;
+  color:var(--g400);
+}
+.agenda-slot-empty:hover .agenda-slot-plus{opacity:1}
+.agenda-slot-empty:hover{background:var(--g50) !important}
+
+/* ── Agenda: view label — hide text on narrow mobile ───────────────────────── */
+@media(max-width:440px){
+  .agenda-view-label{display:none}
+}
+
+/* ── iOS PWA: momentum scroll on all scrollable areas ──────────────────────── */
+.content,.ai-drawer-body,.as-main,.as-sidebar{
+  -webkit-overflow-scrolling:touch;
+}
+
+/* ── Content bottom-safe-area on mobile — add extra buffer  ────────────────── */
+@media(max-width:640px){
+  .content{padding-bottom:calc(64px + env(safe-area-inset-bottom,0px))}
+}
+
 /* ── Grace (inadimplência) banner ────────────────────────────────────────────
    z-index 10001: above .bottom-nav (9999) and .sidebar (100)
    On mobile: floats above the bottom navigation bar                          */

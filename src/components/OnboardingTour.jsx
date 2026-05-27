@@ -1,202 +1,145 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 
-// ── Slide definitions ────────────────────────────────────────────────────────
+// ── 5 slides — cada um cabe sem scroll em qualquer phone ─────────────────────
 const SLIDES = [
   {
     id: 'welcome',
-    bg: 'linear-gradient(135deg, #1E3328 0%, #3D6B4A 100%)',
-    iconBg: 'rgba(255,255,255,0.15)',
+    gradient: ['#162218', '#2D4A38', '#1E3328'],
+    iconBg: 'rgba(92,143,106,0.22)',
     icon: (
-      <svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.95)" strokeWidth="1.4">
-        <circle cx="12" cy="12" r="10"/>
-        <path d="M12 8v4l3 3"/>
-        <path d="M2 12h2M20 12h2M12 2v2M12 20v2"/>
-      </svg>
+      <span style={{
+        fontFamily: "'Fraunces', serif",
+        fontSize: 54, color: 'rgba(255,255,255,0.95)',
+        lineHeight: 1, display: 'block',
+      }}>Ψ</span>
     ),
-    badge: 'Bem-vindo',
-    title: 'Seu assistente de raciocínio clínico',
-    desc: 'O PsicoAI combina prontuário eletrônico, IA clínica e ferramentas de sessão em um ambiente seguro, projetado exclusivamente para psicólogos.',
-    bullets: [
-      { icon: '◉', text: 'Hipóteses diagnósticas DSM-5 e CID-11 com probabilidade ponderada' },
-      { icon: '◈', text: 'Alertas automáticos de padrões: evitação, ruminação, risco de crise' },
-      { icon: '◇', text: 'Conformidade total CFP Resolução 09/2024 · dados criptografados' },
-    ],
-  },
-  {
-    id: 'dashboard',
-    bg: 'linear-gradient(135deg, #2D4A38 0%, #4A7C59 100%)',
-    iconBg: 'rgba(255,255,255,0.15)',
-    icon: (
-      <svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.95)" strokeWidth="1.4">
-        <rect x="3" y="3" width="7" height="7" rx="1"/>
-        <rect x="14" y="3" width="7" height="7" rx="1"/>
-        <rect x="3" y="14" width="7" height="7" rx="1"/>
-        <rect x="14" y="14" width="7" height="7" rx="1"/>
-      </svg>
-    ),
-    badge: 'Dashboard',
-    title: 'Visão completa da sua prática',
-    desc: 'Cada vez que você abre o PsicoAI, o Dashboard resume o estado atual da sua clínica: agenda do dia, sessões recentes, alertas e métricas que importam.',
-    bullets: [
-      { icon: '→', text: 'Agenda do dia com horários, pacientes e tipo de sessão' },
-      { icon: '→', text: 'Alertas clínicos ativos — quem precisa de atenção agora' },
-      { icon: '→', text: 'Atalho direto para iniciar qualquer sessão com um clique' },
-    ],
+    badge: 'PsicoAI',
+    title: 'Seu segundo olhar clínico',
+    desc: 'O único assistente de raciocínio clínico para psicólogos. Hipóteses DSM-5 e alertas de risco — direto das suas anotações.',
+    cta: 'Mostrar como funciona',
   },
   {
     id: 'patients',
-    bg: 'linear-gradient(135deg, #3D6B4A 0%, #5C8F6A 100%)',
-    iconBg: 'rgba(255,255,255,0.15)',
+    gradient: ['#1A2E22', '#3D6B4A', '#2D4A38'],
+    iconBg: 'rgba(255,255,255,0.12)',
     icon: (
-      <svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.95)" strokeWidth="1.4">
+      <svg width="52" height="52" viewBox="0 0 24 24" fill="none"
+        stroke="rgba(255,255,255,0.95)" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round">
         <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
         <circle cx="9" cy="7" r="4"/>
-        <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
-        <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+        <path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>
       </svg>
     ),
-    badge: 'Pacientes',
-    title: 'Prontuário clínico que evolui com você',
-    desc: 'Cada paciente tem um prontuário completo com dados clínicos, histórico de sessões, linha do tempo de evolução, notas e relatórios de IA acumulados ao longo do tempo.',
-    bullets: [
-      { icon: '→', text: 'Cadastro completo: queixa, CID-11, abordagem, frequência, valor' },
-      { icon: '→', text: 'Timeline de sessões com marcos, hipóteses e evolução visual' },
-      { icon: '→', text: 'Notas livres com salvamento automático — nunca perde rascunhos' },
-    ],
+    badge: 'Prontuário',
+    title: 'Cada paciente, uma história viva',
+    desc: 'Linha do tempo de evolução, relatórios de IA acumulados e histórico completo — tudo no mesmo lugar.',
+    cta: 'Próximo',
   },
   {
     id: 'session',
-    bg: 'linear-gradient(135deg, #1E3328 0%, #2D4A38 100%)',
-    iconBg: 'rgba(255,255,255,0.15)',
+    gradient: ['#243828', '#4A7C59', '#1E3328'],
+    iconBg: 'rgba(255,255,255,0.12)',
     icon: (
-      <svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.95)" strokeWidth="1.4">
+      <svg width="52" height="52" viewBox="0 0 24 24" fill="none"
+        stroke="rgba(255,255,255,0.95)" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round">
         <path d="M12 20h9"/>
         <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
       </svg>
     ),
     badge: 'Sessões',
-    title: 'Registre a sessão do jeito que pensa',
-    desc: 'Dois modos de registro adaptados ao seu estilo: Canvas livre para desenhar e escrever à mão, ou Texto estruturado para anotações organizadas por categorias clínicas.',
-    bullets: [
-      { icon: '→', text: 'Canvas: canetinhas, formas, texto livre — ideal para mapas mentais' },
-      { icon: '→', text: 'Texto: campos estruturados por queixa, intervenção e resposta' },
-      { icon: '→', text: 'Ao encerrar, a IA gera análise automática com hipóteses e alertas' },
-    ],
+    title: 'Anote do jeito que você pensa',
+    desc: 'Canvas livre para escrever à mão ou texto estruturado. Ao encerrar, a IA analisa e devolve insights clínicos.',
+    cta: 'Próximo',
   },
   {
     id: 'ai',
-    bg: 'linear-gradient(135deg, #2D4A38 0%, #5C8F6A 100%)',
-    iconBg: 'rgba(255,255,255,0.15)',
+    gradient: ['#162218', '#2D4A38', '#4A7C59'],
+    iconBg: 'rgba(255,255,255,0.12)',
     icon: (
-      <svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.95)" strokeWidth="1.4">
-        <circle cx="12" cy="12" r="3"/>
-        <path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/>
+      <svg width="52" height="52" viewBox="0 0 24 24" fill="none"
+        stroke="rgba(255,255,255,0.95)" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round">
+        <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
       </svg>
     ),
-    badge: 'Análise IA',
-    title: 'Raciocínio clínico aumentado por IA',
-    desc: 'Ao encerrar cada sessão, a IA analisa as anotações e gera um relatório clínico completo — hipóteses com probabilidade, padrões detectados, alertas de risco e sugestões para a próxima sessão.',
-    bullets: [
-      { icon: '→', text: 'Hipóteses diagnósticas com probabilidade ponderada (DSM-5 e CID-11)' },
-      { icon: '→', text: 'Padrões comportamentais: evitação, ruminação, hipervigilância' },
-      { icon: '→', text: 'Alertas graduados (baixo → crítico) com contexto clínico explicado' },
-    ],
-  },
-  {
-    id: 'insights',
-    bg: 'linear-gradient(135deg, #3D6B4A 0%, #1E3328 100%)',
-    iconBg: 'rgba(255,255,255,0.15)',
-    icon: (
-      <svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.95)" strokeWidth="1.4">
-        <line x1="18" y1="20" x2="18" y2="10"/>
-        <line x1="12" y1="20" x2="12" y2="4"/>
-        <line x1="6" y1="20" x2="6" y2="14"/>
-        <line x1="2" y1="20" x2="22" y2="20"/>
-      </svg>
-    ),
-    badge: 'Inteligência Clínica',
-    title: 'Inteligência da sua carteira inteira',
-    desc: 'A seção Inteligência Clínica agrega as análises de todos os pacientes e revela padrões da sua prática: hipóteses mais frequentes, alertas ativos, cobertura de análise e evolução geral.',
-    bullets: [
-      { icon: '→', text: 'Mapa de padrões da carteira: evitação, ruminação, isolamento e mais' },
-      { icon: '→', text: 'Hipóteses diagnósticas mais frequentes com taxa de ocorrência' },
-      { icon: '→', text: 'Clique em qualquer paciente para abrir o relatório de IA completo' },
-    ],
-  },
-  {
-    id: 'agenda',
-    bg: 'linear-gradient(135deg, #1E3328 0%, #4A7C59 100%)',
-    iconBg: 'rgba(255,255,255,0.15)',
-    icon: (
-      <svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.95)" strokeWidth="1.4">
-        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
-        <line x1="16" y1="2" x2="16" y2="6"/>
-        <line x1="8" y1="2" x2="8" y2="6"/>
-        <line x1="3" y1="10" x2="21" y2="10"/>
-      </svg>
-    ),
-    badge: 'Agenda & Financeiro',
-    title: 'Gestão completa em um único lugar',
-    desc: 'A Agenda integra seus compromissos com os pacientes e links de teleatendimento. O módulo Financeiro rastreia sessões, pagamentos e gera relatórios de receita mensais.',
-    bullets: [
-      { icon: '→', text: 'Calendário semanal com visualização de slots e horários livres' },
-      { icon: '→', text: 'Controle de sessões pagas, pendentes e recibos automáticos' },
-      { icon: '→', text: 'Lembretes automáticos por e-mail ou WhatsApp para seus pacientes' },
-    ],
+    badge: 'IA Clínica',
+    title: 'Hipóteses em segundos',
+    desc: 'Acione quando quiser. Padrões de comportamento, alertas graduados e hipóteses ponderadas pelo DSM-5 e CID-11.',
+    cta: 'Próximo',
   },
   {
     id: 'ready',
-    bg: 'linear-gradient(135deg, #2D4A38 0%, #3D6B4A 100%)',
-    iconBg: 'rgba(255,255,255,0.18)',
+    gradient: ['#1A3024', '#3D6B4A', '#2D4A38'],
+    iconBg: 'rgba(255,255,255,0.14)',
     icon: (
-      <svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.95)" strokeWidth="1.4">
+      <svg width="52" height="52" viewBox="0 0 24 24" fill="none"
+        stroke="rgba(255,255,255,0.95)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <polyline points="20 6 9 17 4 12"/>
       </svg>
     ),
     badge: 'Pronto!',
-    title: 'Você está pronto para começar',
-    desc: 'Agora você conhece todas as ferramentas. Recomendamos começar pelo Dashboard e, depois, cadastrar seu primeiro paciente e registrar uma sessão.',
-    bullets: [
-      { icon: '1.', text: 'Acesse o Dashboard e veja seu panorama clínico de hoje' },
-      { icon: '2.', text: 'Cadastre o primeiro paciente em Pacientes → Novo Paciente' },
-      { icon: '3.', text: 'Inicie uma sessão e deixe a IA gerar sua primeira análise' },
-    ],
+    title: 'Você está a 3 cliques do primeiro insight',
+    desc: 'Cadastre um paciente → registre uma sessão → acione a IA. Começa aqui.',
+    cta: 'Começar a usar',
+    isLast: true,
   },
 ]
 
-// ── Dot nav ──────────────────────────────────────────────────────────────────
+// ── Dot indicator ─────────────────────────────────────────────────────────────
 function Dots({ total, current, onGo }) {
   return (
-    <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+    <div style={{ display: 'flex', gap: 6, alignItems: 'center', justifyContent: 'center' }}>
       {Array.from({ length: total }).map((_, i) => (
-        <button key={i} onClick={() => onGo(i)}
-          style={{ width: i === current ? '20px' : '7px', height: '7px', borderRadius: '4px', background: i === current ? '#fff' : 'rgba(255,255,255,0.35)', border: 'none', cursor: 'pointer', padding: 0, transition: 'all 0.25s' }} />
+        <button
+          key={i}
+          onClick={() => onGo(i)}
+          aria-label={`Slide ${i + 1}`}
+          style={{
+            width: i === current ? 22 : 7,
+            height: 7,
+            borderRadius: 4,
+            background: i === current ? '#fff' : 'rgba(255,255,255,0.28)',
+            border: 'none', cursor: 'pointer', padding: 0,
+            transition: 'all 0.28s cubic-bezier(0.4,0,0.2,1)',
+          }}
+        />
       ))}
     </div>
   )
 }
 
-// ── Main component ───────────────────────────────────────────────────────────
+// ── Main ──────────────────────────────────────────────────────────────────────
 export default function OnboardingTour({ isOpen, onClose }) {
-  const [idx, setIdx] = useState(0)
-  const [sliding, setSliding] = useState(false)
-  const [dir, setDir] = useState(1) // 1 = forward, -1 = back
+  const [idx, setIdx]         = useState(0)
+  const [anim, setAnim]       = useState('in')   // 'in' | 'out-left' | 'out-right'
+  const [dir, setDir]         = useState(1)       // 1 = forward, -1 = back
+  const touchX                = useRef(0)
+  const touchY                = useRef(0)
+  const animLock              = useRef(false)
+
+  // Reset when opened
+  useEffect(() => { if (isOpen) { setIdx(0); setAnim('in') } }, [isOpen])
 
   if (!isOpen) return null
 
-  const slide = SLIDES[idx]
-  const isLast = idx === SLIDES.length - 1
+  const slide  = SLIDES[idx]
+  const isLast = !!slide.isLast
 
-  const goTo = (nextIdx) => {
-    if (sliding || nextIdx === idx) return
-    setDir(nextIdx > idx ? 1 : -1)
-    setSliding(true)
-    setTimeout(() => { setIdx(nextIdx); setSliding(false) }, 200)
+  const goTo = (nextIdx, direction = nextIdx > idx ? 1 : -1) => {
+    if (animLock.current || nextIdx === idx || nextIdx < 0 || nextIdx >= SLIDES.length) return
+    animLock.current = true
+    setDir(direction)
+    setAnim(direction > 0 ? 'out-left' : 'out-right')
+    setTimeout(() => {
+      setIdx(nextIdx)
+      setAnim('in')
+      animLock.current = false
+    }, 230)
   }
-  const next = () => !isLast && goTo(idx + 1)
-  const prev = () => idx > 0 && goTo(idx - 1)
 
-  const dismiss = (permanent) => {
+  const next = () => goTo(idx + 1, 1)
+  const prev = () => goTo(idx - 1, -1)
+
+  const dismiss = (permanent = false) => {
     if (permanent) localStorage.setItem('psicoai_onboarding_seen', 'true')
     setIdx(0)
     onClose()
@@ -208,139 +151,255 @@ export default function OnboardingTour({ isOpen, onClose }) {
     onClose()
   }
 
+  // Touch swipe
+  const onTouchStart = (e) => {
+    touchX.current = e.touches[0].clientX
+    touchY.current = e.touches[0].clientY
+  }
+  const onTouchEnd = (e) => {
+    const dx = e.changedTouches[0].clientX - touchX.current
+    const dy = e.changedTouches[0].clientY - touchY.current
+    if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 44) {
+      if (dx < 0 && !isLast) next()
+      else if (dx > 0 && idx > 0) prev()
+    }
+  }
+
+  // Animated content transform
+  const contentTransform = {
+    'in':        { opacity: 1, transform: 'translateX(0)' },
+    'out-left':  { opacity: 0, transform: dir > 0 ? 'translateX(-40px)' : 'translateX(40px)' },
+    'out-right': { opacity: 0, transform: dir > 0 ? 'translateX(-40px)' : 'translateX(40px)' },
+  }[anim]
+
+  const bg = `linear-gradient(160deg, ${slide.gradient[0]} 0%, ${slide.gradient[1]} 55%, ${slide.gradient[2]} 100%)`
+
   return (
-    <div style={{
-      position: 'fixed', inset: 0, zIndex: 800,
-      background: 'rgba(10,15,10,0.75)',
-      backdropFilter: 'blur(4px)',
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      padding: '16px',
-      fontFamily: "'DM Sans', sans-serif",
-    }}>
-      {/* Card */}
+    <>
+      <style>{`
+        @keyframes ob-in  { from{opacity:0;transform:translateY(18px)} to{opacity:1;transform:translateY(0)} }
+        @keyframes ob-bg  { from{opacity:0} to{opacity:1} }
+        .ob-root { animation: ob-in 0.32s cubic-bezier(0.4,0,0.2,1) }
+      `}</style>
+
+      {/* Backdrop */}
       <div style={{
-        width: '100%', maxWidth: '520px',
-        background: 'var(--w)',
-        borderRadius: '20px',
-        overflow: 'hidden',
-        boxShadow: '0 32px 80px rgba(0,0,0,0.35)',
-        maxHeight: '90vh',
-        display: 'flex', flexDirection: 'column',
+        position: 'fixed', inset: 0, zIndex: 800,
+        background: 'rgba(5,12,6,0.65)',
+        backdropFilter: 'blur(6px)',
+        WebkitBackdropFilter: 'blur(6px)',
+        display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
+        fontFamily: "'DM Sans', sans-serif",
+        animation: 'ob-bg 0.25s ease',
       }}>
 
-        {/* Hero band */}
-        <div style={{
-          background: slide.bg,
-          padding: '32px 28px 28px',
-          flexShrink: 0,
-          transition: 'background 0.4s',
-          position: 'relative',
-        }}>
-          {/* Close X */}
-          <button onClick={() => dismiss(false)} style={{ position: 'absolute', top: '16px', right: '16px', background: 'rgba(255,255,255,0.15)', border: 'none', color: 'rgba(255,255,255,0.85)', width: '30px', height: '30px', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', transition: 'background 0.15s' }}
-            onMouseOver={e => e.currentTarget.style.background = 'rgba(255,255,255,0.25)'}
-            onMouseOut={e => e.currentTarget.style.background = 'rgba(255,255,255,0.15)'}>
-            ✕
-          </button>
-
-          {/* Progress: slide X de Y */}
-          <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.5)', marginBottom: '20px', fontWeight: 600, letterSpacing: '0.5px' }}>
-            {idx + 1} DE {SLIDES.length}
-          </div>
-
-          {/* Icon */}
+        {/* Sheet — full-width bottom sheet on mobile, centered card on desktop */}
+        <div
+          className="ob-root"
+          onTouchStart={onTouchStart}
+          onTouchEnd={onTouchEnd}
+          style={{
+            width: '100%',
+            maxWidth: 520,
+            borderRadius: '24px 24px 0 0',
+            overflow: 'hidden',
+            boxShadow: '0 -8px 60px rgba(0,0,0,0.5)',
+            display: 'flex',
+            flexDirection: 'column',
+            maxHeight: '92dvh',
+            /* on larger screens, make it a card */
+            margin: '0 auto',
+          }}
+        >
+          {/* ── Hero band ──────────────────────────────────────── */}
           <div style={{
-            width: '80px', height: '80px', borderRadius: '20px',
-            background: slide.iconBg,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            marginBottom: '20px',
-            opacity: sliding ? 0 : 1,
-            transform: sliding ? `translateX(${dir * 24}px)` : 'translateX(0)',
-            transition: 'opacity 0.18s, transform 0.18s',
+            background: bg,
+            transition: 'background 0.4s ease',
+            padding: '28px 28px 32px',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            textAlign: 'center',
+            position: 'relative',
+            flexShrink: 0,
           }}>
-            {slide.icon}
+            {/* Skip button — top right */}
+            <button
+              onClick={() => dismiss(true)}
+              style={{
+                position: 'absolute', top: 16, right: 16,
+                background: 'rgba(255,255,255,0.1)',
+                border: 'none', color: 'rgba(255,255,255,0.55)',
+                padding: '5px 12px', borderRadius: 20,
+                fontSize: 11, fontWeight: 600,
+                cursor: 'pointer',
+                letterSpacing: '0.3px',
+                fontFamily: "'DM Sans', sans-serif",
+                transition: 'background 0.15s',
+              }}
+              onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.18)'}
+              onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'}
+            >
+              Pular
+            </button>
+
+            {/* Counter */}
+            <div style={{
+              fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.38)',
+              letterSpacing: '1.2px', marginBottom: 24,
+              alignSelf: 'flex-start',
+            }}>
+              {idx + 1} / {SLIDES.length}
+            </div>
+
+            {/* Icon circle */}
+            <div
+              style={{
+                width: 100, height: 100, borderRadius: '50%',
+                background: slide.iconBg,
+                border: '1.5px solid rgba(255,255,255,0.12)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                marginBottom: 24,
+                transition: 'opacity 0.22s, transform 0.22s',
+                ...contentTransform,
+              }}
+            >
+              {slide.icon}
+            </div>
+
+            {/* Badge */}
+            <div style={{
+              background: 'rgba(255,255,255,0.14)',
+              border: '1px solid rgba(255,255,255,0.1)',
+              borderRadius: 20,
+              padding: '4px 14px',
+              fontSize: 10, fontWeight: 700,
+              color: 'rgba(255,255,255,0.75)',
+              letterSpacing: '1px', textTransform: 'uppercase',
+              marginBottom: 14,
+              transition: 'opacity 0.22s',
+              opacity: contentTransform.opacity,
+            }}>
+              {slide.badge}
+            </div>
+
+            {/* Title */}
+            <div style={{
+              fontFamily: "'Fraunces', serif",
+              fontSize: 26, fontWeight: 400,
+              color: '#fff',
+              lineHeight: 1.2,
+              letterSpacing: '-0.3px',
+              maxWidth: 340,
+              transition: 'opacity 0.22s, transform 0.22s',
+              ...contentTransform,
+            }}>
+              {slide.title}
+            </div>
+
+            {/* Dots */}
+            <div style={{ marginTop: 24 }}>
+              <Dots total={SLIDES.length} current={idx} onGo={goTo} />
+            </div>
           </div>
 
-          {/* Badge */}
-          <div style={{ display: 'inline-flex', alignItems: 'center', background: 'rgba(255,255,255,0.15)', borderRadius: '20px', padding: '3px 10px', fontSize: '11px', fontWeight: 700, color: 'rgba(255,255,255,0.85)', letterSpacing: '0.5px', textTransform: 'uppercase', marginBottom: '10px', opacity: sliding ? 0 : 1, transition: 'opacity 0.18s' }}>
-            {slide.badge}
+          {/* ── Body ────────────────────────────────────────────── */}
+          <div style={{
+            background: 'var(--w, #fff)',
+            padding: '24px 28px 0',
+            flexShrink: 0,
+          }}>
+            <p style={{
+              fontSize: 14, color: 'var(--gr5, #6B6B6B)',
+              lineHeight: 1.65, margin: 0,
+              transition: 'opacity 0.22s, transform 0.22s',
+              ...contentTransform,
+            }}>
+              {slide.desc}
+            </p>
           </div>
 
-          {/* Title */}
-          <div style={{ fontFamily: "'Fraunces', serif", fontSize: '22px', fontWeight: 400, color: '#fff', lineHeight: 1.3, opacity: sliding ? 0 : 1, transform: sliding ? `translateX(${dir * 16}px)` : 'translateX(0)', transition: 'opacity 0.18s, transform 0.18s' }}>
-            {slide.title}
-          </div>
-
-          {/* Dots */}
-          <div style={{ marginTop: '20px' }}>
-            <Dots total={SLIDES.length} current={idx} onGo={goTo} />
-          </div>
-        </div>
-
-        {/* Content */}
-        <div style={{
-          padding: '24px 28px 20px',
-          flex: 1,
-          overflowY: 'auto',
-          opacity: sliding ? 0 : 1,
-          transform: sliding ? `translateX(${dir * 16}px)` : 'translateX(0)',
-          transition: 'opacity 0.18s, transform 0.18s',
-        }}>
-          {/* Description */}
-          <p style={{ fontSize: '14px', color: 'var(--gr5)', lineHeight: 1.65, margin: '0 0 20px' }}>
-            {slide.desc}
-          </p>
-
-          {/* Bullets */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            {slide.bullets.map((b, i) => (
-              <div key={i} style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
-                <div style={{ width: '24px', height: '24px', borderRadius: '6px', background: 'var(--g50)', border: '1px solid var(--g100)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 700, color: 'var(--g600)', flexShrink: 0, marginTop: '1px' }}>
-                  {b.icon}
-                </div>
-                <span style={{ fontSize: '13px', color: 'var(--d)', lineHeight: 1.55 }}>{b.text}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Footer */}
-        <div style={{ padding: '16px 28px 20px', borderTop: '1px solid var(--gr2)', display: 'flex', alignItems: 'center', gap: '12px', flexShrink: 0 }}>
-          {/* "Não mostrar" link */}
-          <button onClick={() => dismiss(true)}
-            style={{ fontSize: '12px', color: 'var(--gr4)', background: 'none', border: 'none', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", padding: 0, flex: 1, textAlign: 'left', textDecoration: 'underline', textDecorationColor: 'var(--gr3)' }}>
-            Não exibir este guia novamente
-          </button>
-
-          {/* Nav buttons */}
-          <div style={{ display: 'flex', gap: '8px' }}>
-            {idx > 0 && (
-              <button onClick={prev}
-                style={{ padding: '10px 16px', border: '1px solid var(--gr2)', borderRadius: 'var(--r)', background: 'var(--w)', fontSize: '13px', fontWeight: 500, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", color: 'var(--gr5)', transition: 'all 0.15s' }}
-                onMouseOver={e => { e.currentTarget.style.borderColor = 'var(--g300)'; e.currentTarget.style.color = 'var(--g600)' }}
-                onMouseOut={e => { e.currentTarget.style.borderColor = 'var(--gr2)'; e.currentTarget.style.color = 'var(--gr5)' }}>
-                Anterior
-              </button>
-            )}
-            {isLast ? (
-              <button onClick={finish}
-                style={{ padding: '10px 22px', border: 'none', borderRadius: 'var(--r)', background: 'var(--g600)', color: '#fff', fontSize: '13px', fontWeight: 600, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", transition: 'background 0.15s', display: 'flex', alignItems: 'center', gap: '6px' }}
-                onMouseOver={e => e.currentTarget.style.background = 'var(--g700)'}
-                onMouseOut={e => e.currentTarget.style.background = 'var(--g600)'}>
-                Começar a usar o PsicoAI
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+          {/* ── Footer ───────────────────────────────────────────── */}
+          <div style={{
+            background: 'var(--w, #fff)',
+            padding: '20px 28px',
+            paddingBottom: 'max(20px, env(safe-area-inset-bottom, 0px))',
+            display: 'flex', alignItems: 'center', gap: 10,
+            flexShrink: 0,
+          }}>
+            {/* Back (hidden on first slide) */}
+            {idx > 0 ? (
+              <button
+                onClick={prev}
+                style={{
+                  width: 44, height: 44,
+                  borderRadius: 12,
+                  border: '1.5px solid var(--gr2, #E8E5E0)',
+                  background: 'none',
+                  cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  color: 'var(--gr5, #6B6B6B)',
+                  flexShrink: 0,
+                  transition: 'all 0.15s',
+                }}
+                onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--g300, #8BB89A)'; e.currentTarget.style.color = 'var(--g600, #3D6B4A)' }}
+                onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--gr2, #E8E5E0)'; e.currentTarget.style.color = 'var(--gr5, #6B6B6B)' }}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                  <polyline points="15 18 9 12 15 6"/>
+                </svg>
               </button>
             ) : (
-              <button onClick={next}
-                style={{ padding: '10px 22px', border: 'none', borderRadius: 'var(--r)', background: 'var(--g600)', color: '#fff', fontSize: '13px', fontWeight: 600, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", transition: 'background 0.15s' }}
-                onMouseOver={e => e.currentTarget.style.background = 'var(--g700)'}
-                onMouseOut={e => e.currentTarget.style.background = 'var(--g600)'}>
-                Próximo
+              /* "Não mostrar" faz o spacer + skip link */
+              <button
+                onClick={() => dismiss(true)}
+                style={{
+                  fontSize: 12, color: 'var(--gr4, #8B8B8B)',
+                  background: 'none', border: 'none', cursor: 'pointer',
+                  fontFamily: "'DM Sans', sans-serif",
+                  padding: 0, flex: 1,
+                  textAlign: 'left',
+                  textDecoration: 'underline',
+                  textDecorationColor: 'var(--gr3, #C8C5C0)',
+                }}
+              >
+                Não exibir novamente
               </button>
             )}
+
+            {/* Primary CTA */}
+            <button
+              onClick={isLast ? finish : next}
+              style={{
+                flex: 1,
+                height: 50,
+                background: 'var(--g500, #4A7C59)',
+                color: '#fff',
+                border: 'none',
+                borderRadius: 14,
+                fontSize: 14, fontWeight: 700,
+                cursor: 'pointer',
+                fontFamily: "'DM Sans', sans-serif",
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                transition: 'background 0.15s, transform 0.12s',
+                letterSpacing: '0.1px',
+              }}
+              onMouseEnter={e => e.currentTarget.style.background = 'var(--g600, #3D6B4A)'}
+              onMouseLeave={e => e.currentTarget.style.background = 'var(--g500, #4A7C59)'}
+              onMouseDown={e => e.currentTarget.style.transform = 'scale(0.98)'}
+              onMouseUp={e => e.currentTarget.style.transform = 'scale(1)'}
+            >
+              {slide.cta}
+              {!isLast && (
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                  <line x1="5" y1="12" x2="19" y2="12"/>
+                  <polyline points="12 5 19 12 12 19"/>
+                </svg>
+              )}
+            </button>
           </div>
         </div>
       </div>
-    </div>
+    </>
   )
 }

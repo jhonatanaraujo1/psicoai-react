@@ -65,6 +65,7 @@ export default function Agenda({ currentUser }) {
   const [eventModal, setEventModal] = useState(EMPTY_MODAL)
   const [allPatients, setAllPatients] = useState([])
   const [saving, setSaving] = useState(false)
+  const [agendaView, setAgendaView] = useState(() => window.innerWidth <= 640 ? 'list' : 'week')
   const [form, setForm] = useState({
     title: '', type: 'session', patientId: '', date: '', startTime: '', endTime: '', meetLink: '', notes: ''
   })
@@ -113,11 +114,24 @@ export default function Agenda({ currentUser }) {
     }
   }, [eventModal.open])
 
-  function openCreate() {
+  function openCreate(prefill = {}) {
     const d = new Date()
     const dateStr = d.toISOString().slice(0, 10)
-    setForm({ title: '', type: 'session', patientId: '', date: dateStr, startTime: '09:00', endTime: '10:00', meetLink: '', notes: '' })
+    setForm({
+      title: '', type: 'session', patientId: '',
+      date: dateStr, startTime: '09:00', endTime: '10:00',
+      meetLink: '', notes: '',
+      ...prefill,
+    })
     setEventModal({ open: true, mode: 'create', data: null })
+  }
+
+  function openSlot(dayIdx, hour) {
+    const slotDate = weekDates[dayIdx]
+    const dateStr = slotDate.toISOString().slice(0, 10)
+    const startTime = `${String(hour).padStart(2, '0')}:00`
+    const endTime   = `${String(hour + 1).padStart(2, '0')}:00`
+    openCreate({ date: dateStr, startTime, endTime })
   }
 
   function openEdit(evt) {
@@ -256,27 +270,162 @@ export default function Agenda({ currentUser }) {
     return d >= weekDates[0] && d <= weekDates[4] && e.type === 'session'
   }).length
 
+  // List view: all upcoming events, sorted, grouped by date
+  const listEvents = allEvents
+    .filter(e => new Date(e.startAt) >= new Date(today.getTime() - 86400000 * 7))
+    .sort((a, b) => new Date(a.startAt) - new Date(b.startAt))
+
+  // Group by date string
+  const listGrouped = listEvents.reduce((acc, evt) => {
+    const d = new Date(evt.startAt)
+    const key = d.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' })
+    if (!acc[key]) acc[key] = []
+    acc[key].push(evt)
+    return acc
+  }, {})
+
   return (
     <div className="view">
+      {/* ── Header ─────────────────────────────────────────────── */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px', gap: '12px', flexWrap: 'wrap' }}>
         <div>
           <div style={{ fontFamily: "'Fraunces', serif", fontSize: '22px', fontWeight: 300, color: 'var(--d)' }}>
-            Semana de {weekRange}
+            {agendaView === 'week' ? `Semana de ${weekRange}` : 'Agenda'}
           </div>
           <div style={{ fontSize: '13px', color: 'var(--gr5)', marginTop: '3px' }}>
             {loading ? '…' : `${sessionsThisWeek} ${sessionsThisWeek !== 1 ? 'sessões' : 'sessão'} agendada${sessionsThisWeek !== 1 ? 's' : ''} esta semana`}
           </div>
         </div>
-        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-          <button className="btn-outline" style={{ padding: '8px 14px', fontSize: '12px' }} onClick={() => setWeekOffset(w => w - 1)}>‹ Semana anterior</button>
-          <button className="btn-outline" style={{ padding: '8px 14px', fontSize: '12px', borderColor: 'var(--g300)', color: 'var(--g600)' }} onClick={() => setWeekOffset(0)}>Hoje</button>
-          <button className="btn-outline" style={{ padding: '8px 14px', fontSize: '12px' }} onClick={() => setWeekOffset(w => w + 1)}>Próxima semana ›</button>
-          <button className="btn-primary" style={{ padding: '8px 16px', fontSize: '12px' }} onClick={openCreate}>
+        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+          {/* View toggle */}
+          <div style={{
+            display: 'flex', borderRadius: 10,
+            border: '1px solid var(--gr2)',
+            overflow: 'hidden',
+            background: 'var(--w)',
+          }}>
+            {[
+              { key: 'week', label: 'Grade', icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg> },
+              { key: 'list', label: 'Lista', icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg> },
+            ].map(v => (
+              <button
+                key={v.key}
+                onClick={() => setAgendaView(v.key)}
+                title={v.label}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 5,
+                  padding: '7px 12px',
+                  border: 'none',
+                  background: agendaView === v.key ? 'var(--g50)' : 'transparent',
+                  color: agendaView === v.key ? 'var(--g600)' : 'var(--gr4)',
+                  fontSize: 12, fontWeight: agendaView === v.key ? 600 : 400,
+                  cursor: 'pointer',
+                  fontFamily: "'DM Sans', sans-serif",
+                  transition: 'all 0.15s',
+                }}
+              >
+                {v.icon}
+                <span className="agenda-view-label">{v.label}</span>
+              </button>
+            ))}
+          </div>
+
+          {agendaView === 'week' && <>
+            <button className="btn-outline" style={{ padding: '8px 14px', fontSize: '12px' }} onClick={() => setWeekOffset(w => w - 1)}>‹ Anterior</button>
+            <button className="btn-outline" style={{ padding: '8px 14px', fontSize: '12px', borderColor: 'var(--g300)', color: 'var(--g600)' }} onClick={() => setWeekOffset(0)}>Hoje</button>
+            <button className="btn-outline" style={{ padding: '8px 14px', fontSize: '12px' }} onClick={() => setWeekOffset(w => w + 1)}>Próxima ›</button>
+          </>}
+          <button className="btn-primary" style={{ padding: '8px 16px', fontSize: '12px' }} onClick={() => openCreate()}>
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
             Novo Evento
           </button>
         </div>
       </div>
+
+      {/* ── LIST VIEW ──────────────────────────────────────────── */}
+      {agendaView === 'list' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+          {loading
+            ? Array.from({ length: 5 }).map((_, i) => (
+                <div key={i} style={{ display: 'flex', gap: 14, padding: '14px 0', borderBottom: '1px solid var(--gr1)', alignItems: 'center' }}>
+                  <div className="skel-pulse" style={{ width: 44, height: 44, borderRadius: 10, flexShrink: 0 }} />
+                  <div style={{ flex: 1 }}>
+                    <div className="skel-pulse" style={{ height: 13, width: '60%', borderRadius: 4, marginBottom: 6 }} />
+                    <div className="skel-pulse" style={{ height: 10, width: '35%', borderRadius: 4 }} />
+                  </div>
+                </div>
+              ))
+            : Object.keys(listGrouped).length === 0
+              ? (
+                <div style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--gr4)', fontSize: 13 }}>
+                  <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--gr2)" strokeWidth="1.5" style={{ marginBottom: 14, display: 'block', margin: '0 auto 14px' }}>
+                    <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+                  </svg>
+                  Nenhum evento agendado nos próximos dias
+                </div>
+              )
+              : Object.entries(listGrouped).map(([dateLabel, evts]) => (
+                  <div key={dateLabel}>
+                    {/* Date heading */}
+                    <div style={{
+                      fontSize: 11, fontWeight: 700, color: 'var(--gr4)',
+                      letterSpacing: '0.6px', textTransform: 'uppercase',
+                      padding: '14px 0 8px',
+                      borderBottom: '1px solid var(--gr2)',
+                    }}>
+                      {dateLabel}
+                    </div>
+                    {evts.map(evt => {
+                      const ts = TYPE_STYLES[evt.type] || TYPE_STYLES.session
+                      return (
+                        <div
+                          key={evt.id}
+                          onClick={() => openEdit(evt)}
+                          style={{
+                            display: 'flex', alignItems: 'center', gap: 14,
+                            padding: '12px 4px',
+                            borderBottom: '1px solid var(--gr1)',
+                            cursor: 'pointer',
+                            transition: 'background 0.13s',
+                            borderRadius: 8,
+                            margin: '2px 0',
+                          }}
+                          onMouseEnter={e => e.currentTarget.style.background = 'var(--gr1)'}
+                          onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                        >
+                          {/* Time box */}
+                          <div style={{
+                            width: 48, textAlign: 'center', flexShrink: 0,
+                          }}>
+                            <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--d)', fontVariantNumeric: 'tabular-nums' }}>{fmtHour(evt.startAt)}</div>
+                            <div style={{ fontSize: 9, color: 'var(--gr4)', marginTop: 1 }}>{fmtHour(evt.endAt)}</div>
+                          </div>
+                          {/* Color bar */}
+                          <div style={{ width: 3, height: 36, borderRadius: 2, background: ts.border, flexShrink: 0 }} />
+                          {/* Info */}
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--d)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              {evt.patientName || evt.title}
+                            </div>
+                            <div style={{ fontSize: 11, color: 'var(--gr5)', marginTop: 2 }}>
+                              {TYPE_LABELS[evt.type] || evt.type}
+                              {evt.meetLink && ' · 📹 Remota'}
+                            </div>
+                          </div>
+                          {/* Arrow */}
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--gr3)" strokeWidth="2">
+                            <polyline points="9 18 15 12 9 6"/>
+                          </svg>
+                        </div>
+                      )
+                    })}
+                  </div>
+                ))
+          }
+        </div>
+      )}
+
+      {agendaView === 'week' && (
 
       <div className="agenda-layout">
         {/* Week grid */}
@@ -300,15 +449,28 @@ export default function Agenda({ currentUser }) {
                 {weekDates.map((_, dayIdx) => {
                   const slotEvts = loading ? [] : getEventsForSlot(dayIdx, hour)
                   const ts = slotEvts[0] ? TYPE_STYLES[slotEvts[0].type] || TYPE_STYLES.session : null
+                  const isEmpty = slotEvts.length === 0
                   return (
-                    <div key={`slot-${hour}-${dayIdx}`} className="agenda-slot">
+                    <div
+                      key={`slot-${hour}-${dayIdx}`}
+                      className={`agenda-slot${isEmpty ? ' agenda-slot-empty' : ''}`}
+                      onClick={() => isEmpty && openSlot(dayIdx, hour)}
+                      title={isEmpty ? `Novo evento ${String(hour).padStart(2,'0')}:00` : undefined}
+                    >
+                      {isEmpty && (
+                        <div className="agenda-slot-plus">
+                          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                            <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+                          </svg>
+                        </div>
+                      )}
                       {slotEvts.map(evt => (
                         <div
                           key={evt.id}
                           className={`agenda-event ${ts?.cls || 'green'}`}
                           style={{ background: ts?.bg, borderColor: ts?.border, color: ts?.color, cursor: 'pointer' }}
                           title={`${evt.title} · ${fmtHour(evt.startAt)} – ${fmtHour(evt.endAt)}`}
-                          onClick={() => openEdit(evt)}
+                          onClick={e => { e.stopPropagation(); openEdit(evt) }}
                         >
                           <div className="agenda-event-name">{evt.patientName || evt.title}</div>
                           <div className="agenda-event-meta">
@@ -408,6 +570,7 @@ export default function Agenda({ currentUser }) {
           </div>
         </div>
       </div>
+      )} {/* end agendaView === 'week' */}
 
       {/* Event modal */}
       {eventModal.open && (
