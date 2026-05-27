@@ -88,7 +88,7 @@ export default function BottomNav({ currentView, setCurrentView, onMorePress, op
         <button
           className="bn-item"
           onClick={onSessionsBadgeClick}
-          aria-label={`${openSessionsCount} sessão(ões) em andamento`}
+          aria-label={`${openSessionsCount} anotação(ões) em aberto`}
           style={{ position: 'relative' }}
         >
           <span className="bn-icon" style={{ position: 'relative' }}>
@@ -106,7 +106,7 @@ export default function BottomNav({ currentView, setCurrentView, onMorePress, op
               animation: 'pulse-dot 1.8s ease-in-out infinite',
             }}>{openSessionsCount}</span>
           </span>
-          <span className="bn-label" style={{ color: '#D94F00', fontSize: '10px' }}>Sessões</span>
+          <span className="bn-label" style={{ color: '#D94F00', fontSize: '10px' }}>Em aberto</span>
         </button>
       )}
 
