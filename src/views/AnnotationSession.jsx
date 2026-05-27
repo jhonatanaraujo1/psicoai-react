@@ -1151,49 +1151,159 @@ export default function AnnotationSession({
       )
     }
 
-    // Texto: formatação
-    const fmtTools = [
-      { cmd: 'bold',          icon: <strong style={{ fontFamily: 'inherit' }}>B</strong>,  title: 'Negrito' },
-      { cmd: 'italic',        icon: <em style={{ fontFamily: 'inherit' }}>I</em>,           title: 'Itálico' },
-      { cmd: 'underline',     icon: <u style={{ fontFamily: 'inherit' }}>U</u>,             title: 'Sublinhado' },
-      { sep: true },
-      { cmd: 'formatBlock',   arg: 'h3',
-        icon: <span style={{ fontFamily: "'Fraunces',serif", fontSize: 15 }}>H</span>, title: 'Título' },
-      { cmd: 'insertUnorderedList',
-        icon: <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/>
-          <line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/>
-          <line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>
-        </svg>, title: 'Lista' },
-      { sep: true },
-      { cmd: 'removeFormat',
-        icon: <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/>
-          <line x1="15" y1="5" x2="19" y2="9"/>
-        </svg>, title: 'Limpar' },
+    // Texto: formatação — botão simples reutilizável
+    const FBtn = ({ cmd, arg, icon, title, onMD }) => (
+      <button title={title}
+        onMouseDown={e => { e.preventDefault(); onMD ? onMD() : exec(cmd, arg) }}
+        style={{
+          width: 36, height: 36, border: 'none', borderRadius: 8,
+          background: 'transparent', cursor: 'pointer',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: 13, color: 'rgba(255,255,255,0.6)', transition: 'all 0.12s',
+          flexShrink: 0, touchAction: 'manipulation',
+        }}
+        onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.1)'; e.currentTarget.style.color = '#fff' }}
+        onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'rgba(255,255,255,0.6)' }}
+      >{icon}</button>
+    )
+
+    // Cores de texto clínicas (verde, vermelho, roxo, cinza)
+    const TEXT_COLORS = [
+      { c: '#2D6A4F', label: 'Verde' },
+      { c: '#C0392B', label: 'Vermelho' },
+      { c: '#7D3C98', label: 'Roxo' },
+      { c: '#1C1C1C', label: 'Preto' },
     ]
 
     return (
       <>
-        {fmtTools.map((t, i) => t.sep
-          ? <Sep key={i} />
-          : (
-            <button key={i} title={t.title}
-              onMouseDown={e => { e.preventDefault(); exec(t.cmd, t.arg) }}
-              style={{
-                width: 36, height: 36, border: 'none', borderRadius: 8,
-                background: 'transparent', cursor: 'pointer',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: 13, color: 'rgba(255,255,255,0.6)', transition: 'all 0.12s',
-                flexShrink: 0,
-              }}
-              onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.1)'; e.currentTarget.style.color = '#fff' }}
-              onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'rgba(255,255,255,0.6)' }}
-            >
-              {t.icon}
-            </button>
-          )
-        )}
+        {/* Grupo 1: peso/estilo */}
+        <FBtn cmd="bold"          title="Negrito (Ctrl+B)"    icon={<strong style={{ fontFamily: 'inherit', fontSize: 14 }}>B</strong>} />
+        <FBtn cmd="italic"        title="Itálico (Ctrl+I)"    icon={<em style={{ fontFamily: 'inherit', fontSize: 14 }}>I</em>} />
+        <FBtn cmd="underline"     title="Sublinhado (Ctrl+U)" icon={<u style={{ fontFamily: 'inherit', fontSize: 13 }}>U</u>} />
+        <FBtn cmd="strikeThrough" title="Tachado"             icon={<s style={{ fontFamily: 'inherit', fontSize: 13 }}>S</s>} />
+
+        <Sep />
+
+        {/* Grupo 2: títulos */}
+        <FBtn cmd="formatBlock" arg="h1" title="Título grande (H1)"
+          icon={<span style={{ fontWeight: 800, fontSize: 13, letterSpacing: '-0.3px' }}>H1</span>} />
+        <FBtn cmd="formatBlock" arg="h2" title="Título médio (H2)"
+          icon={<span style={{ fontWeight: 700, fontSize: 12 }}>H2</span>} />
+        <FBtn cmd="formatBlock" arg="h3" title="Título pequeno (H3)"
+          icon={<span style={{ fontWeight: 600, fontSize: 11 }}>H3</span>} />
+        <FBtn cmd="formatBlock" arg="p" title="Parágrafo normal"
+          icon={<span style={{ fontSize: 11, opacity: 0.8 }}>¶</span>} />
+
+        <Sep />
+
+        {/* Grupo 3: listas e indent */}
+        <FBtn cmd="insertUnorderedList" title="Lista com marcadores"
+          icon={<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/>
+            <line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/>
+            <line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>
+          </svg>} />
+        <FBtn cmd="insertOrderedList" title="Lista numerada"
+          icon={<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <line x1="10" y1="6" x2="21" y2="6"/><line x1="10" y1="12" x2="21" y2="12"/>
+            <line x1="10" y1="18" x2="21" y2="18"/>
+            <path d="M4 6h1v4"/><path d="M4 10h2"/><path d="M6 18H4c0-1 2-2 2-3s-1-1.5-2-1"/>
+          </svg>} />
+        <FBtn cmd="indent"  title="Aumentar recuo (Tab)"
+          icon={<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <polyline points="3 8 7 12 3 16"/><line x1="21" y1="12" x2="11" y2="12"/>
+            <line x1="21" y1="6" x2="3" y2="6"/><line x1="21" y1="18" x2="3" y2="18"/>
+          </svg>} />
+        <FBtn cmd="outdent" title="Diminuir recuo"
+          icon={<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <polyline points="7 8 3 12 7 16"/><line x1="21" y1="12" x2="11" y2="12"/>
+            <line x1="21" y1="6" x2="3" y2="6"/><line x1="21" y1="18" x2="3" y2="18"/>
+          </svg>} />
+
+        <Sep />
+
+        {/* Grupo 4: alinhamento */}
+        <FBtn cmd="justifyLeft"   title="Alinhar esquerda"
+          icon={<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="15" y2="12"/>
+            <line x1="3" y1="18" x2="18" y2="18"/>
+          </svg>} />
+        <FBtn cmd="justifyCenter" title="Centralizar"
+          icon={<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <line x1="3" y1="6" x2="21" y2="6"/><line x1="6" y1="12" x2="18" y2="12"/>
+            <line x1="4" y1="18" x2="20" y2="18"/>
+          </svg>} />
+
+        <Sep />
+
+        {/* Grupo 5: cores de texto */}
+        {TEXT_COLORS.map(({ c, label }) => (
+          <button key={c} title={`Cor: ${label}`}
+            onMouseDown={e => { e.preventDefault(); exec('foreColor', c) }}
+            style={{
+              width: 32, height: 32, borderRadius: 8, border: 'none',
+              background: 'transparent', cursor: 'pointer', flexShrink: 0,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              transition: 'background 0.12s', touchAction: 'manipulation',
+            }}
+            onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'}
+            onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+          >
+            <span style={{ fontWeight: 800, fontSize: 14, color: c, fontFamily: 'inherit', lineHeight: 1 }}>A</span>
+          </button>
+        ))}
+
+        {/* Highlight amarelo */}
+        <button title="Destacar (amarelo)"
+          onMouseDown={e => { e.preventDefault(); exec('hiliteColor', '#FFF176') }}
+          style={{
+            width: 32, height: 32, borderRadius: 8, border: 'none',
+            background: 'transparent', cursor: 'pointer', flexShrink: 0,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            transition: 'background 0.12s', touchAction: 'manipulation',
+          }}
+          onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'}
+          onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+        >
+          <span style={{ fontWeight: 800, fontSize: 14, color: '#1C1C1C', background: '#FFF176', padding: '0 2px', lineHeight: 1, borderRadius: 2, fontFamily: 'inherit' }}>A</span>
+        </button>
+
+        <Sep />
+
+        {/* Grupo 6: limpar + zoom */}
+        <FBtn cmd="removeFormat" title="Limpar formatação"
+          icon={<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/>
+            <line x1="15" y1="5" x2="19" y2="9"/>
+            <line x1="3" y1="21" x2="21" y2="3" stroke="currentColor" strokeWidth="1.5" opacity="0.4"/>
+          </svg>} />
+
+        {/* Zoom (igual ao canvas) */}
+        <Sep />
+        <TBtn active={false} onClick={() => setZoom(z => Math.max(0.4, +(z - 0.1).toFixed(1)))} title="Reduzir zoom">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+            <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+            <line x1="8" y1="11" x2="14" y2="11"/>
+          </svg>
+        </TBtn>
+        <button onMouseDown={e => { e.preventDefault(); setZoom(1.0) }} title="Zoom 100%"
+          style={{
+            minWidth: 38, height: 28, borderRadius: 6, border: 'none',
+            background: zoom !== 1.0 ? 'rgba(255,255,255,0.12)' : 'transparent',
+            color: zoom !== 1.0 ? '#fff' : 'rgba(255,255,255,0.45)',
+            cursor: 'pointer', fontSize: 10, fontWeight: 700,
+            fontFamily: "'DM Sans', sans-serif", letterSpacing: '0.3px',
+            flexShrink: 0, transition: 'all 0.15s',
+          }}>
+          {Math.round(zoom * 100)}%
+        </button>
+        <TBtn active={false} onClick={() => setZoom(z => Math.min(2.5, +(z + 0.1).toFixed(1)))} title="Aumentar zoom">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+            <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+            <line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/>
+          </svg>
+        </TBtn>
 
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 4 }}>
           <span className="as-kbd-hint" style={{
@@ -1760,14 +1870,30 @@ export default function AnnotationSession({
         [contenteditable][data-placeholder]:empty:before {
           content: attr(data-placeholder); color: #B0ADA8; pointer-events: none;
         }
-        [contenteditable] h3 {
-          font-family: 'Fraunces', serif; font-size: 18px;
-          font-weight: 500; color: #1C1C1C; margin: 20px 0 8px;
+        [contenteditable] h1 {
+          font-size: 26px; font-weight: 800;
+          color: #1C1C1C; margin: 24px 0 10px; line-height: 1.2;
+          border-bottom: 2px solid #E8E5E0; padding-bottom: 6px;
         }
-        [contenteditable] ul { padding-left: 20px; margin: 8px 0; }
+        [contenteditable] h2 {
+          font-size: 20px; font-weight: 700;
+          color: #2A2A2A; margin: 20px 0 8px; line-height: 1.3;
+        }
+        [contenteditable] h3 {
+          font-size: 16px; font-weight: 600;
+          color: #3A3A3A; margin: 16px 0 6px; line-height: 1.4;
+        }
+        [contenteditable] ul { padding-left: 22px; margin: 8px 0; list-style: disc; }
+        [contenteditable] ol { padding-left: 22px; margin: 8px 0; list-style: decimal; }
         [contenteditable] li { margin-bottom: 4px; }
         [contenteditable] strong { font-weight: 700; }
         [contenteditable] em { font-style: italic; }
+        [contenteditable] u { text-decoration: underline; }
+        [contenteditable] s { text-decoration: line-through; opacity: 0.6; }
+        [contenteditable] blockquote {
+          border-left: 3px solid #4A7C59; margin: 10px 0; padding: 4px 12px;
+          color: #555; font-style: italic;
+        }
 
         .as-sidebar::-webkit-scrollbar { width: 3px }
         .as-sidebar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px }
