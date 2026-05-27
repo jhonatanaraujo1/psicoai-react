@@ -139,7 +139,6 @@ function CustomSelect({ value, onChange, options, placeholder = 'Selecionar…' 
 
 export default function Agenda({ currentUser }) {
   const [weekOffset, setWeekOffset] = useState(0)
-  const [miniCalOffset, setMiniCalOffset] = useState(0)
   const [events, setEvents] = useState([])
   const [googleEvents, setGoogleEvents] = useState([])
   const [loading, setLoading] = useState(true)
@@ -324,26 +323,6 @@ export default function Agenda({ currentUser }) {
     .filter(e => new Date(e.startAt) >= today)
     .sort((a, b) => new Date(a.startAt) - new Date(b.startAt))
     .slice(0, 6)
-
-  // Mini cal
-  const miniBase = new Date(today.getFullYear(), today.getMonth() + miniCalOffset, 1)
-  const miniYear = miniBase.getFullYear()
-  const miniMonth = miniBase.getMonth()
-  const firstDay = new Date(miniYear, miniMonth, 1).getDay()
-  const daysInMonth = new Date(miniYear, miniMonth + 1, 0).getDate()
-  const startOffset = firstDay === 0 ? 6 : firstDay - 1
-  const miniDays = []
-  for (let i = 0; i < startOffset; i++) miniDays.push(null)
-  for (let i = 1; i <= daysInMonth; i++) miniDays.push(i)
-
-  // Days with events for mini cal
-  const daysWithEvents = new Set(
-    events.map(e => {
-      const d = new Date(e.startAt)
-      if (d.getMonth() === miniMonth && d.getFullYear() === miniYear) return d.getDate()
-      return null
-    }).filter(Boolean)
-  )
 
   const weekRange = `${weekDates[0].getDate()} a ${weekDates[4].getDate()} de ${MONTHS_PT[weekDates[0].getMonth()]}`
   const sessionsThisWeek = events.filter(e => {
@@ -574,50 +553,6 @@ export default function Agenda({ currentUser }) {
 
         {/* Sidebar */}
         <div>
-          {/* Mini cal */}
-          <div className="agenda-mini-cal">
-            <div className="mini-cal-header">
-              <span className="mini-cal-title">{MONTHS_PT[miniMonth]} {miniYear}</span>
-              <div style={{ display: 'flex', gap: '4px' }}>
-                <button className="mini-cal-nav" onClick={() => setMiniCalOffset(o => o - 1)}>‹</button>
-                <button className="mini-cal-nav" onClick={() => setMiniCalOffset(o => o + 1)}>›</button>
-              </div>
-            </div>
-            <div className="mini-cal-grid">
-              {['S','T','Q','Q','S','S','D'].map((d, i) => (
-                <div key={i} className="mini-cal-dow">{d}</div>
-              ))}
-              {miniDays.map((day, i) => {
-                const isToday = day && day === today.getDate() && miniMonth === today.getMonth() && miniYear === today.getFullYear()
-                const isInWeek = day && weekDates.some(wd => wd.getDate() === day && wd.getMonth() === miniMonth && wd.getFullYear() === miniYear)
-                return (
-                <div
-                  key={i}
-                  className={`mini-cal-day${isToday ? ' today' : ''}${!day ? ' other-month' : ''}${isInWeek && !isToday ? ' in-week' : ''}`}
-                  style={{
-                    ...(day && daysWithEvents.has(day) ? { position: 'relative' } : {}),
-                    ...(day ? { cursor: 'pointer' } : {}),
-                  }}
-                  onClick={() => {
-                    if (!day) return
-                    const clicked = new Date(miniYear, miniMonth, day)
-                    const clickedMonday = getMondayOf(clicked)
-                    const todayMonday = getMondayOf(today)
-                    const diffMs = clickedMonday - todayMonday
-                    const diffWeeks = Math.round(diffMs / (7 * 24 * 60 * 60 * 1000))
-                    setWeekOffset(diffWeeks)
-                  }}
-                >
-                  {day || ''}
-                  {day && daysWithEvents.has(day) && (
-                    <span style={{ position: 'absolute', bottom: '1px', left: '50%', transform: 'translateX(-50%)', width: '4px', height: '4px', borderRadius: '50%', background: 'var(--g500)', display: 'block' }} />
-                  )}
-                </div>
-                )
-              })}
-            </div>
-          </div>
-
           {/* Upcoming */}
           <div className="agenda-upcoming">
             <div className="card-header" style={{ padding: '16px 16px 14px' }}>

@@ -268,6 +268,9 @@ export default function App() {
   // Pre-loaded content for reopening a session
   const [textInitialHtml, setTextInitialHtml] = useState('')
   const [canvasInitialData, setCanvasInitialData] = useState(null)
+  // Modo visualização de sessão histórica — não cria sessão ativa, sem badge
+  const [canvasViewOnly, setCanvasViewOnly] = useState(false)
+  const [viewOnlySessionId, setViewOnlySessionId] = useState(null)
 
   // ── AI Drawer ─────────────────────────────────────────────────────────────
   const [aiDrawerOpen, setAiDrawerOpen] = useState(false)
@@ -290,6 +293,8 @@ export default function App() {
   const _openTextSession = (patient) => {
     const pat = patient || currentPatient
     activeSessionRef.current = null
+    setCanvasViewOnly(false)
+    setViewOnlySessionId(null)
     setCurrentPatient(pat)
     setActiveSessionType('canvas')
     setCanvasInitialPageType('text')
@@ -312,6 +317,8 @@ export default function App() {
   const _openCanvasSession = (patient) => {
     const pat = patient || currentPatient
     activeSessionRef.current = null
+    setCanvasViewOnly(false)
+    setViewOnlySessionId(null)
     setCurrentPatient(pat)
     setActiveSessionType('canvas')
     setCanvasInitialPageType('draw')
@@ -344,6 +351,8 @@ export default function App() {
   const _openExistingAnnotation = (patient) => {
     const pat = patient || currentPatient
     activeSessionRef.current = null
+    setCanvasViewOnly(false)
+    setViewOnlySessionId(null)
     setCurrentPatient(pat)
     setActiveSessionType('canvas')
     setCanvasInitialPageType(null) // recovery — não adiciona nova página
@@ -480,6 +489,14 @@ export default function App() {
 
   // ── Handlers de minimizar: move sessão foreground → background ──────────
   const handleMinimizeCanvas = () => {
+    if (canvasViewOnly) {
+      // Visualização histórica: só fecha, não entra no background nem gera badge
+      setCanvasViewOnly(false)
+      setViewOnlySessionId(null)
+      setCanvasOpen(false)
+      setCanvasInitialPageType(null)
+      return
+    }
     if (activeSessionId) {
       setBackgroundSessions(prev =>
         prev.find(s => s.id === activeSessionId) ? prev : [
@@ -491,6 +508,7 @@ export default function App() {
       setActiveSessionType(null)
     }
     setCanvasOpen(false)
+    setCanvasInitialPageType(null)
   }
 
   const handleMinimizeText = () => {
@@ -540,12 +558,14 @@ export default function App() {
   }
 
   // Abre canvas histórico (sessão já encerrada) para visualização/edição
+  // VIEW-ONLY: não chama setSession() → activeSessionId fica null → sem badge
   const handleOpenCanvasFromHistory = (session) => {
     const patient = { id: session.patientId, name: session.patientName }
     setCurrentPatient(patient)
     setCanvasInitialData(session.canvasDataJson || null)
-    // Abre canvas com ID da sessão histórica — sem novo timer de sessão ativa
-    setSession(session.id)
+    setViewOnlySessionId(session.id)
+    setCanvasViewOnly(true)
+    setCanvasInitialPageType(null)
     setActiveSessionType('canvas')
     setCanvasOpen(true)
   }
@@ -612,11 +632,13 @@ export default function App() {
   // destination === 'analyses' → navigate to 'anotacoes', run analysis, AiDrawer opens there
   // destination === 'later'    → run in background, toast when done
   const handleAnalyze = ({ imageBase64, textContent, htmlContent, duration, canvasDataJson, canvasTextContent, destination }) => {
-    const sid = activeSessionRef.current
+    const sid = canvasViewOnly ? viewOnlySessionId : activeSessionRef.current
     setSession(null)
     setActiveSessionType(null)
     setCanvasOpen(false)
     setTextOpen(false)
+    setCanvasViewOnly(false)
+    setViewOnlySessionId(null)
 
     if (destination === 'here') {
       handleAnalysisConfirm({ imageBase64, textContent, htmlContent, duration, sessionId: sid, canvasDataJson, canvasTextContent })
@@ -708,14 +730,17 @@ export default function App() {
   // Called when the user closes the session without requesting AI analysis
   const handleSessionClose = async ({ textContent, htmlContent, duration, canvasDataJson, canvasTextContent } = {}) => {
     const sid = activeSessionRef.current
+    const wasViewOnly = canvasViewOnly
     setSession(null)
     setActiveSessionType(null)
     setTextOpen(false)
     setCanvasOpen(false)
+    setCanvasViewOnly(false)
+    setViewOnlySessionId(null)
     setCurrentView('paciente')
 
-    // Finish session in background so notes are not lost (fire-and-forget)
-    if (sid) {
+    // Finish session in background — skip for view-only (sessão histórica já encerrada)
+    if (sid && !wasViewOnly) {
       api.finishSession(sid, { textContent, htmlContent, canvasDataJson, canvasTextContent, durationSeconds: duration }).catch(() => {})
     }
   }
@@ -766,9 +791,10 @@ export default function App() {
             patient={currentPatient}
             isOpen={canvasOpen}
             initialPageType={canvasInitialPageType}
-            sessionId={activeSessionId}
+            sessionId={canvasViewOnly ? viewOnlySessionId : activeSessionId}
+            viewOnly={canvasViewOnly}
             onClose={handleSessionClose}
-            onMinimize={() => { setCanvasOpen(false); setCanvasInitialPageType(null) }}
+            onMinimize={handleMinimizeCanvas}
             onAnalyze={handleAnalyze}
             onAutosave={(id, data) => api.autosaveSession?.(id, data)}
           />
