@@ -54,6 +54,9 @@ export default function App() {
   }
   const handleLogout = () => { auth.logout(); setCurrentUser(null) }
 
+  // ── Prontuário overlay (A4 view) — abre sobre o perfil do paciente ──────
+  const [prontuarioOpen, setProntuarioOpen] = useState(false)
+
   // ── Payment required (conta bloqueada) ───────────────────────────────────
   const [paymentRequired, setPaymentRequired] = useState(false)
 
@@ -691,7 +694,7 @@ export default function App() {
     switch (currentView) {
       case 'dashboard':    return <Agenda currentUser={currentUser} />
       case 'pacientes':   return <Pacientes setCurrentView={handleSetView} onNovoCadastro={() => setCadastroOpen(true)} />
-      case 'paciente':    return <ProntuarioView patient={currentPatient} onClose={() => setCurrentView('pacientes')} onNewAnnotation={() => setBriefingOpen(true)} onOpenCanvas={handleOpenCanvasFromHistory} onReopenSession={handleReopenSession} />
+      case 'paciente':    return <Paciente patient={currentPatient} setCurrentView={handleSetView} onSessao={() => handleSetView('sessao', currentPatient)} onQuickNote={() => setQuickNoteOpen(true)} onReopenSession={handleReopenSession} onViewProntuario={() => setProntuarioOpen(true)} />
       case 'agenda':      return <Agenda currentUser={currentUser} />
       case 'insights':    return <Insights onGoToPatient={(patient) => handleSetView('paciente', patient)} />
       case 'financeiro':  return <Financeiro />
@@ -892,6 +895,17 @@ export default function App() {
 
       {/* Onboarding */}
       <OnboardingTour isOpen={onboardingOpen} onClose={() => setOnboardingOpen(false)} />
+
+      {/* Prontuário A4 — overlay sobre o perfil do paciente */}
+      {prontuarioOpen && currentView === 'paciente' && (
+        <ProntuarioView
+          patient={currentPatient}
+          onClose={() => setProntuarioOpen(false)}
+          onNewAnnotation={() => { setProntuarioOpen(false); handleSetView('sessao', currentPatient) }}
+          onOpenCanvas={handleOpenCanvasFromHistory}
+          onReopenSession={handleReopenSession}
+        />
+      )}
 
       {/* Sistema de feedback global */}
       <ProgressBar />

@@ -71,6 +71,7 @@ export default function BottomNav({ currentView, setCurrentView, onMorePress, op
         return (
           <button
             key={item.key}
+            data-tour={`nav-${item.key}`}
             className={`bn-item${isActive ? ' active' : ''}`}
             onClick={() => setCurrentView(item.key)}
             aria-label={item.label}
