@@ -75,10 +75,11 @@ const SHAPE_TOOLS = ['rect', 'circle', 'diamond', 'arrow', 'line']
 function drawShape(ctx, shape, x1, y1, x2, y2, color, lineWidth) {
   ctx.save()
   ctx.strokeStyle = color
-  ctx.fillStyle = 'transparent'
   ctx.lineWidth = lineWidth
   ctx.lineCap = 'round'
   ctx.lineJoin = 'round'
+  ctx.setLineDash([])       // reset qualquer lineDash herdado do contexto
+  ctx.setLineDashOffset(0)
   const w  = x2 - x1
   const h  = y2 - y1
   const cx = (x1 + x2) / 2
@@ -1627,6 +1628,13 @@ export default function AnnotationSession({
         <div
           ref={mainScrollRef}
           onScroll={isCanvas ? handleScroll : undefined}
+          onWheel={e => {
+            // Ctrl+scroll ou ⌘+scroll → zoom do canvas (não faz scroll)
+            if (!e.ctrlKey && !e.metaKey) return
+            e.preventDefault()
+            const delta = e.deltaY > 0 ? -0.1 : 0.1
+            setZoom(z => Math.min(2.5, Math.max(0.4, +(z + delta).toFixed(1))))
+          }}
           className="as-main"
           style={{
             flex: 1, overflowY: 'auto', overflowX: 'auto',
