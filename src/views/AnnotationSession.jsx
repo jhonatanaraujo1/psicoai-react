@@ -429,6 +429,7 @@ export default function AnnotationSession({
   onAnalyze,
   onAutosave,
   sessionId,
+  viewOnly = false,         // true → visualização histórica: sem autosave, sem badge
 }) {
   // Sempre canvas — texto é apenas um tipo de página dentro do canvas
   const isCanvas = true
@@ -490,7 +491,8 @@ export default function AnnotationSession({
   const autosaveRef     = useRef(null)   // timer debounce backend
   const localSaveRef    = useRef(null)
   const patientIdRef    = useRef(patient?.id)
-  const pagesRef2       = useRef(null)   // snapshot das pages para flush síncrono no unload
+  const pagesRef2           = useRef(null)   // snapshot das pages para flush síncrono no unload
+  const isDirtyForBackend   = useRef(false)  // true quando conteúdo mudou e backend ainda não foi atualizado
   useEffect(() => { patientIdRef.current = patient?.id }, [patient?.id])
 
   // ── Refs compartilhados ────────────────────────────────────────────────────
@@ -544,6 +546,7 @@ export default function AnnotationSession({
 
   const flushToBackend = useCallback(async (pagesSnapshot) => {
     if (!onAutosave || !sessionIdRef.current || !pagesSnapshot) return
+    if (!isDirtyForBackend.current) return  // nada mudou desde o último save — não bate na API
     try {
       // Coleta textContent + htmlContent das páginas de texto
       const textPages = pagesSnapshot.filter(p => p.pageType === 'text' && p.textHtml)
@@ -557,10 +560,12 @@ export default function AnnotationSession({
         // dataUrl omitido no autosave — só vai no save final
       }))).slice(0, 4_000_000)
       await onAutosave(sessionIdRef.current, { textContent, htmlContent, canvasData })
+      isDirtyForBackend.current = false  // backend está sincronizado
       setBackendSyncStatus('saved')
       setTimeout(() => setBackendSyncStatus('idle'), 2000)
     } catch {
       setBackendSyncStatus('error')
+      // isDirtyForBackend permanece true — próximo flush tentará de novo
     }
   }, [onAutosave])
 
@@ -569,18 +574,20 @@ export default function AnnotationSession({
 
   // Debounce: 6s após última mudança → flush backend
   const scheduleBackendSave = useCallback((pagesSnapshot) => {
+    if (viewOnly) return  // modo visualização: nunca bate no backend
+    isDirtyForBackend.current = true  // marca que há mudança pendente
     setBackendSyncStatus('pending')
     clearTimeout(autosaveRef.current)
     autosaveRef.current = setTimeout(() => flushToBackend(pagesSnapshot), 6000)
-  }, [flushToBackend])
+  }, [flushToBackend, viewOnly])
 
   // beforeunload + visibilitychange: flush síncrono antes de sair
   useEffect(() => {
     if (!isOpen) return
     const handleUnload = () => {
       clearTimeout(autosaveRef.current)
-      // sendBeacon para não bloquear o unload — mais confiável que fetch
-      if (onAutosave && sessionIdRef.current && pagesRef2.current) {
+      // Só flush se: há sessão, há dados e conteúdo realmente mudou desde o último save
+      if (onAutosave && sessionIdRef.current && pagesRef2.current && isDirtyForBackend.current) {
         flushToBackend(pagesRef2.current).catch(() => {})
       }
     }
