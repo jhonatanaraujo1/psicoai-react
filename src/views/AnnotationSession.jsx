@@ -47,6 +47,58 @@ const textKey   = (id) => `psicoai_text_draft_p${id}`
 let _pid = 0
 const newPageId = () => `pg-${Date.now()}-${_pid++}`
 
+// ── Shape tool list ───────────────────────────────────────────────────────────
+const SHAPE_TOOLS = ['rect', 'circle', 'diamond', 'arrow', 'line']
+
+// Draws a shape preview/commit onto a canvas context
+function drawShape(ctx, shape, x1, y1, x2, y2, color, lineWidth) {
+  ctx.save()
+  ctx.strokeStyle = color
+  ctx.fillStyle = 'transparent'
+  ctx.lineWidth = lineWidth
+  ctx.lineCap = 'round'
+  ctx.lineJoin = 'round'
+  const w  = x2 - x1
+  const h  = y2 - y1
+  const cx = (x1 + x2) / 2
+  const cy = (y1 + y2) / 2
+  ctx.beginPath()
+  if (shape === 'rect') {
+    ctx.rect(x1, y1, w, h)
+    ctx.stroke()
+  } else if (shape === 'circle') {
+    const rx = Math.abs(w) / 2
+    const ry = Math.abs(h) / 2
+    ctx.ellipse(cx, cy, rx || 1, ry || 1, 0, 0, Math.PI * 2)
+    ctx.stroke()
+  } else if (shape === 'diamond') {
+    ctx.moveTo(cx, y1)
+    ctx.lineTo(x2, cy)
+    ctx.lineTo(cx, y2)
+    ctx.lineTo(x1, cy)
+    ctx.closePath()
+    ctx.stroke()
+  } else if (shape === 'line') {
+    ctx.moveTo(x1, y1)
+    ctx.lineTo(x2, y2)
+    ctx.stroke()
+  } else if (shape === 'arrow') {
+    ctx.moveTo(x1, y1)
+    ctx.lineTo(x2, y2)
+    ctx.stroke()
+    const angle    = Math.atan2(y2 - y1, x2 - x1)
+    const alen     = Math.max(lineWidth * 4, 18 * SCALE)
+    const spread   = Math.PI / 6
+    ctx.beginPath()
+    ctx.moveTo(x2, y2)
+    ctx.lineTo(x2 - alen * Math.cos(angle - spread), y2 - alen * Math.sin(angle - spread))
+    ctx.moveTo(x2, y2)
+    ctx.lineTo(x2 - alen * Math.cos(angle + spread), y2 - alen * Math.sin(angle + spread))
+    ctx.stroke()
+  }
+  ctx.restore()
+}
+
 function loadCanvasPages(patientId) {
   try {
     const raw = localStorage.getItem(canvasKey(patientId))
@@ -126,10 +178,12 @@ function AddPageMenu({ onAddPage }) {
 
 // ── A4 canvas page (modo canvas) ──────────────────────────────────────────────
 function CanvasPage({ page, isActive, toolRef, colorRef, sizeRef, onStrokeEnd, onClick, penDetectedRef }) {
-  const canvasRef    = useRef(null)
-  const isDrawing    = useRef(false)
-  const lastPos      = useRef({ x: 0, y: 0 })
-  const prevDataUrl  = useRef(null) // snapshot antes do traço comecar
+  const canvasRef        = useRef(null)
+  const isDrawing        = useRef(false)
+  const lastPos          = useRef({ x: 0, y: 0 })
+  const prevDataUrl      = useRef(null) // snapshot antes do traço comecar
+  const shapeStartRef    = useRef(null) // {x,y} — início do shape drag
+  const shapeSnapshotRef = useRef(null) // ImageData — canvas antes do preview
 
   useEffect(() => { page.canvasRef.current = canvasRef.current })
 
@@ -163,43 +217,63 @@ function CanvasPage({ page, isActive, toolRef, colorRef, sizeRef, onStrokeEnd, o
     canvasRef.current?.setPointerCapture(e.pointerId)
     isDrawing.current = true
     prevDataUrl.current = canvasRef.current?.toDataURL('image/png') || null
-    lastPos.current = getPos(e)
-    const ctx  = canvasRef.current?.getContext('2d')
+    const pos = getPos(e)
+    lastPos.current = pos
+    const canvas = canvasRef.current
+    const ctx    = canvas?.getContext('2d')
     if (!ctx) return
-    ctx.save()
-    ctx.globalCompositeOperation = toolRef.current === 'eraser' ? 'destination-out' : 'source-over'
-    ctx.fillStyle = toolRef.current === 'eraser' ? 'rgba(0,0,0,1)' : colorRef.current
-    ctx.beginPath()
-    ctx.arc(lastPos.current.x, lastPos.current.y, (sizeRef.current * SCALE) / 2, 0, Math.PI * 2)
-    ctx.fill()
-    ctx.restore()
+    if (SHAPE_TOOLS.includes(toolRef.current)) {
+      // Shape mode: record start position + take ImageData snapshot for live preview
+      shapeStartRef.current    = pos
+      shapeSnapshotRef.current = ctx.getImageData(0, 0, canvas.width, canvas.height)
+    } else {
+      // Freehand: draw initial dot
+      ctx.save()
+      ctx.globalCompositeOperation = toolRef.current === 'eraser' ? 'destination-out' : 'source-over'
+      ctx.fillStyle = toolRef.current === 'eraser' ? 'rgba(0,0,0,1)' : colorRef.current
+      ctx.beginPath()
+      ctx.arc(pos.x, pos.y, (sizeRef.current * SCALE) / 2, 0, Math.PI * 2)
+      ctx.fill()
+      ctx.restore()
+    }
   }, []) // eslint-disable-line
 
   const onPointerMove = useCallback((e) => {
     if (!isDrawing.current) return
     if (penDetectedRef?.current && e.pointerType === 'touch') return
     e.preventDefault()
-    const ctx = canvasRef.current?.getContext('2d')
+    const canvas = canvasRef.current
+    const ctx    = canvas?.getContext('2d')
     if (!ctx) return
-    const pos      = getPos(e)
-    const pressure = (e.pointerType === 'pen' && e.pressure > 0) ? e.pressure : 0.5
-    const lineW    = (sizeRef.current * SCALE) * (0.4 + pressure * 1.2)
-    ctx.save()
-    ctx.globalCompositeOperation = toolRef.current === 'eraser' ? 'destination-out' : 'source-over'
-    ctx.strokeStyle = toolRef.current === 'eraser' ? 'rgba(0,0,0,1)' : colorRef.current
-    ctx.lineWidth = lineW; ctx.lineCap = 'round'; ctx.lineJoin = 'round'
-    ctx.beginPath()
-    ctx.moveTo(lastPos.current.x, lastPos.current.y)
-    ctx.lineTo(pos.x, pos.y)
-    ctx.stroke()
-    ctx.restore()
-    lastPos.current = pos
+    const pos = getPos(e)
+    if (SHAPE_TOOLS.includes(toolRef.current)) {
+      if (!shapeStartRef.current || !shapeSnapshotRef.current) return
+      // Restore to pre-drag state, then draw live preview
+      ctx.putImageData(shapeSnapshotRef.current, 0, 0)
+      const lineW = sizeRef.current * SCALE * 1.5
+      drawShape(ctx, toolRef.current, shapeStartRef.current.x, shapeStartRef.current.y, pos.x, pos.y, colorRef.current, lineW)
+    } else {
+      const pressure = (e.pointerType === 'pen' && e.pressure > 0) ? e.pressure : 0.5
+      const lineW    = (sizeRef.current * SCALE) * (0.4 + pressure * 1.2)
+      ctx.save()
+      ctx.globalCompositeOperation = toolRef.current === 'eraser' ? 'destination-out' : 'source-over'
+      ctx.strokeStyle = toolRef.current === 'eraser' ? 'rgba(0,0,0,1)' : colorRef.current
+      ctx.lineWidth = lineW; ctx.lineCap = 'round'; ctx.lineJoin = 'round'
+      ctx.beginPath()
+      ctx.moveTo(lastPos.current.x, lastPos.current.y)
+      ctx.lineTo(pos.x, pos.y)
+      ctx.stroke()
+      ctx.restore()
+      lastPos.current = pos
+    }
   }, []) // eslint-disable-line
 
   const onPointerUp = useCallback((e) => {
     if (!isDrawing.current) return
     isDrawing.current = false
     e.preventDefault()
+    shapeStartRef.current    = null
+    shapeSnapshotRef.current = null
     onStrokeEnd(page.id, prevDataUrl.current)
     prevDataUrl.current = null
   }, [page.id, onStrokeEnd])
@@ -890,6 +964,18 @@ export default function AnnotationSession({
     }
 
     if (isCanvas) {
+      const SHAPES = [
+        { id: 'rect',    title: 'Retângulo',
+          icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="6" width="18" height="12" rx="1.5"/></svg> },
+        { id: 'circle',  title: 'Elipse',
+          icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><ellipse cx="12" cy="12" rx="9" ry="6.5"/></svg> },
+        { id: 'diamond', title: 'Losango (decisão)',
+          icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 3L21 12L12 21L3 12Z"/></svg> },
+        { id: 'arrow',   title: 'Seta',
+          icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="13 6 19 12 13 18"/></svg> },
+        { id: 'line',    title: 'Linha',
+          icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="4" y1="20" x2="20" y2="4"/></svg> },
+      ]
       return (
         <>
           <TBtn active={tool === 'pen'} onClick={() => setTool('pen')} title="Caneta">
@@ -908,8 +994,19 @@ export default function AnnotationSession({
 
           <Sep />
 
+          {/* Shape tools */}
+          {SHAPES.map(s => (
+            <TBtn key={s.id} active={tool === s.id} onClick={() => setTool(s.id)} title={s.title}>
+              {s.icon}
+            </TBtn>
+          ))}
+
+          <Sep />
+
           {COLORS.map(c => (
-            <button key={c} onClick={() => { setColor(c); setTool('pen') }} title={c}
+            <button key={c}
+              onClick={() => { setColor(c); if (!SHAPE_TOOLS.includes(tool)) setTool('pen') }}
+              title={c}
               style={{
                 // 44×44 tap target wrapping a 22px dot — WCAG minimum
                 width: 44, height: 44, borderRadius: 8, background: 'transparent',
@@ -921,7 +1018,7 @@ export default function AnnotationSession({
             >
               <div style={{
                 width: 22, height: 22, borderRadius: '50%', background: c, flexShrink: 0,
-                boxShadow: color === c && tool === 'pen' ? `0 0 0 2px #1A1A1A, 0 0 0 3.5px ${c}` : 'none',
+                boxShadow: color === c && (tool === 'pen' || SHAPE_TOOLS.includes(tool)) ? `0 0 0 2px #1A1A1A, 0 0 0 3.5px ${c}` : 'none',
                 transition: 'box-shadow 0.15s',
               }} />
             </button>
