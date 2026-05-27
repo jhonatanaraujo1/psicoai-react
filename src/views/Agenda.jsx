@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { api } from '../services'
 
 const DAYS = ['SEG', 'TER', 'QUA', 'QUI', 'SEX']
@@ -55,6 +55,86 @@ const inSt = {
 }
 
 const EMPTY_MODAL = { open: false, mode: 'create', data: null }
+
+// ── CustomSelect — dropdown estilizado, substitui <select> nativo ────────────
+function CustomSelect({ value, onChange, options, placeholder = 'Selecionar…' }) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef(null)
+
+  useEffect(() => {
+    if (!open) return
+    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false) }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [open])
+
+  const selected = options.find(o => String(o.value) === String(value))
+
+  return (
+    <div ref={ref} style={{ position: 'relative' }}>
+      <button
+        type="button"
+        onClick={() => setOpen(o => !o)}
+        style={{
+          ...inSt,
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          cursor: 'pointer', textAlign: 'left',
+          borderColor: open ? 'var(--g300)' : 'var(--gr2)',
+          boxShadow: open ? '0 0 0 3px rgba(74,124,89,0.10)' : 'none',
+          transition: 'border-color 0.15s, box-shadow 0.15s',
+          userSelect: 'none',
+        }}
+      >
+        <span style={{ color: selected ? 'var(--d)' : 'var(--gr4)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {selected ? selected.label : placeholder}
+        </span>
+        <svg
+          width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--gr4)" strokeWidth="2" strokeLinecap="round"
+          style={{ flexShrink: 0, marginLeft: 8, transition: 'transform 0.18s', transform: open ? 'rotate(180deg)' : 'none' }}
+        >
+          <polyline points="6 9 12 15 18 9"/>
+        </svg>
+      </button>
+
+      {open && (
+        <div style={{
+          position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0, zIndex: 270,
+          background: 'var(--w)', border: '1px solid var(--gr2)',
+          borderRadius: 'var(--r)', boxShadow: '0 8px 28px rgba(0,0,0,0.14)',
+          overflow: 'hidden', maxHeight: 240, overflowY: 'auto',
+        }}>
+          {options.map(o => {
+            const isActive = String(o.value) === String(value)
+            return (
+              <button
+                key={o.value}
+                type="button"
+                onClick={() => { onChange(o.value); setOpen(false) }}
+                style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  width: '100%', padding: '10px 14px', border: 'none', cursor: 'pointer',
+                  background: isActive ? 'var(--g50)' : 'var(--w)',
+                  color: isActive ? 'var(--g700)' : 'var(--d)',
+                  fontSize: '13px', fontFamily: "'DM Sans', sans-serif",
+                  fontWeight: isActive ? 600 : 400, textAlign: 'left',
+                }}
+                onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = 'var(--ow)' }}
+                onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = 'var(--w)' }}
+              >
+                {o.label}
+                {isActive && (
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--g600)" strokeWidth="2.5" strokeLinecap="round">
+                    <polyline points="20 6 9 17 4 12"/>
+                  </svg>
+                )}
+              </button>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
+}
 
 export default function Agenda({ currentUser }) {
   const [weekOffset, setWeekOffset] = useState(0)
@@ -603,44 +683,54 @@ export default function Agenda({ currentUser }) {
               {/* Tipo */}
               <div>
                 <label style={{ fontSize: '11px', fontWeight: 600, color: 'var(--gr5)', letterSpacing: '0.05em', display: 'block', marginBottom: '6px' }}>TIPO</label>
-                <select
-                  style={inSt}
+                <CustomSelect
                   value={form.type}
-                  onChange={e => setForm(f => ({ ...f, type: e.target.value, patientId: '' }))}
-                >
-                  <option value="session">Sessão</option>
-                  <option value="supervision">Supervisão</option>
-                  <option value="personal">Pessoal</option>
-                  <option value="other">Outro</option>
-                </select>
+                  onChange={v => setForm(f => ({ ...f, type: v, patientId: '' }))}
+                  options={[
+                    { value: 'session',    label: 'Sessão' },
+                    { value: 'supervision',label: 'Supervisão' },
+                    { value: 'personal',   label: 'Pessoal' },
+                    { value: 'other',      label: 'Outro' },
+                  ]}
+                />
               </div>
 
               {/* Paciente — só se tipo === session */}
               {form.type === 'session' && (
                 <div>
                   <label style={{ fontSize: '11px', fontWeight: 600, color: 'var(--gr5)', letterSpacing: '0.05em', display: 'block', marginBottom: '6px' }}>PACIENTE</label>
-                  <select
-                    style={inSt}
+                  <CustomSelect
                     value={form.patientId}
-                    onChange={e => setForm(f => ({ ...f, patientId: e.target.value }))}
-                  >
-                    <option value="">Selecionar paciente…</option>
-                    {allPatients.map(p => (
-                      <option key={p.id} value={p.id}>{p.name || p.fullName}</option>
-                    ))}
-                  </select>
+                    onChange={v => setForm(f => ({ ...f, patientId: v }))}
+                    placeholder="Selecionar paciente…"
+                    options={allPatients.map(p => ({ value: String(p.id), label: p.name || p.fullName }))}
+                  />
                 </div>
               )}
 
               {/* Data */}
               <div>
                 <label style={{ fontSize: '11px', fontWeight: 600, color: 'var(--gr5)', letterSpacing: '0.05em', display: 'block', marginBottom: '6px' }}>DATA</label>
-                <input
-                  style={inSt}
-                  type="date"
-                  value={form.date}
-                  onChange={e => setForm(f => ({ ...f, date: e.target.value }))}
-                />
+                <div style={{ position: 'relative' }}>
+                  <input
+                    style={{
+                      ...inSt,
+                      paddingRight: 40,
+                      WebkitAppearance: 'none',
+                      MozAppearance: 'none',
+                      appearance: 'none',
+                    }}
+                    type="date"
+                    value={form.date}
+                    onChange={e => setForm(f => ({ ...f, date: e.target.value }))}
+                  />
+                  <svg
+                    style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }}
+                    width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--gr4)" strokeWidth="1.8"
+                  >
+                    <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+                  </svg>
+                </div>
               </div>
 
               {/* Horários */}

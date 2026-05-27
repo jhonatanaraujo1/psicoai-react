@@ -76,6 +76,14 @@ function CadernoCard({ patient, canvas, onOpen }) {
   const [hovered, setHovered] = useState(false)
   const col = avatarColor(patient.id)
   const isEmpty = !canvas
+  const sessionCount = patient.sessions ?? 0
+
+  // Sub-label: última edição canvas, ou info de sessões backend, ou vazio
+  const subLabel = !isEmpty
+    ? fmtRelative(canvas.lastModified) || 'Editado recentemente'
+    : sessionCount > 0
+      ? `${sessionCount} sessão${sessionCount !== 1 ? 'ões' : ''} no prontuário · sem canvas`
+      : 'Nenhuma anotação ainda'
 
   return (
     <button
@@ -85,12 +93,12 @@ function CadernoCard({ patient, canvas, onOpen }) {
       style={{
         display: 'flex', flexDirection: 'column', gap: '12px',
         padding: '16px', borderRadius: '12px', textAlign: 'left',
-        border: `1px solid ${hovered ? 'var(--g300)' : (isEmpty ? 'var(--gr1)' : 'var(--gr2)')}`,
+        border: `1px solid ${hovered ? 'var(--g300)' : (isEmpty && !sessionCount ? 'var(--gr1)' : 'var(--gr2)')}`,
         background: hovered ? 'var(--g50)' : 'var(--w)',
         boxShadow: hovered ? 'var(--sh1)' : 'none',
         cursor: 'pointer', transition: 'all 0.15s',
         fontFamily: "'DM Sans', sans-serif",
-        opacity: isEmpty ? 0.72 : 1,
+        opacity: isEmpty && !sessionCount ? 0.65 : 1,
       }}
     >
       {/* Patient row */}
@@ -107,10 +115,8 @@ function CadernoCard({ patient, canvas, onOpen }) {
           <div style={{ fontSize: '13.5px', fontWeight: 600, color: 'var(--d)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {patient.name}
           </div>
-          <div style={{ fontSize: '11px', color: 'var(--gr4)', marginTop: '2px' }}>
-            {isEmpty
-              ? 'Nenhuma anotação ainda'
-              : fmtRelative(canvas.lastModified) || 'Editado recentemente'}
+          <div style={{ fontSize: '11px', color: isEmpty && sessionCount > 0 ? 'var(--gr5)' : 'var(--gr4)', marginTop: '2px' }}>
+            {subLabel}
           </div>
         </div>
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--gr3)" strokeWidth="2"
