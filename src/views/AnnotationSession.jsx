@@ -421,12 +421,16 @@ export default function AnnotationSession({
   const undoStackRef = useRef({})
   const redoStackRef = useRef({})
 
+  const [zoom, setZoom] = useState(1.0)
+
   const toolRef  = useRef(tool)
   const colorRef = useRef(color)
   const sizeRef  = useRef(size)
+  const pagesRef = useRef(pages)
   useEffect(() => { toolRef.current  = tool  }, [tool])
   useEffect(() => { colorRef.current = color }, [color])
   useEffect(() => { sizeRef.current  = size  }, [size])
+  useEffect(() => { pagesRef.current = pages }, [pages])
 
   // ── Estado texto ───────────────────────────────────────────────────────────
   const [savedIndicator, setSavedIndicator] = useState(false)
@@ -449,6 +453,7 @@ export default function AnnotationSession({
     if (!isOpen || !patient?.id) return
     setIsDirty(false)
     setShowEndModal(false)
+    penDetectedRef.current = false // C-1: reset palm rejection on every new session
 
     // Carrega histórico do paciente do localStorage
     const saved = loadCanvasPages(patient.id)
@@ -567,19 +572,21 @@ export default function AnnotationSession({
   }, [patient?.id])
 
   // ── Canvas: scroll → página ativa ─────────────────────────────────────────
+  // M-2: usa pagesRef para não recriar o handler a cada mudança de páginas
+  // C-3: usa el.offsetHeight em vez de PAGE_H para funcionar com CSS scaling no mobile
   const handleScroll = useCallback(() => {
     const c = mainScrollRef.current
     if (!c) return
     const midY = c.scrollTop + c.clientHeight / 2
     let closest = 0, minDist = Infinity
-    pages.forEach((p, i) => {
+    pagesRef.current.forEach((p, i) => {
       const el = document.getElementById(`page-${p.id}`)
       if (!el) return
-      const dist = Math.abs(el.offsetTop + PAGE_H / 2 - midY)
+      const dist = Math.abs(el.offsetTop + el.offsetHeight / 2 - midY)
       if (dist < minDist) { minDist = dist; closest = i }
     })
     setActivePage(closest)
-  }, [pages])
+  }, []) // eslint-disable-line — intencional: usa pagesRef, nunca recria
 
   useEffect(() => {
     const sb = sidebarRef.current
@@ -598,6 +605,9 @@ export default function AnnotationSession({
     return () => document.removeEventListener('pointerdown', handler, true)
   }, [showAddMenu])
 
+  // M-1: version counter previne race condition — stale onload de imagem anterior não sobrescreve nova
+  const undoVersionRef = useRef(0)
+
   const handleUndo = useCallback(() => {
     const page = pages[activePage]
     if (!page || page.pageType !== 'draw') return
@@ -614,8 +624,11 @@ export default function AnnotationSession({
       ctx.fillStyle = '#fff'
       ctx.fillRect(0, 0, canvas.width, canvas.height)
     } else {
+      undoVersionRef.current += 1
+      const myVersion = undoVersionRef.current
       const img = new Image()
       img.onload = () => {
+        if (undoVersionRef.current !== myVersion) return // stale — descarta
         ctx.clearRect(0, 0, canvas.width, canvas.height)
         ctx.drawImage(img, 0, 0)
       }
@@ -719,10 +732,17 @@ export default function AnnotationSession({
       imageBase64 = combined.toDataURL('image/png').split(',')[1]
     } catch (e) { console.warn('[AnnotationSession] export:', e) }
 
+    // C-2: coleta conteúdo de páginas de texto para a IA processar
+    const allTextHtml = targetPages
+      .filter(p => p.pageType === 'text' && p.textHtml)
+      .map(p => p.textHtml)
+      .join('<hr/>')
+
     return {
       imageBase64,
       canvasDataJson: JSON.stringify({ pages: snaps }),
-      textContent: null, htmlContent: null,
+      textContent: allTextHtml ? allTextHtml.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim() : null,
+      htmlContent: allTextHtml || null,
     }
   }
 
@@ -733,8 +753,6 @@ export default function AnnotationSession({
     onClose({ duration: 0, ...data })
   }
 
-  // handleAnalyze agora delega para o fluxo de seleção de páginas
-  const handleAnalyze = () => handleStartAnalysis()
 
   if (!isOpen) return null
 
@@ -1026,7 +1044,8 @@ export default function AnnotationSession({
 
           <Sep />
 
-          {[2, 4, 8].map(s => (
+          {/* Tamanhos: pen usa 2/4/8, eraser usa os maiores também */}
+          {(tool === 'eraser' ? [4, 12, 24, 40] : [2, 4, 8]).map(s => (
             <button key={s} onClick={() => setSize(s)} title={`Espessura ${s}`}
               style={{
                 width: 36, height: 36, borderRadius: 8, border: 'none',
@@ -1035,7 +1054,13 @@ export default function AnnotationSession({
                 transition: 'background 0.15s',
               }}
             >
-              <div style={{ width: Math.min(s * 2.5, 20), height: Math.min(s * 2.5, 20), borderRadius: '50%', background: color }} />
+              <div style={{
+                width: Math.min(s * (tool === 'eraser' ? 0.6 : 2.5), 26),
+                height: Math.min(s * (tool === 'eraser' ? 0.6 : 2.5), 26),
+                borderRadius: tool === 'eraser' ? 3 : '50%',
+                background: tool === 'eraser' ? 'rgba(255,255,255,0.3)' : color,
+                border: tool === 'eraser' ? '1.5px solid rgba(255,255,255,0.4)' : 'none',
+              }} />
             </button>
           ))}
 
@@ -1050,6 +1075,36 @@ export default function AnnotationSession({
           <TBtn active={false} onClick={handleRedo} title="Refazer (Ctrl+Y)">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <polyline points="15 14 20 9 15 4"/><path d="M4 20v-7a4 4 0 0 1 4-4h12"/>
+            </svg>
+          </TBtn>
+
+          <Sep />
+
+          {/* Zoom controls — PC não tem pinch, tablet/mobile já têm */}
+          <TBtn active={false} onClick={() => setZoom(z => Math.max(0.4, +(z - 0.1).toFixed(1)))} title="Reduzir zoom (–)">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+              <line x1="8" y1="11" x2="14" y2="11"/>
+            </svg>
+          </TBtn>
+          <button
+            onClick={() => setZoom(1.0)}
+            title="Zoom 100%"
+            style={{
+              minWidth: 38, height: 28, borderRadius: 6, border: 'none',
+              background: zoom !== 1.0 ? 'rgba(255,255,255,0.12)' : 'transparent',
+              color: zoom !== 1.0 ? '#fff' : 'rgba(255,255,255,0.45)',
+              cursor: 'pointer', fontSize: 10, fontWeight: 700,
+              fontFamily: "'DM Sans', sans-serif", letterSpacing: '0.3px',
+              flexShrink: 0, transition: 'all 0.15s',
+            }}
+          >
+            {Math.round(zoom * 100)}%
+          </button>
+          <TBtn active={false} onClick={() => setZoom(z => Math.min(2.5, +(z + 0.1).toFixed(1)))} title="Aumentar zoom (+)">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+              <line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/>
             </svg>
           </TBtn>
 
@@ -1124,8 +1179,6 @@ export default function AnnotationSession({
       </>
     )
   }
-
-  const wordCount = null
 
   return (
     <div style={{
@@ -1211,7 +1264,7 @@ export default function AnnotationSession({
           </span>
         )}
 
-        <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
+        <div style={{ marginLeft: 'auto', display: 'flex', gap: 8, alignItems: 'center' }}>
           {/* Analisar com IA */}
           <button
             onClick={handleStartAnalysis}
@@ -1243,6 +1296,25 @@ export default function AnnotationSession({
           >
             <span className="as-btn-txt">Salvar</span>
             <span className="as-btn-full-txt"> anotação</span>
+          </button>
+          {/* Fechar — abre modal de salvamento para não perder rascunho */}
+          <button
+            onClick={() => setShowEndModal(true)}
+            title="Fechar sessão"
+            style={{
+              width: 36, height: 36, borderRadius: 8, cursor: 'pointer',
+              background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)',
+              color: 'rgba(255,255,255,0.55)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              flexShrink: 0, transition: 'all 0.15s',
+            }}
+            onMouseEnter={e => { e.currentTarget.style.background = 'rgba(192,57,43,0.25)'; e.currentTarget.style.borderColor = 'rgba(192,57,43,0.5)'; e.currentTarget.style.color = '#E88' }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.12)'; e.currentTarget.style.color = 'rgba(255,255,255,0.55)' }}
+          >
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+              <line x1="18" y1="6" x2="6" y2="18"/>
+              <line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
           </button>
         </div>
       </div>
@@ -1286,7 +1358,7 @@ export default function AnnotationSession({
             transition: 'width 0.2s ease, padding 0.2s ease',
           }}
         >
-          <SidebarContent />
+          {SidebarContent()}
         </div>
 
         {/* Área principal */}
@@ -1299,42 +1371,47 @@ export default function AnnotationSession({
             background: '#2A2A2A',
             display: 'flex', flexDirection: 'column',
             alignItems: 'center',
-            padding: '32px 24px 80px', gap: 32,
+            padding: '32px 24px 80px',
             overscrollBehavior: 'contain', // prevents iOS rubber-band from disrupting drawing
           }}
         >
-          {pages.map((p, i) => (
-            p.pageType === 'text'
-              ? <TextPage
-                  key={p.id} page={p}
-                  isActive={activePage === i}
-                  onTextChange={handlePageTextChange}
-                  onClick={() => setActivePage(i)}
-                />
-              : <CanvasPage
-                  key={p.id} page={p}
-                  isActive={activePage === i}
-                  toolRef={toolRef} colorRef={colorRef} sizeRef={sizeRef}
-                  onStrokeEnd={handleStrokeEnd}
-                  onClick={() => setActivePage(i)}
-                  penDetectedRef={penDetectedRef}
-                />
-          ))}
+          {/* zoom: CSS zoom property altera layout (scroll correto), diferente de transform:scale */}
+          <div style={{ zoom: zoom, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 32 }}>
+            {pages.map((p, i) => (
+              p.pageType === 'text'
+                ? <TextPage
+                    key={p.id} page={p}
+                    isActive={activePage === i}
+                    onTextChange={handlePageTextChange}
+                    onClick={() => setActivePage(i)}
+                  />
+                : <CanvasPage
+                    key={p.id} page={p}
+                    isActive={activePage === i}
+                    toolRef={toolRef} colorRef={colorRef} sizeRef={sizeRef}
+                    onStrokeEnd={handleStrokeEnd}
+                    onClick={() => setActivePage(i)}
+                    penDetectedRef={penDetectedRef}
+                  />
+            ))}
+          </div>
         </div>
       </div>
 
       {/* ── Toolbar ──────────────────────────────────────────────────────── */}
       <div className="as-toolbar" style={{
-        height: 56, flexShrink: 0,
+        // A-2: height TOTAL inclui safe-area-inset-bottom para não sobrepor home indicator
+        height: 'calc(56px + env(safe-area-inset-bottom, 0px))',
+        flexShrink: 0,
         background: '#1A1A1A',
         borderTop: '1px solid rgba(255,255,255,0.08)',
-        display: 'flex', alignItems: 'center',
-        justifyContent: 'center', gap: 4, padding: '0 12px',
-        overflowX: 'auto',
-        // Safe area bottom: Apple Pencil often used in portrait iPad with home indicator
+        display: 'flex', alignItems: 'flex-start',
+        justifyContent: 'center', gap: 4,
+        padding: '0 12px', paddingTop: 0,
         paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+        overflowX: 'auto',
       }}>
-        <ToolbarContent />
+        {ToolbarContent()}
       </div>
 
       {/* ── Modal salvar / analisar ──────────────────────────────────────── */}
@@ -1361,7 +1438,7 @@ export default function AnnotationSession({
 
             <div style={{ padding: '0 24px 24px', display: 'flex', flexDirection: 'column', gap: 10, marginTop: 8 }}>
               <button
-                onClick={handleAnalyze} disabled={saving}
+                onClick={handleStartAnalysis} disabled={saving}
                 style={{
                   width: '100%', padding: 16, border: '2px solid var(--g300)',
                   borderRadius: 12, background: 'var(--g50)', cursor: saving ? 'wait' : 'pointer',

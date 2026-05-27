@@ -808,7 +808,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--ow);color:var(--d);displa
   /* Footer compacto: apenas avatar circle — logout oculto (usar Configurações) */
   .sb-footer{padding:12px 4px}
   .sb-avatar{justify-content:center;padding:8px 0;gap:0}
-  .sb-avatar button{display:none}
+  .sb-avatar button{display:none !important}
 
   /* Layout do conteúdo ajustado para a sidebar de 56px */
   .stats-row{grid-template-columns:1fr 1fr}
