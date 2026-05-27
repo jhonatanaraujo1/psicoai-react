@@ -76,7 +76,7 @@ export default function Lembretes() {
                     <div className="lembrete-cfg-desc">{c.desc}</div>
                     <div className="lembrete-cfg-channel">
                       <span className="channel-chip active email"><EmailIcon /> Email</span>
-                      <span style={{ fontSize: '10px', color: 'var(--gr4)', marginLeft: 6 }}>Em breve: WhatsApp · Instagram</span>
+                      <span style={{ fontSize: '10px', color: 'var(--gr4)', marginLeft: 6 }}>Em breve: WhatsApp · SMS · Instagram</span>
                     </div>
                   </div>
                   <label className="toggle-switch">

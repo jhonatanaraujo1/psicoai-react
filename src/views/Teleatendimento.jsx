@@ -123,7 +123,7 @@ export default function Teleatendimento() {
               </div>
             </label>
             <div style={{ fontSize: '11px', color: 'var(--gr4)', marginTop: '10px', padding: '0 4px' }}>
-              Em breve: WhatsApp e Instagram
+              Em breve: WhatsApp, SMS e Instagram
             </div>
           </div>
 
