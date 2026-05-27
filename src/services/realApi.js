@@ -38,12 +38,24 @@ let _refreshPromise = null
 async function doRefresh() {
   const rt = getRefresh()
   if (!rt) throw new Error('no_refresh_token')
-  const res = await fetch(`${BASE}/api/v1/auth/refresh`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ refreshToken: rt }),
-  })
-  if (!res.ok) throw new Error('refresh_failed')
+
+  let res
+  try {
+    res = await fetch(`${BASE}/api/v1/auth/refresh`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refreshToken: rt }),
+    })
+  } catch {
+    // Erro de rede: servidor offline, connection refused, timeout de deploy
+    throw new Error('network_error')
+  }
+
+  // 401/403 = token realmente inválido ou expirado → deslogar
+  if (res.status === 401 || res.status === 403) throw new Error('refresh_failed')
+  // 5xx / outro = servidor temporariamente indisponível (restart Railway) → NÃO deslogar
+  if (!res.ok) throw new Error('server_error')
+
   const data = await res.json()
   setTokens(data.accessToken, data.refreshToken)
   if (data.user) localStorage.setItem('psicoai_user', JSON.stringify(normalizeUser(data.user)))
@@ -75,12 +87,16 @@ async function req(method, path, body, opts = {}) {
       const newToken = await refreshOnce()
       headers['Authorization'] = `Bearer ${newToken}`
       res = await fetch(url, { method, headers, body: body ? JSON.stringify(body) : undefined, _retry: true })
-    } catch {
+    } catch (e) {
+      if (e.message === 'network_error' || e.message === 'server_error') {
+        // Servidor temporariamente down (deploy Railway, restart) — mantém sessão, propaga erro
+        throw new Error('Serviço temporariamente indisponível. Aguarde alguns segundos e tente novamente.')
+      }
+      // Token realmente inválido ou expirado — desloga
       clearTokens()
       window.dispatchEvent(new CustomEvent('psicoai:session-expired'))
-      // Reload limpo — garante que o usuário vê login sem erro acumulado no estado
       window.location.replace('/')
-      return // nunca alcançado, evita propagação do throw durante o redirect
+      return
     }
   }
 
