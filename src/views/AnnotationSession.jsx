@@ -411,9 +411,8 @@ export default function AnnotationSession({
   const [isDirty, setIsDirty]           = useState(false)
 
   // ── Sidebar: overlay em mobile/tablet, inline em desktop ──────────────────
-  // Canvas: fechado por padrão em ≤900px
-  // Texto: aberto por padrão em desktop (guia de anotação), fechado em mobile
-  const [sidebarOpen, setSidebarOpen]    = useState(() => window.innerWidth > 900)
+  // Sempre começa aberta — no mobile mostra a lista de páginas antes do canvas
+  const [sidebarOpen, setSidebarOpen]    = useState(true)
   const [isOverlaySidebar, setIsOverlay] = useState(() => window.innerWidth <= 900)
 
   useEffect(() => {
@@ -819,13 +818,19 @@ export default function AnnotationSession({
           {/* ── Tab: Páginas ── */}
           {sidebarTab === 'pages' && (
             <>
+              {/* Contador de páginas — ajuda na orientação com muitas páginas */}
+              {pages.length > 1 && (
+                <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', textAlign: 'center', padding: '2px 0 6px', letterSpacing: '0.3px' }}>
+                  {pages.length} páginas
+                </div>
+              )}
               {pages.map((p, i) => (
                 <div
                   key={p.id}
                   data-thumb={i}
                   onMouseEnter={() => setHoveredPageIdx(i)}
                   onMouseLeave={() => setHoveredPageIdx(-1)}
-                  onClick={() => scrollToPage(i)}
+                  onClick={() => { scrollToPage(i); if (isOverlaySidebar) setSidebarOpen(false) }}
                   style={{
                     width: '100%', cursor: 'pointer',
                     background: hoveredPageIdx === i && activePage !== i
@@ -1260,27 +1265,27 @@ export default function AnnotationSession({
           </button>
         )}
 
-        {/* Nome + tipo */}
-        <div style={{ fontSize: 14, color: '#fff', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ opacity: 0.5 }}>Ψ</span>
-          {patientName}
+        {/* Nome + tipo — minWidth:0 + overflow:hidden evita empurrar os botões direitos para fora */}
+        <div style={{ fontSize: 14, color: '#fff', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6, minWidth: 0, overflow: 'hidden' }}>
+          <span style={{ opacity: 0.5, flexShrink: 0 }}>Ψ</span>
+          <span className="as-patient-name" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{patientName}</span>
           <span style={{
-            fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 20,
+            fontSize: 10, fontWeight: 700, padding: '2px 6px', borderRadius: 20, flexShrink: 0,
             background: activePageIsText ? 'rgba(255,255,255,0.12)' : 'rgba(125,60,152,0.3)',
             color: activePageIsText ? 'rgba(255,255,255,0.6)' : '#C39BD3',
             letterSpacing: '0.5px', textTransform: 'uppercase',
           }}>
-            {activePageIsText ? 'Texto' : 'Canvas'}
+            {activePageIsText ? 'TEXTO' : 'CANVAS'}
           </span>
           {pages.length > 1 && (
-            <span style={{ fontSize: 11, background: 'rgba(255,255,255,0.12)', padding: '2px 8px', borderRadius: 20, color: 'rgba(255,255,255,0.6)' }}>
-              pág. {activePage + 1} / {pages.length}
+            <span className="as-page-count" style={{ fontSize: 11, background: 'rgba(255,255,255,0.12)', padding: '2px 6px', borderRadius: 20, color: 'rgba(255,255,255,0.6)', flexShrink: 0 }}>
+              {activePage + 1}/{pages.length}
             </span>
           )}
         </div>
 
         {isDirty && (
-          <span style={{ fontSize: 11, color: '#F0A500', display: 'flex', alignItems: 'center', gap: 4 }}>
+          <span className="as-dirty" style={{ fontSize: 11, color: '#F0A500', display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
             <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
               <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
             </svg>
@@ -1288,7 +1293,7 @@ export default function AnnotationSession({
           </span>
         )}
 
-        <div style={{ marginLeft: 'auto', display: 'flex', gap: 8, alignItems: 'center' }}>
+        <div style={{ marginLeft: 'auto', display: 'flex', gap: 8, alignItems: 'center', flexShrink: 0 }}>
           {/* Analisar com IA */}
           <button
             onClick={handleStartAnalysis}
@@ -1304,7 +1309,7 @@ export default function AnnotationSession({
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
             </svg>
-            <span className="as-btn-txt">Analisar</span>
+            <span className="as-btn-txt as-analyze-txt">Analisar</span>
           </button>
           {/* Salvar */}
           <button
@@ -1793,13 +1798,22 @@ export default function AnnotationSession({
           }
         }
 
-        /* ── Narrow phone header: compress buttons ──────────────────────────
-           375px – 480px: hide "anotação" suffix, keep "Salvar"
-           < 375px: hide all text labels, show icon-only                      */
+        /* ── Narrow phone header ──────────────────────────────────────────────
+           ≤520px: "Analisar" vira ícone (só o star), Salvar mantém texto
+           ≤480px: "anotação" some (botão fica só "Salvar")
+           ≤380px: "Rascunho" some, pág count some
+           ≤340px: "Salvar" também some (ícone save)                          */
+        @media (max-width: 520px) {
+          .as-analyze-txt { display: none; }
+        }
         @media (max-width: 480px) {
           .as-btn-full-txt { display: none; }
         }
-        @media (max-width: 360px) {
+        @media (max-width: 380px) {
+          .as-dirty { display: none !important; }
+          .as-page-count { display: none !important; }
+        }
+        @media (max-width: 340px) {
           .as-btn-txt { display: none; }
         }
       `}</style>
