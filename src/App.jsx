@@ -15,6 +15,7 @@ import Topbar from './components/Topbar'
 import BottomNav from './components/BottomNav'
 import AiDrawer from './components/AiDrawer'
 import PreSessionBriefing from './components/PreSessionBriefing'
+import SessionTypePicker from './components/SessionTypePicker'
 import PatientPicker from './components/PatientPicker'
 import CadastroModal from './components/CadastroModal'
 import AnalyzeSessionsModal from './components/AnalyzeSessionsModal'
@@ -241,6 +242,10 @@ export default function App() {
   // Sessão está "em background" quando existe mas a view está fechada (usuário navegou para outra tela)
   // ── Handlers ──────────────────────────────────────────────────────────────
 
+  // ── Session type picker (Texto / Canvas) ─────────────────────────────────
+  // Aparece depois de selecionar paciente — permite escolher o modo da sessão
+  const [typePickerPatient, setTypePickerPatient] = useState(null)
+
   // Abre AnnotationSession diretamente (text) sem passar pelo PreSessionBriefing.
   // Chamado pelo fluxo "Registrar" — o paciente já é conhecido neste ponto.
   const _openTextSession = (patient) => {
@@ -262,11 +267,30 @@ export default function App() {
     setTextOpen(true)
   }
 
-  // Inicia nova sessão — 'sessao' e 'liveSession' abrem AnnotationSession direto.
-  // QuickNoteModal (pickerMode='quicknote') não é mais acionado pela nav principal.
+  // Abre AnnotationSession diretamente (canvas).
+  const _openCanvasSession = (patient) => {
+    const pat = patient || currentPatient
+    activeSessionRef.current = null
+    setCurrentPatient(pat)
+    setActiveSessionType('canvas')
+    if (pat) {
+      localStorage.setItem('psicoai_active_session', JSON.stringify({
+        sessionId:   null,
+        sessionType: 'canvas',
+        patient:     { id: pat.id, name: pat.name },
+        startedAt:   Date.now(),
+      }))
+    }
+    api.createSession({ patientId: pat?.id, type: 'canvas' })
+      .then(session => setSession(session.id))
+      .catch(e => console.warn('[PsicoAI] createSession (canvas) failed:', e))
+    setCanvasOpen(true)
+  }
+
+  // Inicia nova sessão — mostra o picker de tipo (Texto/Canvas) após selecionar paciente.
   const _startNewSession = (view, patient) => {
     if (view === 'sessao' || view === 'liveSession') {
-      if (patient) { _openTextSession(patient) }
+      if (patient) { setCurrentPatient(patient); setTypePickerPatient(patient) }
       else { setPickerMode('live'); setPickerOpen(true) }
     }
   }
@@ -292,8 +316,8 @@ export default function App() {
   const handlePickerSelect = (patient) => {
     setCurrentPatient(patient)
     setPickerOpen(false)
-    // Todos os fluxos de picker vão para AnnotationSession diretamente
-    _openTextSession(patient)
+    // Mostra o picker de tipo de sessão (Texto / Canvas)
+    setTypePickerPatient(patient)
   }
 
   // ── QuickNote handlers ────────────────────────────────────────────────────
@@ -729,6 +753,13 @@ export default function App() {
         isOpen={pickerOpen}
         onSelect={handlePickerSelect}
         onCancel={() => setPickerOpen(false)}
+      />
+
+      <SessionTypePicker
+        patient={typePickerPatient}
+        onText={() => { const p = typePickerPatient; setTypePickerPatient(null); _openTextSession(p) }}
+        onCanvas={() => { const p = typePickerPatient; setTypePickerPatient(null); _openCanvasSession(p) }}
+        onCancel={() => setTypePickerPatient(null)}
       />
 
       <PreSessionBriefing
