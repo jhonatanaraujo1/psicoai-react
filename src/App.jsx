@@ -293,11 +293,49 @@ export default function App() {
     setCanvasOpen(true)
   }
 
-  // Inicia nova sessão — mostra o picker de tipo (Texto/Canvas) após selecionar paciente.
+  // Verifica se paciente já tem anotações salvas no localStorage
+  const _hasAnnotations = (patientId) => {
+    try {
+      const raw = localStorage.getItem(`psicoai_canvas2_p${patientId}`)
+      if (!raw) return false
+      const parsed = JSON.parse(raw)
+      return Array.isArray(parsed) && parsed.length > 0
+    } catch { return false }
+  }
+
+  // Abre o prontuário existente de um paciente direto (sem picker de tipo)
+  const _openExistingAnnotation = (patient) => {
+    const pat = patient || currentPatient
+    activeSessionRef.current = null
+    setCurrentPatient(pat)
+    setActiveSessionType('canvas')
+    setCanvasInitialPageType(null) // recovery — não adiciona nova página
+    if (pat) {
+      localStorage.setItem('psicoai_active_session', JSON.stringify({
+        sessionId: null, sessionType: 'canvas', patientId: pat.id,
+        patient: { id: pat.id, name: pat.name }, startedAt: Date.now(),
+      }))
+    }
+    api.createSession({ patientId: pat?.id, type: 'canvas' })
+      .then(s => setSession(s.id))
+      .catch(e => console.warn('[PsicoAI] createSession failed:', e))
+    setCanvasOpen(true)
+  }
+
+  // Inicia sessão: se paciente já tem anotações → abre direto; senão → picker de tipo
   const _startNewSession = (view, patient) => {
     if (view === 'sessao' || view === 'liveSession') {
-      if (patient) { setCurrentPatient(patient); setTypePickerPatient(patient) }
-      else { setPickerMode('live'); setPickerOpen(true) }
+      if (patient) {
+        setCurrentPatient(patient)
+        if (_hasAnnotations(patient.id)) {
+          _openExistingAnnotation(patient)
+        } else {
+          setTypePickerPatient(patient)
+        }
+      } else {
+        setPickerMode('live')
+        setPickerOpen(true)
+      }
     }
   }
 
@@ -322,8 +360,11 @@ export default function App() {
   const handlePickerSelect = (patient) => {
     setCurrentPatient(patient)
     setPickerOpen(false)
-    // Mostra o picker de tipo de sessão (Texto / Canvas)
-    setTypePickerPatient(patient)
+    if (_hasAnnotations(patient.id)) {
+      _openExistingAnnotation(patient)
+    } else {
+      setTypePickerPatient(patient)
+    }
   }
 
   // ── QuickNote handlers ────────────────────────────────────────────────────
