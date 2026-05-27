@@ -498,16 +498,55 @@ export default function App() {
     })
   }
 
-  // Step 1 of the analyze flow: close the session view and open the session-picker modal.
-  // The actual API calls happen only after the psychologist confirms in the modal.
-  const handleAnalyze = ({ imageBase64, textContent, htmlContent, duration, canvasDataJson, canvasTextContent }) => {
+  // Background analysis — runs without opening AiDrawer, shows a toast with action when done
+  const _runAnalysisInBackground = async ({ imageBase64, textContent, htmlContent, duration, sessionId, canvasDataJson, canvasTextContent }) => {
+    showToast('Análise iniciada em segundo plano…', 'info', { duration: 4000 })
+    startProgress()
+    try {
+      if (sessionId) {
+        await api.finishSession(sessionId, { textContent, htmlContent, imageBase64, canvasDataJson, canvasTextContent, durationSeconds: duration })
+      }
+      const effectiveId = sessionId || ('s-mock-' + Date.now())
+      const data = await api.createAnalysis({ sessionId: effectiveId, additionalSessionIds: [], template: null, patientId: currentPatient?.id })
+      setAnalysisResult(data)
+      finishProgress()
+      showToast('✓ Análise pronta!', 'success', {
+        description: `Hipóteses identificadas para ${currentPatient?.name || 'o paciente'}.`,
+        action: { label: 'Ver agora →', onClick: () => setAiDrawerOpen(true) },
+        duration: 10000,
+      })
+    } catch (e) {
+      failProgress()
+      showToast('Falha na análise em segundo plano', 'error', {
+        description: 'Verifique sua conexão e tente novamente.',
+        duration: 6000,
+      })
+    }
+  }
+
+  // Step 1 of the analyze flow: close the session view, then route based on destination.
+  // destination === undefined → show AnalyzeSessionsModal (legacy flow / via "Salvar anotação" modal)
+  // destination === 'here'     → run analysis immediately, AiDrawer opens over current view
+  // destination === 'analyses' → navigate to 'anotacoes', run analysis, AiDrawer opens there
+  // destination === 'later'    → run in background, toast when done
+  const handleAnalyze = ({ imageBase64, textContent, htmlContent, duration, canvasDataJson, canvasTextContent, destination }) => {
     const sid = activeSessionRef.current
     setSession(null)
     setActiveSessionType(null)
     setCanvasOpen(false)
     setTextOpen(false)
-    // Store pending data — AnalyzeSessionsModal will collect additionalSessionIds, then call handleAnalysisConfirm
-    setPendingAnalysis({ imageBase64, textContent, htmlContent, duration, sessionId: sid, canvasDataJson, canvasTextContent })
+
+    if (destination === 'here') {
+      handleAnalysisConfirm({ imageBase64, textContent, htmlContent, duration, sessionId: sid, canvasDataJson, canvasTextContent })
+    } else if (destination === 'analyses') {
+      setCurrentView('anotacoes')
+      handleAnalysisConfirm({ imageBase64, textContent, htmlContent, duration, sessionId: sid, canvasDataJson, canvasTextContent })
+    } else if (destination === 'later') {
+      _runAnalysisInBackground({ imageBase64, textContent, htmlContent, duration, sessionId: sid, canvasDataJson, canvasTextContent })
+    } else {
+      // Legacy flow: AnalyzeSessionsModal lets the user pick additional sessions before confirming
+      setPendingAnalysis({ imageBase64, textContent, htmlContent, duration, sessionId: sid, canvasDataJson, canvasTextContent })
+    }
   }
 
   // Step 2: called by AnalyzeSessionsModal after the psychologist selects sessions and clicks confirm.

@@ -270,6 +270,11 @@ export default function AnnotationSession({
   const [activePage, setActivePage] = useState(0)
   const [showAddMenu, setShowAddMenu] = useState(false)
   const addMenuRef = useRef(null)
+
+  // ── Estado do fluxo de análise ─────────────────────────────────────────────
+  const [analysisStep, setAnalysisStep]         = useState('idle') // 'idle' | 'picker' | 'destination'
+  const [selectedPageIds, setSelectedPageIds]   = useState(() => new Set())
+  const [analysisRunning, setAnalysisRunning]   = useState(false)
   const [tool, setTool]             = useState('pen')
   const [color, setColor]           = useState('#1C1C1C')
   const [size, setSize]             = useState(3)
@@ -501,10 +506,37 @@ export default function AnnotationSession({
     setActivePage(idx)
   }
 
+  // ── Helpers de análise ─────────────────────────────────────────────────────
+  const togglePageSel = (id) => setSelectedPageIds(prev => {
+    const next = new Set(prev)
+    next.has(id) ? next.delete(id) : next.add(id)
+    return next
+  })
+
+  const handleStartAnalysis = () => {
+    // Pré-seleciona página ativa
+    setSelectedPageIds(new Set([pages[activePage]?.id].filter(Boolean)))
+    // Se só 1 página, pula direto para escolha de destino
+    setAnalysisStep(pages.length === 1 ? 'destination' : 'picker')
+    setShowEndModal(false)
+  }
+
+  const handleAnalyzeWithDest = async (dest) => {
+    setAnalysisRunning(true)
+    const ids = Array.from(selectedPageIds)
+    const data = await exportData(ids.length > 0 ? ids : null)
+    setAnalysisRunning(false)
+    setAnalysisStep('idle')
+    setIsDirty(false)
+    onAnalyze({ duration: 0, destination: dest, ...data })
+  }
+
   // ── Export ─────────────────────────────────────────────────────────────────
-  const exportData = async () => {
-    // Combina todas as páginas em imagem única
-    const snaps = pages.map(p => ({
+  const exportData = async (pageIds = null) => {
+    // Filtra páginas se pageIds fornecido, senão exporta todas
+    const targetPages = pageIds ? pages.filter(p => pageIds.includes(p.id)) : pages
+    // Combina as páginas selecionadas em imagem única
+    const snaps = targetPages.map(p => ({
       id: p.id,
       dataUrl: p.canvasRef.current?.toDataURL('image/png') || p.dataUrl || null,
     }))
@@ -541,12 +573,8 @@ export default function AnnotationSession({
     onClose({ duration: 0, ...data })
   }
 
-  const handleAnalyze = async () => {
-    setSaving(true)
-    const data = await exportData()
-    setSaving(false); setShowEndModal(false); setIsDirty(false)
-    onAnalyze({ duration: 0, ...data })
-  }
+  // handleAnalyze agora delega para o fluxo de seleção de páginas
+  const handleAnalyze = () => handleStartAnalysis()
 
   if (!isOpen) return null
 
@@ -952,7 +980,24 @@ export default function AnnotationSession({
           </span>
         )}
 
-        <div style={{ marginLeft: 'auto' }}>
+        <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
+          {/* Analisar com IA */}
+          <button
+            onClick={handleStartAnalysis}
+            style={{
+              padding: '7px 14px', background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)',
+              borderRadius: 8, color: 'rgba(255,255,255,0.85)', fontSize: 12, fontWeight: 600,
+              cursor: 'pointer', transition: 'all 0.15s', display: 'flex', alignItems: 'center', gap: 6,
+            }}
+            onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.16)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.35)' }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.1)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)' }}
+          >
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+            </svg>
+            Analisar
+          </button>
+          {/* Salvar */}
           <button
             onClick={() => setShowEndModal(true)}
             style={{
@@ -1127,8 +1172,245 @@ export default function AnnotationSession({
         </div>
       )}
 
+      {/* ── Fluxo de análise — bottom sheet ──────────────────────────── */}
+      {analysisStep !== 'idle' && (
+        <div
+          style={{
+            position: 'fixed', inset: 0, zIndex: 20,
+            background: 'rgba(0,0,0,0.55)',
+            display: 'flex', flexDirection: 'column', justifyContent: 'flex-end',
+            backdropFilter: 'blur(2px)',
+          }}
+          onClick={() => { if (!analysisRunning) setAnalysisStep('idle') }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{
+              background: '#1A1A1A', borderRadius: '20px 20px 0 0',
+              paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 16px)',
+              maxHeight: '85dvh', overflow: 'hidden',
+              display: 'flex', flexDirection: 'column',
+              animation: 'as-slideUp 0.28s cubic-bezier(0.32,0.72,0,1)',
+              boxShadow: '0 -8px 48px rgba(0,0,0,0.55)',
+            }}
+          >
+            {/* Drag handle */}
+            <div style={{ display: 'flex', justifyContent: 'center', padding: '12px 0 4px' }}>
+              <div style={{ width: 36, height: 4, borderRadius: 2, background: 'rgba(255,255,255,0.18)' }} />
+            </div>
+
+            {/* ─ STEP: picker ─ */}
+            {analysisStep === 'picker' && (
+              <>
+                <div style={{ padding: '8px 20px 14px' }}>
+                  <div style={{ fontSize: 16, fontWeight: 700, color: '#fff', marginBottom: 3 }}>
+                    Quais páginas analisar?
+                  </div>
+                  <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)' }}>
+                    Toque para selecionar · {selectedPageIds.size} selecionada{selectedPageIds.size !== 1 ? 's' : ''}
+                  </div>
+                </div>
+
+                {/* Shortcut pills */}
+                <div style={{ display: 'flex', gap: 8, padding: '0 20px 14px' }}>
+                  <button
+                    onClick={() => setSelectedPageIds(new Set(pages.map(p => p.id)))}
+                    style={{
+                      padding: '6px 14px', borderRadius: 20,
+                      background: selectedPageIds.size === pages.length ? '#4A7C59' : 'rgba(255,255,255,0.1)',
+                      border: 'none', color: '#fff', fontSize: 12, fontWeight: 600,
+                      cursor: 'pointer', transition: 'background 0.15s',
+                    }}
+                  >
+                    Todas ({pages.length})
+                  </button>
+                  <button
+                    onClick={() => setSelectedPageIds(new Set([pages[activePage]?.id].filter(Boolean)))}
+                    style={{
+                      padding: '6px 14px', borderRadius: 20,
+                      background: selectedPageIds.size === 1 && selectedPageIds.has(pages[activePage]?.id)
+                        ? '#4A7C59' : 'rgba(255,255,255,0.1)',
+                      border: 'none', color: '#fff', fontSize: 12, fontWeight: 600,
+                      cursor: 'pointer', transition: 'background 0.15s',
+                    }}
+                  >
+                    Só esta
+                  </button>
+                </div>
+
+                {/* Thumbnails — horizontal scroll */}
+                <div style={{
+                  display: 'flex', gap: 10, overflowX: 'auto',
+                  padding: '4px 20px 20px',
+                  scrollSnapType: 'x mandatory',
+                  WebkitOverflowScrolling: 'touch',
+                }}>
+                  {pages.map((p, i) => {
+                    const sel = selectedPageIds.has(p.id)
+                    return (
+                      <button
+                        key={p.id}
+                        onClick={() => togglePageSel(p.id)}
+                        style={{
+                          flexShrink: 0, width: 80, height: 113,
+                          border: `2.5px solid ${sel ? '#5C8F6A' : 'rgba(255,255,255,0.12)'}`,
+                          borderRadius: 8, overflow: 'hidden',
+                          background: '#fff', cursor: 'pointer', position: 'relative',
+                          scrollSnapAlign: 'start', transition: 'border-color 0.15s, transform 0.12s',
+                          padding: 0, transform: sel ? 'scale(1.04)' : 'scale(1)',
+                        }}
+                      >
+                        {p.pageType === 'text'
+                          ? <div style={{ display: 'flex', flexDirection: 'column', gap: 4, padding: 8, background: '#fff', height: '100%' }}>
+                              {[60, 80, 70, 50, 65, 75, 55].map((w, j) => (
+                                <div key={j} style={{ height: 2.5, borderRadius: 2, background: '#E0DDD8', width: `${w}%` }} />
+                              ))}
+                            </div>
+                          : p.dataUrl
+                            ? <img src={p.dataUrl} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="" />
+                            : <div style={{ width: '100%', height: '100%', background: '#F5F3F0' }} />
+                        }
+                        {/* Page number */}
+                        <div style={{
+                          position: 'absolute', bottom: 4, right: 4,
+                          fontSize: 9, fontWeight: 700,
+                          color: sel ? '#4A7C59' : 'rgba(0,0,0,0.3)',
+                          background: 'rgba(255,255,255,0.92)', borderRadius: 3, padding: '1px 4px',
+                        }}>
+                          {i + 1}
+                        </div>
+                        {/* Check overlay */}
+                        {sel && (
+                          <div style={{
+                            position: 'absolute', inset: 0, background: 'rgba(74,124,89,0.16)',
+                            display: 'flex', alignItems: 'flex-start', justifyContent: 'flex-end',
+                            padding: 5,
+                          }}>
+                            <div style={{
+                              width: 18, height: 18, borderRadius: '50%', background: '#4A7C59',
+                              display: 'flex', alignItems: 'center', justifyContent: 'center',
+                              flexShrink: 0,
+                            }}>
+                              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3">
+                                <polyline points="20 6 9 17 4 12"/>
+                              </svg>
+                            </div>
+                          </div>
+                        )}
+                      </button>
+                    )
+                  })}
+                </div>
+
+                {/* CTA */}
+                <div style={{ padding: '0 20px 20px', display: 'flex', gap: 8 }}>
+                  <button
+                    onClick={() => setAnalysisStep('idle')}
+                    style={{
+                      padding: '13px 16px', borderRadius: 12,
+                      border: '1px solid rgba(255,255,255,0.12)',
+                      background: 'transparent', color: 'rgba(255,255,255,0.45)',
+                      fontSize: 13, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif",
+                    }}
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={() => setAnalysisStep('destination')}
+                    disabled={selectedPageIds.size === 0}
+                    style={{
+                      flex: 1, padding: '13px 20px', borderRadius: 12,
+                      background: selectedPageIds.size === 0 ? 'rgba(255,255,255,0.08)' : '#4A7C59',
+                      border: 'none', color: '#fff',
+                      fontSize: 14, fontWeight: 700,
+                      cursor: selectedPageIds.size === 0 ? 'not-allowed' : 'pointer',
+                      transition: 'background 0.15s',
+                      fontFamily: "'DM Sans', sans-serif",
+                    }}
+                  >
+                    Continuar · {selectedPageIds.size} pág{selectedPageIds.size !== 1 ? 's' : ''} →
+                  </button>
+                </div>
+              </>
+            )}
+
+            {/* ─ STEP: destination ─ */}
+            {analysisStep === 'destination' && (
+              <>
+                <div style={{ padding: '8px 20px 14px' }}>
+                  <div style={{ fontSize: 16, fontWeight: 700, color: '#fff', marginBottom: 3 }}>
+                    Onde ver a análise?
+                  </div>
+                  <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)' }}>
+                    {pages.length > 1
+                      ? `${selectedPageIds.size} página${selectedPageIds.size !== 1 ? 's' : ''} selecionada${selectedPageIds.size !== 1 ? 's' : ''}`
+                      : 'Página atual · análise clínica com IA'
+                    }
+                  </div>
+                </div>
+
+                <div style={{ padding: '0 20px 20px', display: 'flex', flexDirection: 'column', gap: 10, overflowY: 'auto' }}>
+                  {[
+                    { dest: 'here',     icon: '🔍', title: 'Ver aqui',           desc: 'A análise abre nesta tela assim que ficar pronta' },
+                    { dest: 'analyses', icon: '📊', title: 'Ir para análises',   desc: 'Navega para a seção de análises com o resultado aberto' },
+                    { dest: 'later',    icon: '⏱', title: 'Mais tarde',          desc: 'Salva e avisa com uma notificação quando estiver pronto' },
+                  ].map(opt => (
+                    <button
+                      key={opt.dest}
+                      onClick={() => { if (!analysisRunning) handleAnalyzeWithDest(opt.dest) }}
+                      disabled={analysisRunning}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: 14,
+                        padding: '14px 16px', borderRadius: 14,
+                        background: 'rgba(255,255,255,0.06)',
+                        border: '1.5px solid rgba(255,255,255,0.1)',
+                        cursor: analysisRunning ? 'wait' : 'pointer',
+                        textAlign: 'left', transition: 'all 0.15s',
+                        opacity: analysisRunning ? 0.6 : 1,
+                        fontFamily: "'DM Sans', sans-serif",
+                      }}
+                      onMouseEnter={e => { if (!analysisRunning) { e.currentTarget.style.background = 'rgba(74,124,89,0.16)'; e.currentTarget.style.borderColor = '#4A7C59' }}}
+                      onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)' }}
+                    >
+                      <span style={{ fontSize: 22, lineHeight: 1, flexShrink: 0 }}>{opt.icon}</span>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: 14, fontWeight: 600, color: '#fff', marginBottom: 2 }}>{opt.title}</div>
+                        <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', lineHeight: 1.4 }}>{opt.desc}</div>
+                      </div>
+                      {analysisRunning
+                        ? <span style={{ width: 16, height: 16, border: '2px solid rgba(255,255,255,0.18)', borderTopColor: '#5C8F6A', borderRadius: '50%', display: 'inline-block', animation: 'as-spin 0.8s linear infinite', flexShrink: 0 }} />
+                        : <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.25)" strokeWidth="2" style={{ flexShrink: 0 }}><polyline points="9 18 15 12 9 6"/></svg>
+                      }
+                    </button>
+                  ))}
+
+                  {pages.length > 1 && (
+                    <button
+                      onClick={() => { if (!analysisRunning) setAnalysisStep('picker') }}
+                      disabled={analysisRunning}
+                      style={{
+                        background: 'none', border: 'none',
+                        color: 'rgba(255,255,255,0.35)', fontSize: 12,
+                        cursor: 'pointer', padding: '6px 0', textAlign: 'center',
+                        fontFamily: "'DM Sans', sans-serif",
+                      }}
+                    >
+                      ← Mudar seleção de páginas
+                    </button>
+                  )}
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
       <style>{`
         @keyframes as-spin { to { transform: rotate(360deg) } }
+        @keyframes as-slideUp {
+          from { transform: translateY(100%); opacity: 0.6 }
+          to   { transform: translateY(0);    opacity: 1 }
+        }
 
         [contenteditable][data-placeholder]:empty:before {
           content: attr(data-placeholder); color: #B0ADA8; pointer-events: none;
