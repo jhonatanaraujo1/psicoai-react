@@ -262,12 +262,10 @@ export default function App() {
     setTextOpen(true)
   }
 
-  // Inicia nova sessão (quicknote ou live) — chamado diretamente ou após gate
+  // Inicia nova sessão — 'sessao' e 'liveSession' abrem AnnotationSession direto.
+  // QuickNoteModal (pickerMode='quicknote') não é mais acionado pela nav principal.
   const _startNewSession = (view, patient) => {
-    if (view === 'sessao') {
-      if (patient) { setCurrentPatient(patient); setQuickNoteOpen(true) }
-      else { setPickerMode('quicknote'); setPickerOpen(true) }
-    } else if (view === 'liveSession') {
+    if (view === 'sessao' || view === 'liveSession') {
       if (patient) { _openTextSession(patient) }
       else { setPickerMode('live'); setPickerOpen(true) }
     }
@@ -294,12 +292,8 @@ export default function App() {
   const handlePickerSelect = (patient) => {
     setCurrentPatient(patient)
     setPickerOpen(false)
-    if (pickerMode === 'quicknote') {
-      setQuickNoteOpen(true)
-    } else {
-      // liveSession: vai direto para AnnotationSession sem PreSessionBriefing
-      _openTextSession(patient)
-    }
+    // Todos os fluxos de picker vão para AnnotationSession diretamente
+    _openTextSession(patient)
   }
 
   // ── QuickNote handlers ────────────────────────────────────────────────────
