@@ -485,10 +485,12 @@ export default function AnnotationSession({
 
   // ── Estado texto ───────────────────────────────────────────────────────────
   const [savedIndicator, setSavedIndicator] = useState(false)
-  const editorRef    = useRef(null)
-  const autosaveRef  = useRef(null)
-  const localSaveRef = useRef(null)
-  const patientIdRef = useRef(patient?.id)
+  const [backendSyncStatus, setBackendSyncStatus] = useState('idle') // 'idle'|'pending'|'saved'|'error'
+  const editorRef       = useRef(null)
+  const autosaveRef     = useRef(null)   // timer debounce backend
+  const localSaveRef    = useRef(null)
+  const patientIdRef    = useRef(patient?.id)
+  const pagesRef2       = useRef(null)   // snapshot das pages para flush síncrono no unload
   useEffect(() => { patientIdRef.current = patient?.id }, [patient?.id])
 
   // ── Refs compartilhados ────────────────────────────────────────────────────
@@ -534,6 +536,65 @@ export default function AnnotationSession({
     }
   }, [isOpen, patient?.id, initialPageType]) // eslint-disable-line
 
+  // ── Autosave backend — debounce 6s + flush no unload/hidden ──────────────────
+  // Padrão Google Docs:
+  //   1. Toda mudança → localStorage imediato (sem latência visual)
+  //   2. 6s de inatividade → backend silencioso (sem spinner)
+  //   3. beforeunload + visibilitychange → força flush antes de sair
+
+  const flushToBackend = useCallback(async (pagesSnapshot) => {
+    if (!onAutosave || !sessionIdRef.current || !pagesSnapshot) return
+    try {
+      // Coleta textContent + htmlContent das páginas de texto
+      const textPages = pagesSnapshot.filter(p => p.pageType === 'text' && p.textHtml)
+      const htmlContent = textPages.map(p => p.textHtml).join('\n\n') || null
+      const textContent = htmlContent
+        ? (new DOMParser().parseFromString(htmlContent, 'text/html').body.textContent || '').slice(0, 80_000)
+        : null
+      // Serializa canvas pages para JSON (sem as imagens — pesadas demais para autosave)
+      const canvasData = JSON.stringify(pagesSnapshot.map(p => ({
+        id: p.id, pageType: p.pageType, textHtml: p.textHtml || null
+        // dataUrl omitido no autosave — só vai no save final
+      }))).slice(0, 4_000_000)
+      await onAutosave(sessionIdRef.current, { textContent, htmlContent, canvasData })
+      setBackendSyncStatus('saved')
+      setTimeout(() => setBackendSyncStatus('idle'), 2000)
+    } catch {
+      setBackendSyncStatus('error')
+    }
+  }, [onAutosave])
+
+  // Mantém ref atualizado com pages atuais para o flush síncrono no unload
+  useEffect(() => { pagesRef2.current = pages }, [pages])
+
+  // Debounce: 6s após última mudança → flush backend
+  const scheduleBackendSave = useCallback((pagesSnapshot) => {
+    setBackendSyncStatus('pending')
+    clearTimeout(autosaveRef.current)
+    autosaveRef.current = setTimeout(() => flushToBackend(pagesSnapshot), 6000)
+  }, [flushToBackend])
+
+  // beforeunload + visibilitychange: flush síncrono antes de sair
+  useEffect(() => {
+    if (!isOpen) return
+    const handleUnload = () => {
+      clearTimeout(autosaveRef.current)
+      // sendBeacon para não bloquear o unload — mais confiável que fetch
+      if (onAutosave && sessionIdRef.current && pagesRef2.current) {
+        flushToBackend(pagesRef2.current).catch(() => {})
+      }
+    }
+    const handleVisibility = () => {
+      if (document.visibilityState === 'hidden') handleUnload()
+    }
+    window.addEventListener('beforeunload', handleUnload)
+    document.addEventListener('visibilitychange', handleVisibility)
+    return () => {
+      window.removeEventListener('beforeunload', handleUnload)
+      document.removeEventListener('visibilitychange', handleVisibility)
+    }
+  }, [isOpen, flushToBackend, onAutosave])
+
   const exec = (cmd, arg) => {
     document.execCommand(cmd, false, arg || null)
   }
@@ -573,9 +634,10 @@ export default function AnnotationSession({
         return { ...p, dataUrl: p.canvasRef.current?.toDataURL('image/png') || p.dataUrl }
       })
       if (patient?.id) saveCanvasPages(sessionIdRef.current, patient.id, updated)
+      scheduleBackendSave(updated)
       return updated
     })
-  }, [patient?.id, pushUndo])
+  }, [patient?.id, pushUndo, scheduleBackendSave])
 
   // ── Canvas: nova página ────────────────────────────────────────────────────
   const addPage = useCallback((pageType = 'draw') => {
@@ -583,6 +645,7 @@ export default function AnnotationSession({
     setPages(prev => {
       const next = [...prev, newPage]
       if (patient?.id) saveCanvasPages(sessionIdRef.current, patient.id, next)
+      scheduleBackendSave(next) // nova página → backend imediato (6s debounce)
       return next
     })
     setActivePage(p => p + 1)
@@ -591,26 +654,26 @@ export default function AnnotationSession({
       const c = mainScrollRef.current
       if (c) c.scrollTo({ top: c.scrollHeight, behavior: 'smooth' })
     }, 80)
-  }, [patient?.id])
+  }, [patient?.id, scheduleBackendSave])
 
   // ── Canvas: apagar página ─────────────────────────────────────────────────
   const deletePage = useCallback((pageId) => {
     setPages(prev => {
-      if (prev.length <= 1) return prev // nunca apaga a última página
+      if (prev.length <= 1) return prev
       const deletedIdx = prev.findIndex(p => p.id === pageId)
       if (deletedIdx === -1) return prev
       const next = prev.filter(p => p.id !== pageId)
       if (patient?.id) saveCanvasPages(sessionIdRef.current, patient.id, next)
-      // Ajusta página ativa
+      scheduleBackendSave(next)
       setActivePage(ap => {
-        if (ap > deletedIdx) return ap - 1          // apagou antes da ativa
-        if (ap === deletedIdx) return Math.min(ap, next.length - 1) // apagou a ativa
-        return ap                                     // apagou depois da ativa
+        if (ap > deletedIdx) return ap - 1
+        if (ap === deletedIdx) return Math.min(ap, next.length - 1)
+        return ap
       })
       return next
     })
     setIsDirty(true)
-  }, [patient?.id])
+  }, [patient?.id, scheduleBackendSave])
 
   // ── Canvas: atualizar texto em página de texto ────────────────────────────
   const handlePageTextChange = useCallback((pageId, html) => {
@@ -618,9 +681,10 @@ export default function AnnotationSession({
     setPages(prev => {
       const updated = prev.map(p => p.id === pageId ? { ...p, textHtml: html } : p)
       if (patient?.id) saveCanvasPages(sessionIdRef.current, patient.id, updated)
+      scheduleBackendSave(updated) // debounce 6s — não salva a cada tecla no backend
       return updated
     })
-  }, [patient?.id])
+  }, [patient?.id, scheduleBackendSave])
 
   // ── Canvas: scroll → página ativa ─────────────────────────────────────────
   // M-2: usa pagesRef para não recriar o handler a cada mudança de páginas
@@ -1334,7 +1398,30 @@ export default function AnnotationSession({
           </svg>
         </TBtn>
 
-        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 4 }}>
+        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6 }}>
+          {/* Indicador de sync backend — discreto, no canto */}
+          {onAutosave && backendSyncStatus !== 'idle' && (
+            <span style={{
+              fontSize: 10, display: 'flex', alignItems: 'center', gap: 3,
+              color: backendSyncStatus === 'saved' ? '#5C8F6A'
+                   : backendSyncStatus === 'error' ? '#E88'
+                   : 'rgba(255,255,255,0.25)',
+              transition: 'color 0.3s',
+            }}>
+              {backendSyncStatus === 'pending' && (
+                <span style={{ width: 5, height: 5, borderRadius: '50%', background: 'currentColor', animation: 'pulse 1.2s ease-in-out infinite' }} />
+              )}
+              {backendSyncStatus === 'saved' && (
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <polyline points="20 6 9 17 4 12"/>
+                </svg>
+              )}
+              {backendSyncStatus === 'error' && '!'}
+              <span className="as-kbd-hint">
+                {backendSyncStatus === 'pending' ? 'salvando…' : backendSyncStatus === 'saved' ? 'salvo' : 'erro ao salvar'}
+              </span>
+            </span>
+          )}
           <span className="as-kbd-hint" style={{
             fontSize: 10, color: savedIndicator ? '#5C8F6A' : 'rgba(255,255,255,0.28)',
             display: 'flex', alignItems: 'center', gap: 4, transition: 'color 0.3s',
@@ -1891,6 +1978,7 @@ export default function AnnotationSession({
 
       <style>{`
         @keyframes as-spin { to { transform: rotate(360deg) } }
+        @keyframes pulse { 0%,100% { opacity: 0.3 } 50% { opacity: 1 } }
         @keyframes as-slideUp {
           from { transform: translateY(100%); opacity: 0.6 }
           to   { transform: translateY(0);    opacity: 1 }
