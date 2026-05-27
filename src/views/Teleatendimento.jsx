@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { api } from '../services'
+import { DatePicker, TimePicker } from '../components/DateTimePickers'
 
 export default function Teleatendimento() {
   const [platform, setPlatform] = useState('whereby')
@@ -198,19 +199,17 @@ export default function Teleatendimento() {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
               <div>
                 <label style={labelSt}>Data</label>
-                <input
-                  type="date"
+                <DatePicker
                   value={teleForm.date}
-                  onChange={e => setTeleForm(f => ({ ...f, date: e.target.value }))}
+                  onChange={v => setTeleForm(f => ({ ...f, date: v }))}
                   style={inputSt}
                 />
               </div>
               <div>
                 <label style={labelSt}>Horário</label>
-                <input
-                  type="time"
+                <TimePicker
                   value={teleForm.time}
-                  onChange={e => setTeleForm(f => ({ ...f, time: e.target.value }))}
+                  onChange={v => setTeleForm(f => ({ ...f, time: v }))}
                   style={inputSt}
                 />
               </div>

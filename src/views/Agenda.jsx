@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { api } from '../services'
+import { DatePicker, TimePicker } from '../components/DateTimePickers'
 
 const DAYS = ['SEG', 'TER', 'QUA', 'QUI', 'SEX']
 const HOURS = [8, 9, 10, 11, 12, 13, 14, 15, 16, 17]
@@ -727,46 +728,29 @@ export default function Agenda({ currentUser }) {
               {/* Data */}
               <div>
                 <label style={{ fontSize: '11px', fontWeight: 600, color: 'var(--gr5)', letterSpacing: '0.05em', display: 'block', marginBottom: '6px' }}>DATA</label>
-                <div style={{ position: 'relative' }}>
-                  <input
-                    style={{
-                      ...inSt,
-                      paddingRight: 40,
-                      WebkitAppearance: 'none',
-                      MozAppearance: 'none',
-                      appearance: 'none',
-                    }}
-                    type="date"
-                    value={form.date}
-                    onChange={e => setForm(f => ({ ...f, date: e.target.value }))}
-                  />
-                  <svg
-                    style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }}
-                    width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--gr4)" strokeWidth="1.8"
-                  >
-                    <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
-                  </svg>
-                </div>
+                <DatePicker
+                  value={form.date}
+                  onChange={v => setForm(f => ({ ...f, date: v }))}
+                  style={inSt}
+                />
               </div>
 
               {/* Horários */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                 <div>
                   <label style={{ fontSize: '11px', fontWeight: 600, color: 'var(--gr5)', letterSpacing: '0.05em', display: 'block', marginBottom: '6px' }}>HORA INÍCIO</label>
-                  <input
-                    style={inSt}
-                    type="time"
+                  <TimePicker
                     value={form.startTime}
-                    onChange={e => setForm(f => ({ ...f, startTime: e.target.value }))}
+                    onChange={v => setForm(f => ({ ...f, startTime: v }))}
+                    style={inSt}
                   />
                 </div>
                 <div>
                   <label style={{ fontSize: '11px', fontWeight: 600, color: 'var(--gr5)', letterSpacing: '0.05em', display: 'block', marginBottom: '6px' }}>HORA FIM</label>
-                  <input
-                    style={inSt}
-                    type="time"
+                  <TimePicker
                     value={form.endTime}
-                    onChange={e => setForm(f => ({ ...f, endTime: e.target.value }))}
+                    onChange={v => setForm(f => ({ ...f, endTime: v }))}
+                    style={inSt}
                   />
                 </div>
               </div>

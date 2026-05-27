@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { api } from '../services'
+import { DatePicker } from '../components/DateTimePickers'
 
 function fmtBRL(n) {
   return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(n || 0)
@@ -422,7 +423,7 @@ export default function Financeiro() {
                       </div>
                       <div>
                         <label style={lbSt}>VENCIMENTO</label>
-                        <input style={inSt} type="date" value={lancForm.dueDate} onChange={e => setLancForm(f => ({ ...f, dueDate: e.target.value }))} />
+                        <DatePicker value={lancForm.dueDate} onChange={v => setLancForm(f => ({ ...f, dueDate: v }))} style={inSt} />
                       </div>
                     </div>
 
@@ -478,7 +479,7 @@ export default function Financeiro() {
             <select>{events.filter(e => e.patientName).map(e => <option key={e.id}>{e.patientName} — {e.description}</option>)}</select>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-            <div className="form-field"><label>DATA DA SESSÃO</label><input type="date" defaultValue={new Date().toISOString().slice(0, 10)} /></div>
+            <div className="form-field"><label>DATA DA SESSÃO</label><DatePicker value={new Date().toISOString().slice(0, 10)} onChange={() => {}} /></div>
             <div className="form-field"><label>VALOR</label><input type="text" defaultValue="R$ 200,00" /></div>
           </div>
           <div className="form-field"><label>DESCRIÇÃO</label><input type="text" defaultValue="Consulta de Psicologia — sessão individual" /></div>

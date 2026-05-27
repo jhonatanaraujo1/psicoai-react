@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { DatePicker, TimePicker } from './DateTimePickers'
 
 const GENEROS = ['Feminino', 'Masculino', 'Não-binário', 'Prefiro não informar']
 const ABORDAGENS = ['TCC', 'Psicanálise', 'Humanista', 'EMDR', 'ACT', 'DBT', 'Gestalt', 'Outra']
@@ -165,7 +166,7 @@ export default function CadastroModal({ isOpen, onClose, onSave, initialData = n
               </Field>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                 <Field label="Data de nascimento">
-                  <Input field="dataNasc" type="date" />
+                  <DatePicker value={form.dataNasc} onChange={v => set('dataNasc', v)} />
                 </Field>
                 <Field label="Gênero" required>
                   <Select field="genero" options={GENEROS} placeholder="Selecione" />
@@ -260,13 +261,7 @@ export default function CadastroModal({ isOpen, onClose, onSave, initialData = n
                 </select>
               </Field>
               <Field label="Horário fixo">
-                <input
-                  type="time"
-                  value={form.recurringTime}
-                  onChange={e => set('recurringTime', e.target.value)}
-                  onFocus={focusStyle} onBlur={blurStyle}
-                  style={inputStyle}
-                />
+                <TimePicker value={form.recurringTime} onChange={v => set('recurringTime', v)} />
               </Field>
               <Field label="Duração da sessão (min)">
                 <input
