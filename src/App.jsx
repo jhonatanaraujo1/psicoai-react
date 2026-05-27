@@ -241,13 +241,34 @@ export default function App() {
   // Sessão está "em background" quando existe mas a view está fechada (usuário navegou para outra tela)
   // ── Handlers ──────────────────────────────────────────────────────────────
 
+  // Abre AnnotationSession diretamente (text) sem passar pelo PreSessionBriefing.
+  // Chamado pelo fluxo "Registrar" — o paciente já é conhecido neste ponto.
+  const _openTextSession = (patient) => {
+    const pat = patient || currentPatient
+    activeSessionRef.current = null
+    setCurrentPatient(pat)
+    setActiveSessionType('text')
+    if (pat) {
+      localStorage.setItem('psicoai_active_session', JSON.stringify({
+        sessionId:   null,
+        sessionType: 'text',
+        patient:     { id: pat.id, name: pat.name },
+        startedAt:   Date.now(),
+      }))
+    }
+    api.createSession({ patientId: pat?.id, type: 'text' })
+      .then(session => setSession(session.id))
+      .catch(e => console.warn('[PsicoAI] createSession failed, session will not be persisted:', e))
+    setTextOpen(true)
+  }
+
   // Inicia nova sessão (quicknote ou live) — chamado diretamente ou após gate
   const _startNewSession = (view, patient) => {
     if (view === 'sessao') {
       if (patient) { setCurrentPatient(patient); setQuickNoteOpen(true) }
       else { setPickerMode('quicknote'); setPickerOpen(true) }
     } else if (view === 'liveSession') {
-      if (patient) { setCurrentPatient(patient); setBriefingOpen(true) }
+      if (patient) { _openTextSession(patient) }
       else { setPickerMode('live'); setPickerOpen(true) }
     }
   }
@@ -276,7 +297,8 @@ export default function App() {
     if (pickerMode === 'quicknote') {
       setQuickNoteOpen(true)
     } else {
-      setBriefingOpen(true)
+      // liveSession: vai direto para AnnotationSession sem PreSessionBriefing
+      _openTextSession(patient)
     }
   }
 
