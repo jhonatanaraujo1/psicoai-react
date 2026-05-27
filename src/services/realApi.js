@@ -67,8 +67,10 @@ async function req(method, path, body, opts = {}) {
 
   let res = await fetch(url, { method, headers, body: body ? JSON.stringify(body) : undefined, ...opts })
 
-  // Auto-refresh on 401
-  if (res.status === 401 && !opts._retry) {
+  // Auto-refresh on 401 — apenas para endpoints protegidos.
+  // Endpoints de auth (/api/v1/auth/*) retornam 401 para credenciais erradas,
+  // não para token expirado — nunca fazer refresh nesse caso.
+  if (res.status === 401 && !opts._retry && !path.startsWith('/api/v1/auth/')) {
     try {
       const newToken = await refreshOnce()
       headers['Authorization'] = `Bearer ${newToken}`
