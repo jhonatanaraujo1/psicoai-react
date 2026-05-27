@@ -22,6 +22,7 @@
  */
 
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { AES, enc as CryptoEnc } from 'crypto-js'
 
 // ── A4 dimensions ─────────────────────────────────────────────────────────────
 const PAGE_W = 794
@@ -42,10 +43,18 @@ const GUIDE = [
 
 // ── Canvas localStorage ───────────────────────────────────────────────────────
 const canvasKey = (id) => `psicoai_canvas2_p${id}`
-const textKey   = (id) => `psicoai_text_draft_p${id}`
 
 let _pid = 0
 const newPageId = () => `pg-${Date.now()}-${_pid++}`
+
+// SEC-003: chave derivada do JWT (muda por login, impede leitura cross-user)
+// Não é perfeito (key é JS-acessível), mas bloqueia extensions que só lêem localStorage
+const getEncKey = () => {
+  try {
+    const tok = localStorage.getItem('psicoai_token') || ''
+    return tok.length > 16 ? `psicoai-v1:${tok.slice(-32)}` : 'psicoai-clinical-v1-dev'
+  } catch { return 'psicoai-clinical-v1-dev' }
+}
 
 // ── Shape tool list ───────────────────────────────────────────────────────────
 const SHAPE_TOOLS = ['rect', 'circle', 'diamond', 'arrow', 'line']
@@ -103,7 +112,17 @@ function loadCanvasPages(patientId) {
   try {
     const raw = localStorage.getItem(canvasKey(patientId))
     if (!raw) return null
-    const parsed = JSON.parse(raw)
+    let parsed
+    try {
+      // Tenta descriptografar (formato novo — AES)
+      const decrypted = AES.decrypt(raw, getEncKey()).toString(CryptoEnc.Utf8)
+      parsed = JSON.parse(decrypted)
+    } catch {
+      // Fallback: tenta JSON puro (migração de dados legados não-criptografados)
+      parsed = JSON.parse(raw)
+      // Re-salva criptografado imediatamente
+      if (Array.isArray(parsed) && parsed.length > 0) saveCanvasPages(patientId, parsed)
+    }
     return Array.isArray(parsed) && parsed.length > 0 ? parsed : null
   } catch { return null }
 }
@@ -116,7 +135,11 @@ function saveCanvasPages(patientId, pages) {
       dataUrl: p.dataUrl || null,
       textHtml: p.textHtml || null,
     })))
-    if (data.length < 4 * 1024 * 1024) localStorage.setItem(canvasKey(patientId), data)
+    if (data.length < 4 * 1024 * 1024) {
+      // SEC-003: criptografar dados clínicos antes de persistir
+      const encrypted = AES.encrypt(data, getEncKey()).toString()
+      localStorage.setItem(canvasKey(patientId), encrypted)
+    }
   } catch { /* quota */ }
 }
 
@@ -508,7 +531,7 @@ export default function AnnotationSession({
     const stack = undoStackRef.current
     if (!stack[pageId]) stack[pageId] = []
     stack[pageId].push(dataUrl)
-    if (stack[pageId].length > 40) stack[pageId].shift()
+    if (stack[pageId].length > 15) stack[pageId].shift() // SEC-023: 15 itens ≈ 30MB max vs 80MB com 40
     redoStackRef.current[pageId] = [] // ação nova limpa redo
   }, [])
 
@@ -706,8 +729,9 @@ export default function AnnotationSession({
 
   // ── Export ─────────────────────────────────────────────────────────────────
   const exportData = async (pageIds = null) => {
-    // Filtra páginas se pageIds fornecido, senão exporta todas
-    const targetPages = pageIds ? pages.filter(p => pageIds.includes(p.id)) : pages
+    // SEC-019: limitar a 6 páginas por export — canvas combinado de 10+ pages = ~340MB heap V8
+    const MAX_EXPORT_PAGES = 6
+    const targetPages = (pageIds ? pages.filter(p => pageIds.includes(p.id)) : pages).slice(0, MAX_EXPORT_PAGES)
     // Combina as páginas selecionadas em imagem única
     const snaps = targetPages.map(p => ({
       id: p.id,

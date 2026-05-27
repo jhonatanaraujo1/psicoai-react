@@ -916,7 +916,7 @@ export default function App() {
       {paymentRequired && <PaymentModal onLogout={handleLogout} />}
 
       {/* Banner LGPD — aparece uma vez, salvo em localStorage */}
-      <LgpdBanner />
+      <LgpdBanner onShowTermos={() => setCurrentView('termos')} />
 
       {/* Banner de inadimplência em período de graça */}
       {currentUser?.graceDaysRemaining > 0 && !paymentRequired && (

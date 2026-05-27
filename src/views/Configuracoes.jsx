@@ -697,13 +697,14 @@ function FaqItem({ q, a }) {
 }
 
 // ── Main ─────────────────────────────────────────────────────────────────────
+// SEC-010: ícones como JSX direto — sem dangerouslySetInnerHTML
 const TABS = [
-  { id: 'perfil', label: 'Perfil', svg: '<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>' },
-  { id: 'plano', label: 'Plano & Cobrança', svg: '<line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>' },
-  { id: 'preferencias', label: 'Preferências', svg: '<circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M4.93 4.93a10 10 0 0 0 0 14.14"/>' },
-  { id: 'seguranca', label: 'Segurança', svg: '<rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>' },
-  { id: 'integracoes', label: 'Integrações', svg: '<path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/>' },
-  { id: 'ajuda', label: 'Ajuda & Guia', svg: '<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>' },
+  { id: 'perfil',       label: 'Perfil',           icon: <><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></> },
+  { id: 'plano',        label: 'Plano & Cobrança',  icon: <><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></> },
+  { id: 'preferencias', label: 'Preferências',      icon: <><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M4.93 4.93a10 10 0 0 0 0 14.14"/></> },
+  { id: 'seguranca',    label: 'Segurança',          icon: <><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></> },
+  { id: 'integracoes',  label: 'Integrações',        icon: <><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></> },
+  { id: 'ajuda',        label: 'Ajuda & Guia',       icon: <><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></> },
 ]
 
 export default function Configuracoes({ currentUser, onProfileUpdate, onOpenOnboarding, onOpenTermos }) {
@@ -733,7 +734,7 @@ export default function Configuracoes({ currentUser, onProfileUpdate, onOpenOnbo
         <div style={{ background: 'var(--w)', borderRadius: 'var(--r2)', border: '1px solid var(--gr2)', overflow: 'hidden', position: 'sticky', top: '80px' }}>
           {TABS.map((t, i) => (
             <button key={t.id} onClick={() => setTab(t.id)} style={{ width: '100%', background: tab === t.id ? 'var(--g50)' : 'none', border: 'none', borderLeft: `3px solid ${tab === t.id ? 'var(--g600)' : 'transparent'}`, borderBottom: i < TABS.length - 1 ? '1px solid var(--gr1)' : 'none', textAlign: 'left', padding: '13px 16px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px', color: tab === t.id ? 'var(--g700)' : 'var(--gr5)', fontFamily: "'DM Sans', sans-serif", fontSize: '13px', fontWeight: tab === t.id ? 600 : 400, transition: 'all 0.15s' }}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" dangerouslySetInnerHTML={{ __html: t.svg }} />
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">{t.icon}</svg>
               {t.label}
             </button>
           ))}

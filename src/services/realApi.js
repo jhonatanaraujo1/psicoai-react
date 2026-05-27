@@ -483,12 +483,10 @@ export const api = {
   },
 
   async updateLembrete(id, data) {
-    console.log('[realApi] updateLembrete (mock):', id, data)
     return { id, ...data }
   },
 
   async saveLembreteTemplate(id, template) {
-    console.log('[realApi] saveLembreteTemplate (mock):', id)
     return { id, template }
   },
 
@@ -497,7 +495,6 @@ export const api = {
   },
 
   async createTeleSession(data) {
-    console.log('[realApi] createTeleSession (mock):', data)
     return { id: 'ts-' + Date.now(), ...data, status: 'scheduled', createdAt: new Date().toISOString() }
   },
 
@@ -505,8 +502,7 @@ export const api = {
     return { id, ...data }
   },
 
-  async deleteTeleSession(id) {
-    console.log('[realApi] deleteTeleSession (mock):', id)
+  async deleteTeleSession(id) { // eslint-disable-line no-unused-vars
   },
 
   async generateReport({ patientId, type, sections }) {

@@ -11,7 +11,17 @@
  */
 
 import { useState, useEffect, useRef, useCallback } from 'react'
+import DOMPurify from 'dompurify'
 import { api } from '../services'
+
+// SEC-001: config de sanitização — apenas tags seguras para anotações clínicas
+const SANITIZE_CONFIG = {
+  ALLOWED_TAGS: ['p', 'br', 'b', 'i', 'u', 'strong', 'em', 'ul', 'ol', 'li', 'h1', 'h2', 'h3', 'hr', 'span', 'div'],
+  ALLOWED_ATTR: ['style'],
+  ALLOWED_STYLE_PROPS: ['font-weight', 'font-style', 'text-decoration'],
+  FORBID_TAGS: ['script', 'iframe', 'object', 'embed', 'form', 'input', 'button', 'link', 'meta'],
+  FORBID_ATTR: ['onerror', 'onload', 'onclick', 'onmouseover', 'href', 'src', 'action'],
+}
 
 // ── Proporções A4 ──────────────────────────────────────────────────────────────
 const A4_W      = 680                       // px — largura máxima da página A4
@@ -73,7 +83,7 @@ function TextContent({ notePreview, htmlContent, textContent }) {
     return (
       <div
         className="prontuario-html-content"
-        dangerouslySetInnerHTML={{ __html: html }}
+        dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(html, SANITIZE_CONFIG) }}
         style={{
           fontSize: 15, lineHeight: 1.85, color: '#1C1C1C',
           fontFamily: "'DM Sans', sans-serif",

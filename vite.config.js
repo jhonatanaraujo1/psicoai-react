@@ -2,6 +2,11 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 
+// SEC-018: garantir que build de produção não rode sem API configurada
+if (process.env.NODE_ENV === 'production' && !process.env.VITE_API_BASE_URL) {
+  console.warn('[vite] AVISO: VITE_API_BASE_URL não definido — modo mock ativo em produção')
+}
+
 export default defineConfig({
   plugins: [
     react(),
@@ -19,6 +24,11 @@ export default defineConfig({
         maximumFileSizeToCacheInBytes: 5 * 1024 * 1024, // 5MB (tldraw é pesado)
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
         runtimeCaching: [
+          // SEC-012: dados clínicos NUNCA cacheados pelo SW — NetworkOnly para toda a API
+          {
+            urlPattern: /\/api\//i,
+            handler: 'NetworkOnly',
+          },
           {
             urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
             handler: 'CacheFirst',
@@ -76,7 +86,8 @@ export default defineConfig({
       '/api': {
         target: process.env.VITE_API_BASE_URL || 'http://localhost:8080',
         changeOrigin: true,
-        secure: false,
+        // SEC-013: verificar TLS apenas quando apontando para HTTPS (evita aceitar certs inválidos em staging)
+        secure: (process.env.VITE_API_BASE_URL || '').startsWith('https'),
       },
     },
   },

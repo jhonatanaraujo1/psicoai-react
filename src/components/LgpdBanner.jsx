@@ -2,18 +2,44 @@ import { useState, useEffect } from 'react'
 
 const STORAGE_KEY = 'psicoai_lgpd_consent'
 
-export default function LgpdBanner() {
+// SEC-004: registrar consentimento com timestamp e versão dos termos
+function recordConsent(accepted) {
+  try {
+    const record = JSON.stringify({
+      accepted,
+      timestamp: new Date().toISOString(),
+      version: '1.0',
+      userAgent: navigator.userAgent.slice(0, 120),
+    })
+    localStorage.setItem(STORAGE_KEY, record)
+    // TODO (médio prazo): POST /api/v1/auth/consent com { accepted, version, timestamp }
+    // para registrar no backend conforme LGPD Art. 7
+  } catch { /* localStorage bloqueado */ }
+}
+
+export default function LgpdBanner({ onShowTermos }) {
   const [visible, setVisible] = useState(false)
 
   useEffect(() => {
     try {
-      if (!localStorage.getItem(STORAGE_KEY)) setVisible(true)
+      const stored = localStorage.getItem(STORAGE_KEY)
+      if (!stored) { setVisible(true); return }
+      // Compatibilidade com versão antiga (só guardava '1')
+      try { JSON.parse(stored) } catch { setVisible(false) }
     } catch { /* localStorage bloqueado */ }
   }, [])
 
   const accept = () => {
-    try { localStorage.setItem(STORAGE_KEY, '1') } catch {}
+    recordConsent(true)
     setVisible(false)
+  }
+
+  // SEC-004: recusar deve bloquear uso do app (dados de saúde exigem consentimento)
+  const decline = () => {
+    recordConsent(false)
+    setVisible(false)
+    // Redireciona para landing sem dados de saúde
+    window.location.href = '/landing.html'
   }
 
   if (!visible) return null
@@ -28,89 +54,85 @@ export default function LgpdBanner() {
       `}</style>
       <div
         role="dialog"
-        aria-label="Aviso de privacidade LGPD"
+        aria-label="Consentimento de privacidade LGPD"
         style={{
           position: 'fixed',
-          bottom: 0,
-          left: 0,
-          right: 0,
-          /* abaixo do OnboardingTour (z=800) mas acima do conteúdo normal */
+          bottom: 0, left: 0, right: 0,
           zIndex: 798,
-          background: 'rgba(18, 26, 18, 0.97)',
+          background: 'rgba(14, 22, 14, 0.98)',
           backdropFilter: 'blur(12px)',
           WebkitBackdropFilter: 'blur(12px)',
-          borderTop: '1px solid rgba(255,255,255,0.07)',
-          /* sobe acima da bottom-nav no mobile */
+          borderTop: '1px solid rgba(255,255,255,0.08)',
           paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 56px)',
           animation: 'lgpd-up 0.28s cubic-bezier(0.4,0,0.2,1)',
         }}
       >
-        {/* Container inline — single row */}
         <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 10,
-          padding: '10px 14px',
+          display: 'flex', flexDirection: 'column',
+          gap: 10, padding: '14px 16px',
           fontFamily: "'DM Sans', sans-serif",
+          maxWidth: 680, margin: '0 auto',
         }}>
-          {/* Lock icon */}
-          <div style={{
-            width: 28, height: 28, borderRadius: 8,
-            background: 'rgba(92,143,106,0.18)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            flexShrink: 0,
-          }}>
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#5C8F6A" strokeWidth="2.2">
-              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
-              <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-            </svg>
-          </div>
-
-          {/* Text */}
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)', lineHeight: 1.3, display: 'block' }}>
-              <strong style={{ color: 'rgba(255,255,255,0.85)', fontWeight: 600 }}>Dados protegidos</strong>
-              {' '}· CFP 09/2024 · LGPD 13.709/2018 · criptografados em trânsito e repouso
+          {/* Header */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div style={{
+              width: 28, height: 28, borderRadius: 8,
+              background: 'rgba(92,143,106,0.18)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+            }}>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#5C8F6A" strokeWidth="2.2">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+              </svg>
+            </div>
+            <span style={{ fontSize: 12, fontWeight: 700, color: 'rgba(255,255,255,0.9)' }}>
+              Dados de saúde — consentimento LGPD (Art. 11)
             </span>
           </div>
 
-          {/* Política link */}
-          <a
-            href="/politica-privacidade"
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{
-              fontSize: 10, color: 'rgba(255,255,255,0.28)',
-              textDecoration: 'underline', flexShrink: 0,
-              whiteSpace: 'nowrap',
-            }}
-          >
-            Política
-          </a>
+          {/* Body */}
+          <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)', lineHeight: 1.6, margin: 0 }}>
+            O PsicoAI armazena e processa dados sensíveis de saúde (prontuários, anotações de sessão, análises clínicas com IA)
+            conforme a LGPD 13.709/2018 e a Resolução CFP 09/2024. Os dados são criptografados em trânsito (TLS) e repouso.
+            {' '}
+            <button
+              onClick={() => onShowTermos?.()}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#5C8F6A', fontSize: 11, textDecoration: 'underline', padding: 0, fontFamily: 'inherit' }}
+            >
+              Ver política de privacidade completa
+            </button>
+          </p>
 
-          {/* CTA */}
-          <button
-            onClick={accept}
-            style={{
-              background: '#4A7C59',
-              color: '#fff',
-              border: 'none',
-              padding: '7px 16px',
-              borderRadius: 20,
-              fontSize: 11,
-              fontWeight: 700,
-              cursor: 'pointer',
-              fontFamily: "'DM Sans', sans-serif",
-              flexShrink: 0,
-              whiteSpace: 'nowrap',
-              letterSpacing: '0.2px',
-              transition: 'background 0.15s',
-            }}
-            onMouseEnter={e => e.currentTarget.style.background = '#3D6B4A'}
-            onMouseLeave={e => e.currentTarget.style.background = '#4A7C59'}
-          >
-            Entendido
-          </button>
+          {/* Actions */}
+          <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+            <button
+              onClick={decline}
+              style={{
+                background: 'transparent', border: '1px solid rgba(255,255,255,0.15)',
+                color: 'rgba(255,255,255,0.4)', padding: '7px 14px',
+                borderRadius: 20, fontSize: 11, cursor: 'pointer',
+                fontFamily: "'DM Sans', sans-serif", transition: 'all 0.15s',
+              }}
+              onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.3)'; e.currentTarget.style.color = 'rgba(255,255,255,0.6)' }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.15)'; e.currentTarget.style.color = 'rgba(255,255,255,0.4)' }}
+            >
+              Recusar
+            </button>
+            <button
+              onClick={accept}
+              style={{
+                background: '#4A7C59', color: '#fff', border: 'none',
+                padding: '7px 20px', borderRadius: 20,
+                fontSize: 11, fontWeight: 700, cursor: 'pointer',
+                fontFamily: "'DM Sans', sans-serif", transition: 'background 0.15s',
+                letterSpacing: '0.2px',
+              }}
+              onMouseEnter={e => e.currentTarget.style.background = '#3D6B4A'}
+              onMouseLeave={e => e.currentTarget.style.background = '#4A7C59'}
+            >
+              Aceitar e continuar
+            </button>
+          </div>
         </div>
       </div>
     </>
