@@ -68,6 +68,62 @@ function saveCanvasPages(patientId, pages) {
   } catch { /* quota */ }
 }
 
+// ── Shared helpers — declarados antes de qualquer componente para evitar TDZ no Rolldown ──
+function TBtn({ active, onClick, title, children }) {
+  return (
+    <button onClick={onClick} title={title} style={{
+      width: 44, height: 44, borderRadius: 8, border: 'none',
+      background: active ? 'rgba(255,255,255,0.18)' : 'transparent',
+      color: active ? '#fff' : 'rgba(255,255,255,0.55)',
+      cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+      transition: 'all 0.15s', flexShrink: 0,
+      touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent',
+    }}
+    onMouseEnter={e => { if (!active) { e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; e.currentTarget.style.color = 'rgba(255,255,255,0.85)' }}}
+    onMouseLeave={e => { if (!active) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'rgba(255,255,255,0.55)' }}}
+    >
+      {children}
+    </button>
+  )
+}
+
+function Sep() {
+  return <div style={{ width: 1, height: 24, background: 'rgba(255,255,255,0.1)', margin: '0 2px', flexShrink: 0 }} />
+}
+
+function AddPageMenu({ onAddPage }) {
+  return (
+    <div style={{
+      background: '#242424', border: '1px solid rgba(255,255,255,0.12)',
+      borderRadius: 8, overflow: 'hidden',
+      boxShadow: '0 8px 24px rgba(0,0,0,0.5)',
+      display: 'flex', flexDirection: 'column',
+      minWidth: 130, zIndex: 50,
+    }}>
+      {[
+        { type: 'draw', label: 'Desenho', icon: <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/></svg> },
+        { type: 'text', label: 'Texto',   icon: <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/></svg> },
+      ].map((opt, i) => (
+        <button key={opt.type} onClick={() => onAddPage(opt.type)}
+          style={{
+            background: 'transparent', border: 'none', cursor: 'pointer',
+            padding: '10px 14px', textAlign: 'left',
+            color: 'rgba(255,255,255,0.8)', fontSize: 12,
+            fontFamily: "'DM Sans', sans-serif",
+            display: 'flex', alignItems: 'center', gap: 8,
+            borderTop: i > 0 ? '1px solid rgba(255,255,255,0.06)' : 'none',
+            transition: 'background 0.12s',
+          }}
+          onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.08)'}
+          onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+        >
+          {opt.icon} {opt.label}
+        </button>
+      ))}
+    </div>
+  )
+}
+
 // ── A4 canvas page (modo canvas) ──────────────────────────────────────────────
 function CanvasPage({ page, isActive, toolRef, colorRef, sizeRef, onStrokeEnd, onClick, penDetectedRef }) {
   const canvasRef    = useRef(null)
@@ -591,39 +647,6 @@ export default function AnnotationSession({
   const patientName = patient?.name || 'Paciente'
 
   // ── Sidebar content ────────────────────────────────────────────────────────
-  // Menu de tipo de página (reutilizado na sidebar e na toolbar)
-  const AddPageMenu = () => (
-    <div style={{
-      background: '#242424',
-      background: '#242424', border: '1px solid rgba(255,255,255,0.12)',
-      borderRadius: 8, overflow: 'hidden',
-      boxShadow: '0 8px 24px rgba(0,0,0,0.5)',
-      display: 'flex', flexDirection: 'column',
-      minWidth: 130, zIndex: 50,
-    }}>
-      {[
-        { type: 'draw', label: 'Desenho', icon: <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/></svg> },
-        { type: 'text', label: 'Texto',   icon: <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/></svg> },
-      ].map((opt, i) => (
-        <button key={opt.type} onClick={() => addPage(opt.type)}
-          style={{
-            background: 'transparent', border: 'none', cursor: 'pointer',
-            padding: '10px 14px', textAlign: 'left',
-            color: 'rgba(255,255,255,0.8)', fontSize: 12,
-            fontFamily: "'DM Sans', sans-serif",
-            display: 'flex', alignItems: 'center', gap: 8,
-            borderTop: i > 0 ? '1px solid rgba(255,255,255,0.06)' : 'none',
-            transition: 'background 0.12s',
-          }}
-          onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.08)'}
-          onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-        >
-          {opt.icon} {opt.label}
-        </button>
-      ))}
-    </div>
-  )
-
   const SidebarContent = () => {
     if (isCanvas) {
       return (
@@ -808,7 +831,7 @@ export default function AnnotationSession({
                 <line x1="12" y1="11" x2="12" y2="17"/><line x1="9" y1="14" x2="15" y2="14"/>
               </svg>
             </TBtn>
-            {showAddMenu && <AddPageMenu />}
+            {showAddMenu && <AddPageMenu onAddPage={addPage} />}
           </div>
         </>
       )
@@ -889,7 +912,7 @@ export default function AnnotationSession({
                 <line x1="12" y1="11" x2="12" y2="17"/><line x1="9" y1="14" x2="15" y2="14"/>
               </svg>
             </TBtn>
-            {showAddMenu && <AddPageMenu />}
+            {showAddMenu && <AddPageMenu onAddPage={addPage} />}
           </div>
         </>
       )
@@ -1534,25 +1557,3 @@ export default function AnnotationSession({
   )
 }
 
-// ── Shared helpers ─────────────────────────────────────────────────────────────
-function TBtn({ active, onClick, title, children }) {
-  return (
-    <button onClick={onClick} title={title} style={{
-      width: 44, height: 44, borderRadius: 8, border: 'none',
-      background: active ? 'rgba(255,255,255,0.18)' : 'transparent',
-      color: active ? '#fff' : 'rgba(255,255,255,0.55)',
-      cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-      transition: 'all 0.15s', flexShrink: 0,
-      touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent',
-    }}
-    onMouseEnter={e => { if (!active) { e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; e.currentTarget.style.color = 'rgba(255,255,255,0.85)' }}}
-    onMouseLeave={e => { if (!active) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'rgba(255,255,255,0.55)' }}}
-    >
-      {children}
-    </button>
-  )
-}
-
-function Sep() {
-  return <div style={{ width: 1, height: 24, background: 'rgba(255,255,255,0.1)', margin: '0 2px', flexShrink: 0 }} />
-}
