@@ -150,10 +150,12 @@ export default function App() {
     if (activeSessionId) {
       // Persiste no localStorage
       const current = (() => { try { return JSON.parse(localStorage.getItem('psicoai_active_session') || 'null') } catch { return null } })()
+      const pat = currentPatient || current?.patient || null
       localStorage.setItem('psicoai_active_session', JSON.stringify({
         sessionId:   activeSessionId,
         sessionType: activeSessionType,
-        patient:     currentPatient ? { id: currentPatient.id, name: currentPatient.name } : (current?.patient || null),
+        patientId:   pat?.id || current?.patientId || null,
+        patient:     pat ? { id: pat.id, name: pat.name } : null,
         startedAt:   current?.startedAt || Date.now(),
       }))
       // Atualiza URL
