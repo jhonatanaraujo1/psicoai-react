@@ -304,7 +304,7 @@ function CanvasPage({ page, isActive, toolRef, colorRef, sizeRef, onStrokeEnd, o
   return (
     <div
       id={`page-${page.id}`}
-      className="as-page-wrap"
+      className="as-page-wrap as-page-canvas"
       onClick={onClick}
       style={{
         flexShrink: 0, width: PAGE_W, height: PAGE_H,
@@ -339,7 +339,7 @@ function TextPage({ page, isActive, onTextChange, onClick }) {
   return (
     <div
       id={`page-${page.id}`}
-      className="as-page-wrap"
+      className="as-page-wrap as-page-text"
       onClick={onClick}
       style={{
         flexShrink: 0, width: PAGE_W, minHeight: PAGE_H,
@@ -347,7 +347,7 @@ function TextPage({ page, isActive, onTextChange, onClick }) {
         boxShadow: isActive
           ? '0 0 0 2.5px #5C8F6A, 0 8px 40px rgba(0,0,0,0.22)'
           : '0 4px 32px rgba(0,0,0,0.18)',
-        overflow: 'hidden', cursor: 'text',
+        overflow: 'visible', cursor: 'text',
         display: 'flex', flexDirection: 'column',
       }}
     >
@@ -1405,7 +1405,8 @@ export default function AnnotationSession({
           }}
         >
           {/* zoom: CSS zoom property altera layout (scroll correto), diferente de transform:scale */}
-          <div style={{ zoom: zoom, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 32 }}>
+          {/* width:100% necessário: sem isso, min(794px,100%) resolve para 794px sempre (circular) */}
+          <div style={{ zoom: zoom, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 32, width: '100%' }}>
             {pages.map((p, i) => (
               p.pageType === 'text'
                 ? <TextPage
@@ -1782,19 +1783,31 @@ export default function AnnotationSession({
         }
 
         /* ── Responsive A4 page scaling ─────────────────────────────────────
-           On narrow viewports the 794px page overflows. Scale it down
-           proportionally using CSS — getPos() uses getBoundingClientRect()
-           so coordinates automatically correct with CSS scaling.             */
+           On narrow viewports the 794px page overflows. Scale it down.
+           zoom div agora tem width:100%, então 100% aqui resolve para o
+           espaço disponível do container (corretamente).
+
+           Canvas: escala com aspect-ratio (proporção A4 mantida)
+           Texto: largura escala, altura cresce livremente com conteúdo     */
         @media (max-width: 860px) {
           .as-page-wrap {
             width: min(794px, 100%) !important;
             height: auto !important;
             min-height: unset !important;
+          }
+          /* Canvas: mantém proporção A4, overflow hidden para não vazar desenhos */
+          .as-page-canvas {
             aspect-ratio: 794 / 1123;
+            overflow: hidden !important;
           }
           .as-canvas {
             width: 100% !important;
             height: auto !important;
+          }
+          /* Texto: cresce com conteúdo, min-height proporcional à largura */
+          .as-page-text {
+            min-height: calc(min(794px, 100%) * 1123 / 794) !important;
+            overflow: visible !important;
           }
         }
 
