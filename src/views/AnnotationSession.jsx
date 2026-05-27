@@ -230,17 +230,20 @@ function TextPage({ page, isActive, onTextChange, onClick }) {
 export default function AnnotationSession({
   patient,
   isOpen,
-  type = 'text',
+  initialPageType = null,   // 'draw' | 'text' — tipo da nova página a adicionar. null = recovery/histórico
+  // legacy props mantidos para não quebrar chamadas existentes:
+  type,
+  initialHtml,
+  initialCanvasData,
   onClose,
   onMinimize,
   onAnalyze,
   onAutosave,
   sessionId,
-  initialHtml = '',
-  initialCanvasData,
 }) {
-  const isCanvas = type === 'canvas'
-  const isText   = type === 'text'
+  // Sempre canvas — texto é apenas um tipo de página dentro do canvas
+  const isCanvas = true
+  const isText   = false
 
   // ── Estado compartilhado ───────────────────────────────────────────────────
   const [showEndModal, setShowEndModal] = useState(false)
@@ -300,73 +303,50 @@ export default function AnnotationSession({
     if (!isOpen || !patient?.id) return
     setIsDirty(false)
     setShowEndModal(false)
-    setActivePage(0)
 
-    if (isCanvas) {
-      const saved = loadCanvasPages(patient.id)
-      setPages(saved
-        ? saved.map(p => ({ id: p.id, pageType: p.pageType || 'draw', canvasRef: { current: null }, dataUrl: p.dataUrl || null, textHtml: p.textHtml || null }))
-        : [{ id: newPageId(), pageType: 'draw', canvasRef: { current: null }, dataUrl: null, textHtml: null }]
-      )
-    }
+    // Carrega histórico do paciente do localStorage
+    const saved = loadCanvasPages(patient.id)
+    const restored = saved
+      ? saved.map(p => ({ id: p.id, pageType: p.pageType || 'draw', canvasRef: { current: null }, dataUrl: p.dataUrl || null, textHtml: p.textHtml || null }))
+      : []
 
-    if (isText) {
+    if (initialPageType && restored.length > 0) {
+      // Nova anotação sobre histórico existente: adiciona nova página ao final
+      const nova = { id: newPageId(), pageType: initialPageType, canvasRef: { current: null }, dataUrl: null, textHtml: null }
+      const all = [...restored, nova]
+      setPages(all)
+      setActivePage(all.length - 1)
       setTimeout(() => {
-        if (!editorRef.current) return
-        const draft = patient?.id ? localStorage.getItem(textKey(patient.id)) : null
-        editorRef.current.innerHTML = draft || initialHtml || ''
-        if (!isTouch.current) editorRef.current.focus()
-      }, 80)
+        const c = mainScrollRef.current
+        if (c) c.scrollTo({ top: c.scrollHeight, behavior: 'smooth' })
+      }, 200)
+    } else if (restored.length > 0) {
+      // Recovery/histórico: exibe páginas existentes do início
+      setPages(restored)
+      setActivePage(0)
+    } else {
+      // Primeiro acesso: nova página em branco do tipo solicitado
+      const nova = { id: newPageId(), pageType: initialPageType || 'draw', canvasRef: { current: null }, dataUrl: null, textHtml: null }
+      setPages([nova])
+      setActivePage(0)
     }
-  }, [isOpen, patient?.id]) // eslint-disable-line
-
-  // ── Texto: salva ao trocar aba / fechar janela ────────────────────────────
-  const saveTextNow = useCallback(() => {
-    clearTimeout(localSaveRef.current)
-    if (patientIdRef.current && editorRef.current)
-      localStorage.setItem(textKey(patientIdRef.current), editorRef.current.innerHTML)
-  }, [])
-
-  useEffect(() => {
-    if (!isOpen || !isText) return
-    const onHide = () => { if (document.visibilityState === 'hidden') saveTextNow() }
-    document.addEventListener('visibilitychange', onHide)
-    window.addEventListener('pagehide', saveTextNow)
-    return () => {
-      document.removeEventListener('visibilitychange', onHide)
-      window.removeEventListener('pagehide', saveTextNow)
-    }
-  }, [isOpen, isText, saveTextNow])
-
-  // ── Texto: autosave backend a cada 30s ────────────────────────────────────
-  useEffect(() => {
-    if (!isOpen || !isText || !sessionId || !onAutosave) return
-    autosaveRef.current = setInterval(() => {
-      const text = editorRef.current?.innerText || ''
-      if (text.trim()) onAutosave(sessionId, { textContent: text })
-    }, 30000)
-    return () => clearInterval(autosaveRef.current)
-  }, [isOpen, isText, sessionId, onAutosave])
-
-  const handleTextInput = () => {
-    setIsDirty(true)
-    clearTimeout(localSaveRef.current)
-    localSaveRef.current = setTimeout(() => {
-      if (patient?.id && editorRef.current) {
-        localStorage.setItem(textKey(patient.id), editorRef.current.innerHTML)
-        setSavedIndicator(true)
-        setTimeout(() => setSavedIndicator(false), 1500)
-      }
-    }, 400)
-  }
+  }, [isOpen, patient?.id, initialPageType]) // eslint-disable-line
 
   const exec = (cmd, arg) => {
     document.execCommand(cmd, false, arg || null)
-    editorRef.current?.focus()
   }
 
+  // Insere seção de guia na página de texto ativa (canvas text page)
   const insertGuideSection = (label) => {
-    const editor = editorRef.current
+    // Usa o elemento focado ou procura o editor da página ativa
+    let editor = null
+    const active = document.activeElement
+    if (active && active.contentEditable === 'true') {
+      editor = active
+    } else {
+      const pageEl = document.getElementById(`page-${pages[activePage]?.id}`)
+      editor = pageEl?.querySelector('[contenteditable="true"]')
+    }
     if (!editor) return
     editor.focus()
     document.execCommand('insertText', false, (editor.innerText.trim() ? '\n\n' : '') + label + ': ')
@@ -523,13 +503,7 @@ export default function AnnotationSession({
 
   // ── Export ─────────────────────────────────────────────────────────────────
   const exportData = async () => {
-    if (isText) {
-      const text = editorRef.current?.innerText || ''
-      const html = editorRef.current?.innerHTML || ''
-      return { textContent: text, htmlContent: html, imageBase64: null, canvasDataJson: null }
-    }
-
-    // canvas: combina todas as páginas em imagem única
+    // Combina todas as páginas em imagem única
     const snaps = pages.map(p => ({
       id: p.id,
       dataUrl: p.canvasRef.current?.toDataURL('image/png') || p.dataUrl || null,
@@ -560,15 +534,10 @@ export default function AnnotationSession({
     }
   }
 
-  const clearTextDraft = () => {
-    if (patient?.id) localStorage.removeItem(textKey(patient.id))
-  }
-
   const handleSave = async () => {
     setSaving(true)
     const data = await exportData()
     setSaving(false); setShowEndModal(false); setIsDirty(false)
-    if (isText) clearTextDraft()
     onClose({ duration: 0, ...data })
   }
 
@@ -576,7 +545,6 @@ export default function AnnotationSession({
     setSaving(true)
     const data = await exportData()
     setSaving(false); setShowEndModal(false); setIsDirty(false)
-    if (isText) clearTextDraft()
     onAnalyze({ duration: 0, ...data })
   }
 
@@ -700,41 +668,40 @@ export default function AnnotationSession({
               </svg>
             </button>
           </div>
+          {/* Guia de anotação — visível quando página ativa é de texto */}
+          {pages[activePage]?.pageType === 'text' && (
+            <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)', marginTop: 8, paddingTop: 8, width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, padding: '8px 6px 0' }}>
+              <div style={{ fontSize: 8, fontWeight: 700, color: 'rgba(255,255,255,0.28)', letterSpacing: '0.8px', textTransform: 'uppercase', marginBottom: 4 }}>
+                GUIA
+              </div>
+              {GUIDE.map(g => (
+                <button key={g.label} title={g.hint}
+                  onClick={() => { insertGuideSection(g.label); if (isOverlaySidebar) setSidebarOpen(false) }}
+                  style={{
+                    background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.07)',
+                    borderRadius: 6, padding: '5px 6px', cursor: 'pointer',
+                    textAlign: 'left', fontFamily: "'DM Sans', sans-serif", width: '100%',
+                    transition: 'background 0.15s',
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.12)'}
+                  onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
+                >
+                  <div style={{ fontSize: 11 }}>{g.icon}</div>
+                  <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.6)', lineHeight: 1.3, fontWeight: 500, marginTop: 2 }}>{g.label}</div>
+                </button>
+              ))}
+            </div>
+          )}
         </>
       )
     }
 
-    // Texto: guia de anotação
-    return (
-      <div style={{ padding: '12px 10px 16px', display: 'flex', flexDirection: 'column', gap: 4 }}>
-        <div style={{ fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,0.35)', letterSpacing: '0.8px', textTransform: 'uppercase', marginBottom: 6, paddingLeft: 2 }}>
-          Guia de anotação
-        </div>
-        {GUIDE.map(g => (
-          <button
-            key={g.label}
-            title={g.hint}
-            onClick={() => { insertGuideSection(g.label); if (isOverlaySidebar) setSidebarOpen(false) }}
-            style={{
-              background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)',
-              borderRadius: 7, padding: '7px 8px', cursor: 'pointer',
-              textAlign: 'left', fontFamily: "'DM Sans', sans-serif",
-              transition: 'background 0.15s',
-            }}
-            onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.12)'}
-            onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.06)'}
-          >
-            <div style={{ fontSize: 14, marginBottom: 2 }}>{g.icon}</div>
-            <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.7)', lineHeight: 1.35, fontWeight: 500 }}>{g.label}</div>
-          </button>
-        ))}
-      </div>
-    )
+    return null
   }
 
   // ── Toolbar content ────────────────────────────────────────────────────────
   // Página ativa é de texto? (sessão canvas com página de tipo texto)
-  const activePageIsText = isCanvas && pages[activePage]?.pageType === 'text'
+  const activePageIsText = pages[activePage]?.pageType === 'text'
 
   const ToolbarContent = () => {
     // Canvas mode: toolbar muda conforme o tipo da página ativa
@@ -901,10 +868,7 @@ export default function AnnotationSession({
     )
   }
 
-  // ── Save modal: word count para texto ─────────────────────────────────────
-  const wordCount = isText
-    ? (editorRef.current?.innerText?.trim().split(/\s+/).filter(Boolean).length || 0)
-    : null
+  const wordCount = null
 
   return (
     <div style={{
@@ -966,13 +930,13 @@ export default function AnnotationSession({
           {patientName}
           <span style={{
             fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 20,
-            background: isCanvas ? 'rgba(125,60,152,0.3)' : 'rgba(255,255,255,0.12)',
-            color: isCanvas ? '#C39BD3' : 'rgba(255,255,255,0.6)',
+            background: activePageIsText ? 'rgba(255,255,255,0.12)' : 'rgba(125,60,152,0.3)',
+            color: activePageIsText ? 'rgba(255,255,255,0.6)' : '#C39BD3',
             letterSpacing: '0.5px', textTransform: 'uppercase',
           }}>
-            {isCanvas ? 'Canvas' : 'Texto'}
+            {activePageIsText ? 'Texto' : 'Canvas'}
           </span>
-          {isCanvas && pages.length > 1 && (
+          {pages.length > 1 && (
             <span style={{ fontSize: 11, background: 'rgba(255,255,255,0.12)', padding: '2px 8px', borderRadius: 20, color: 'rgba(255,255,255,0.6)' }}>
               pág. {activePage + 1} / {pages.length}
             </span>
@@ -1056,72 +1020,25 @@ export default function AnnotationSession({
             background: '#2A2A2A',
             display: 'flex', flexDirection: 'column',
             alignItems: 'center',
-            padding: '32px 24px 80px', gap: isCanvas ? 32 : 0,
+            padding: '32px 24px 80px', gap: 32,
           }}
         >
-          {isCanvas ? (
-            pages.map((p, i) => (
-              p.pageType === 'text'
-                ? <TextPage
-                    key={p.id} page={p}
-                    isActive={activePage === i}
-                    onTextChange={handlePageTextChange}
-                    onClick={() => setActivePage(i)}
-                  />
-                : <CanvasPage
-                    key={p.id} page={p}
-                    isActive={activePage === i}
-                    toolRef={toolRef} colorRef={colorRef} sizeRef={sizeRef}
-                    onStrokeEnd={handleStrokeEnd}
-                    onClick={() => setActivePage(i)}
-                  />
-            ))
-          ) : (
-            /* Folha A4 de texto */
-            <div style={{
-              width: Math.min(PAGE_W, window.innerWidth - 48),
-              minHeight: PAGE_H,
-              background: '#fff',
-              borderRadius: 2,
-              boxShadow: '0 4px 32px rgba(0,0,0,0.22)',
-              display: 'flex', flexDirection: 'column',
-              overflow: 'hidden',
-            }}>
-              {/* Cabeçalho da folha */}
-              <div style={{
-                padding: '20px 40px 16px',
-                borderBottom: '1px solid #F0EDE8',
-                flexShrink: 0,
-              }}>
-                <div style={{ fontFamily: "'Fraunces', serif", fontSize: 20, color: '#1C1C1C', fontWeight: 400, marginBottom: 4 }}>
-                  {patientName}
-                </div>
-                <div style={{ fontSize: 12, color: '#B0ADA8' }}>
-                  {new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
-                </div>
-              </div>
-
-              {/* Editor */}
-              <div style={{ flex: 1, padding: '28px 40px 40px' }}>
-                <div
-                  ref={editorRef}
-                  contentEditable
-                  suppressContentEditableWarning
-                  data-placeholder="Escreva livremente — o que o paciente trouxe, o que você observou, o que emergiu..."
-                  style={{
-                    minHeight: 600, outline: 'none',
-                    fontSize: 15, lineHeight: 1.85,
-                    color: '#1C1C1C', fontFamily: "'DM Sans', sans-serif",
-                    caretColor: '#4A7C59',
-                  }}
-                  onInput={handleTextInput}
-                  onKeyDown={e => {
-                    if (e.key === 'Tab') { e.preventDefault(); document.execCommand('insertText', false, '    ') }
-                  }}
+          {pages.map((p, i) => (
+            p.pageType === 'text'
+              ? <TextPage
+                  key={p.id} page={p}
+                  isActive={activePage === i}
+                  onTextChange={handlePageTextChange}
+                  onClick={() => setActivePage(i)}
                 />
-              </div>
-            </div>
-          )}
+              : <CanvasPage
+                  key={p.id} page={p}
+                  isActive={activePage === i}
+                  toolRef={toolRef} colorRef={colorRef} sizeRef={sizeRef}
+                  onStrokeEnd={handleStrokeEnd}
+                  onClick={() => setActivePage(i)}
+                />
+          ))}
         </div>
       </div>
 
@@ -1155,23 +1072,8 @@ export default function AnnotationSession({
                 Salvar anotação
               </div>
               <div style={{ fontSize: 13, color: '#8B8B8B', lineHeight: 1.6 }}>
-                {patientName} · {isCanvas ? `${pages.length} página${pages.length > 1 ? 's' : ''}` : new Date().toLocaleDateString('pt-BR')}
+                {patientName} · {pages.length} página{pages.length > 1 ? 's' : ''}
               </div>
-
-              {/* Word count hint (só texto) */}
-              {isText && wordCount !== null && (() => {
-                const c = wordCount < 30 ? '#E74C3C' : wordCount < 80 ? '#F39C12' : '#27AE60'
-                const m = wordCount < 30
-                  ? `Só ${wordCount} palavras — anotações curtas limitam a precisão da IA.`
-                  : wordCount < 80
-                  ? `${wordCount} palavras — bom começo.`
-                  : `${wordCount} palavras — ótimo nível de detalhe.`
-                return (
-                  <div style={{ marginTop: 12, fontSize: 12, color: c, background: `${c}18`, border: `1px solid ${c}44`, borderRadius: 7, padding: '8px 12px', lineHeight: 1.5 }}>
-                    {m}
-                  </div>
-                )
-              })()}
             </div>
 
             <div style={{ padding: '0 24px 24px', display: 'flex', flexDirection: 'column', gap: 10, marginTop: 8 }}>

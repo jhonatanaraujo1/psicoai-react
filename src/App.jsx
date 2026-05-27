@@ -216,12 +216,14 @@ export default function App() {
   const [pickerOpen, setPickerOpen] = useState(false)
   // quickNoteOpen foi movido para antes do useEffect de persistência (evitar TDZ)
   const [pickerMode, setPickerMode] = useState('live') // 'live' | 'quicknote'
+  // textOpen mantido como alias para não quebrar referências internas — sempre false
   const [textOpen, setTextOpen] = useState(false)
+  const [canvasInitialPageType, setCanvasInitialPageType] = useState(null)
   // Inicializa do localStorage — sobrevive refresh, deploy do Vercel, fechar aba
   const [canvasOpen, setCanvasOpen] = useState(() => {
     try {
       const s = JSON.parse(localStorage.getItem('psicoai_active_session') || 'null')
-      if (!s?.sessionId || s.sessionType !== 'canvas') return false
+      if (!s?.patientId) return false
       return (Date.now() - (s.startedAt || 0)) < 8 * 3600 * 1000
     } catch { return false }
   })
@@ -246,37 +248,41 @@ export default function App() {
   // Aparece depois de selecionar paciente — permite escolher o modo da sessão
   const [typePickerPatient, setTypePickerPatient] = useState(null)
 
-  // Abre AnnotationSession diretamente (text) sem passar pelo PreSessionBriefing.
-  // Chamado pelo fluxo "Registrar" — o paciente já é conhecido neste ponto.
+  // Abre AnnotationSession com nova página de TEXTO.
+  // O histórico de páginas do paciente é carregado automaticamente — a nova página é adicionada ao final.
   const _openTextSession = (patient) => {
     const pat = patient || currentPatient
     activeSessionRef.current = null
     setCurrentPatient(pat)
-    setActiveSessionType('text')
+    setActiveSessionType('canvas')
+    setCanvasInitialPageType('text')
     if (pat) {
       localStorage.setItem('psicoai_active_session', JSON.stringify({
         sessionId:   null,
-        sessionType: 'text',
+        sessionType: 'canvas',
+        patientId:   pat.id,
         patient:     { id: pat.id, name: pat.name },
         startedAt:   Date.now(),
       }))
     }
-    api.createSession({ patientId: pat?.id, type: 'text' })
+    api.createSession({ patientId: pat?.id, type: 'canvas' })
       .then(session => setSession(session.id))
-      .catch(e => console.warn('[PsicoAI] createSession failed, session will not be persisted:', e))
-    setTextOpen(true)
+      .catch(e => console.warn('[PsicoAI] createSession failed:', e))
+    setCanvasOpen(true)
   }
 
-  // Abre AnnotationSession diretamente (canvas).
+  // Abre AnnotationSession com nova página de DESENHO.
   const _openCanvasSession = (patient) => {
     const pat = patient || currentPatient
     activeSessionRef.current = null
     setCurrentPatient(pat)
     setActiveSessionType('canvas')
+    setCanvasInitialPageType('draw')
     if (pat) {
       localStorage.setItem('psicoai_active_session', JSON.stringify({
         sessionId:   null,
         sessionType: 'canvas',
+        patientId:   pat.id,
         patient:     { id: pat.id, name: pat.name },
         startedAt:   Date.now(),
       }))
@@ -387,8 +393,7 @@ export default function App() {
       .then(session => setSession(session.id))
       .catch(e => console.warn('[PsicoAI] createSession failed, session will not be persisted:', e))
 
-    if (type === 'text') setTextOpen(true)
-    else setCanvasOpen(true)
+    setCanvasOpen(true)
   }
 
   // ── Handlers de minimizar: move sessão foreground → background ──────────
@@ -407,17 +412,9 @@ export default function App() {
   }
 
   const handleMinimizeText = () => {
-    if (activeSessionId) {
-      setBackgroundSessions(prev =>
-        prev.find(s => s.id === activeSessionId) ? prev : [
-          ...prev,
-          { id: activeSessionId, type: 'text', patient: currentPatient, startedAt: Date.now() },
-        ]
-      )
-      setSession(null)
-      setActiveSessionType(null)
-    }
-    setTextOpen(false)
+    // alias mantido — agora tudo usa canvas
+    setCanvasOpen(false)
+    setCanvasInitialPageType(null)
   }
 
   // ── Retomar sessão do background ─────────────────────────────────────────
@@ -437,8 +434,9 @@ export default function App() {
     setCurrentPatient(bgSession.patient)
     setSession(bgSession.id)
     setActiveSessionType(bgSession.type)
-    if (bgSession.type === 'canvas') { setCanvasOpen(true); setTextOpen(false) }
-    else { setTextOpen(true); setCanvasOpen(false) }
+    setCanvasInitialPageType(null)
+    setCanvasOpen(true)
+    setTextOpen(false)
   }
 
   // ── Encerrar sessão do background ────────────────────────────────────────
@@ -472,8 +470,7 @@ export default function App() {
 
   // Volta para a sessão em background — reabre a view sem criar nova sessão
   const handleReturnToSession = () => {
-    if (activeSessionType === 'canvas') setCanvasOpen(true)
-    else setTextOpen(true)
+    setCanvasOpen(true)
   }
 
   // Encerra sessão em background (sem IA, conteúdo já foi autosalvo)
@@ -583,13 +580,8 @@ export default function App() {
       .then(s => setSession(s.id))
       .catch(e => console.warn('[PsicoAI] createSession (reopen) failed:', e))
 
-    if (session.type === 'canvas') {
-      setCanvasInitialData(null) // canvas loads from localStorage by patient/sessionId
-      setCanvasOpen(true)
-    } else {
-      setTextInitialHtml(html)
-      setTextOpen(true)
-    }
+    setCanvasInitialPageType(null) // recovery mode: não adiciona nova página
+    setCanvasOpen(true)
   }
 
   // Called when the user closes the session without requesting AI analysis
@@ -642,15 +634,14 @@ export default function App() {
           </div>
         }>
           <AnnotationSession
-            type="canvas"
             patient={currentPatient}
             isOpen={canvasOpen}
+            initialPageType={canvasInitialPageType}
             sessionId={activeSessionId}
             onClose={handleSessionClose}
-            onMinimize={() => setCanvasOpen(false)}
+            onMinimize={() => { setCanvasOpen(false); setCanvasInitialPageType(null) }}
             onAnalyze={handleAnalyze}
             onAutosave={(id, data) => api.autosaveSession?.(id, data)}
-            initialCanvasData={canvasInitialData}
           />
         </Suspense>
         {/* AnalyzeSessionsModal e AiDrawer aparecem após "Analisar com IA" no canvas */}
@@ -716,20 +707,7 @@ export default function App() {
         onSessionsBadgeClick={() => setSessionsPanelOpen(o => !o)}
       />
 
-      {/* Sessions */}
-      <Suspense fallback={null}>
-        <AnnotationSession
-          type="text"
-          patient={currentPatient}
-          isOpen={textOpen}
-          sessionId={activeSessionId}
-          onAutosave={(id, data) => api.autosaveSession?.(id, data)}
-          onClose={handleSessionClose}
-          onMinimize={handleMinimizeText}
-          onAnalyze={handleAnalyze}
-          initialHtml={textInitialHtml}
-        />
-      </Suspense>
+      {/* Sessions — apenas canvas agora, texto é um tipo de página dentro do canvas */}
 
       {/* Painel de sessões abertas */}
       {sessionsPanelOpen && (
