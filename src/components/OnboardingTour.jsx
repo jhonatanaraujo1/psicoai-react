@@ -14,7 +14,7 @@ const STEPS = [
     selector: null,
     badge: 'PsicoAI',
     title: 'Seu segundo olhar clínico',
-    desc: 'O assistente feito para psicólogos. Prontuários, sessões e análise de IA — num lugar só, criptografado.',
+    desc: 'O assistente feito para psicólogos. Prontuários, anotações e análise de IA — num lugar só, criptografado.',
     cta: 'Mostrar como funciona',
   },
   {
@@ -30,7 +30,7 @@ const STEPS = [
     selector: '[data-tour="nav-cadernos"]',
     badge: 'Cadernos',
     title: 'Anote do jeito que você pensa',
-    desc: 'Canvas livre ou texto estruturado. Encerre a sessão e acione a IA — hipóteses DSM-5 em segundos.',
+    desc: 'Canvas livre ou texto estruturado. Encerre o atendimento e acione a IA — hipóteses DSM-5 em segundos.',
     cta: 'Próximo',
   },
   {
@@ -38,7 +38,7 @@ const STEPS = [
     selector: null,
     badge: 'Pronto',
     title: 'A 3 cliques do primeiro insight',
-    desc: 'Cadastre um paciente → abra uma sessão → acione a IA. Começa aqui.',
+    desc: 'Cadastre um paciente → inicie um atendimento → acione a IA. Começa aqui.',
     cta: 'Começar a usar',
     isLast: true,
   },
@@ -116,7 +116,14 @@ export default function OnboardingTour({ isOpen, onClose }) {
 
   // Posição do card: acima ou abaixo do spotlight
   const GUTTER = 14
-  const cardBase = { position: 'fixed', left: 14, right: 14, zIndex: 800 }
+  // Max-width fixo + centrado horizontalmente (não invade sidebar nem borda)
+  const cardBase = {
+    position: 'fixed',
+    left: '50%',
+    transform: 'translateX(-50%)',
+    width: `min(460px, calc(100vw - 28px))`,
+    zIndex: 800,
+  }
   let cardPos = {}
   if (rect) {
     const midY = rect.y + rect.h / 2
@@ -128,8 +135,7 @@ export default function OnboardingTour({ isOpen, onClose }) {
       cardPos = { top: rect.y + rect.h + PAD + GUTTER }
     }
   } else {
-    // Sem spotlight → posiciona no terço superior para não colidir com o banner LGPD
-    // (que fica na parte de baixo). Terço superior = 18%–28% do viewport.
+    // Sem spotlight → terço superior, longe do banner LGPD na base
     cardPos = { top: Math.round(vh * 0.18) }
   }
 
