@@ -113,21 +113,18 @@ export default function Teleatendimento() {
 
         <div>
           <div className="tele-platform-card">
-            <div className="tele-platform-title">Plataforma padrão</div>
-            {[
-              { id: 'whereby', icon: '📹', name: 'Whereby (integrado)', desc: 'Sala permanente, sem conta exigida do paciente' },
-              { id: 'meet', icon: '🎥', name: 'Google Meet', desc: 'Gera link automático via Google Calendar' },
-              { id: 'zoom', icon: '💻', name: 'Zoom', desc: 'Link fixo ou por sessão via integração OAuth' },
-            ].map(p => (
-              <label key={p.id} className={`platform-option${platform === p.id ? ' selected' : ''}`} onClick={() => setPlatform(p.id)}>
-                <input type="radio" name="platform" checked={platform === p.id} onChange={() => setPlatform(p.id)} />
-                <div className="platform-icon">{p.icon}</div>
-                <div>
-                  <div className="platform-name">{p.name}</div>
-                  <div className="platform-desc">{p.desc}</div>
-                </div>
-              </label>
-            ))}
+            <div className="tele-platform-title">Plataforma</div>
+            <label className="platform-option selected">
+              <input type="radio" name="platform" checked readOnly />
+              <div className="platform-icon">🎥</div>
+              <div>
+                <div className="platform-name">Google Meet</div>
+                <div className="platform-desc">Gera link automático via Google Calendar</div>
+              </div>
+            </label>
+            <div style={{ fontSize: '11px', color: 'var(--gr4)', marginTop: '10px', padding: '0 4px' }}>
+              Em breve: WhatsApp e Instagram
+            </div>
           </div>
 
           <div className="card" style={{ marginBottom: '16px' }}>
@@ -222,14 +219,8 @@ export default function Teleatendimento() {
             {/* Plataforma */}
             <div>
               <label style={labelSt}>Plataforma</label>
-              <select
-                value={teleForm.platform}
-                onChange={e => setTeleForm(f => ({ ...f, platform: e.target.value }))}
-                style={inputSt}
-              >
-                <option value="whereby">Whereby</option>
+              <select value="meet" disabled style={{ ...inputSt, opacity: 0.7 }}>
                 <option value="meet">Google Meet</option>
-                <option value="zoom">Zoom</option>
               </select>
             </div>
 

@@ -17,10 +17,10 @@ const EmailIcon = () => (
 
 export default function Lembretes() {
   const [configs, setConfigs] = useState([
-    { title: 'Confirmação de consulta — 24h antes', desc: 'Mensagem automática pedindo confirmação da sessão. Se não houver resposta em 4h, uma segunda mensagem é enviada.', channels: ['whatsapp', 'email'], enabled: true },
-    { title: 'Lembrete no dia da sessão — 2h antes', desc: 'Aviso no dia para reduzir no-shows. Inclui link de localização ou link de teleatendimento se a sessão for remota.', channels: ['whatsapp'], enabled: true },
-    { title: 'Cobrança automática — 3 dias após sessão sem pagamento', desc: 'Mensagem educada lembrando do pagamento pendente. Não ativa para pacientes com plano de saúde.', channels: ['whatsapp'], enabled: false },
-    { title: 'Pesquisa de satisfação — 1 dia após sessão', desc: 'Link curto com 3 perguntas (SRS simplificado). Opcional — desligado por padrão.', channels: ['whatsapp'], enabled: false },
+    { title: 'Confirmação de anotação — 24h antes', desc: 'Email automático pedindo confirmação da anotação. Se não houver resposta em 4h, um segundo email é enviado.', channels: ['email'], enabled: true },
+    { title: 'Lembrete no dia — 2h antes', desc: 'Aviso no dia para reduzir no-shows. Inclui link de localização ou link remoto se a anotação for online.', channels: ['email'], enabled: true },
+    { title: 'Cobrança — 3 dias após anotação sem pagamento', desc: 'Email educado lembrando do pagamento pendente. Não ativa para pacientes com plano de saúde.', channels: ['email'], enabled: false },
+    { title: 'Pesquisa de satisfação — 1 dia após anotação', desc: 'Link curto com 3 perguntas (SRS simplificado). Opcional — desligado por padrão.', channels: ['email'], enabled: false },
   ])
 
   useEffect(() => {
@@ -42,16 +42,15 @@ export default function Lembretes() {
   }
 
   const fila = [
-    { time: '08:00', date: 'amanhã', name: 'Lucas Martins', desc: 'Confirmação — Sessão #15 às 09h', type: 'wp' },
-    { time: '08:00', date: 'amanhã', name: 'Rafael Ferreira', desc: 'Confirmação — Sessão #8 às 14h', type: 'wp' },
-    { time: '07:00', date: 'amanhã', name: 'Lucas Martins', desc: 'Confirmação — Sessão #15 às 09h', type: 'em' },
-    { time: '07:00', date: '20 mai', name: 'João Oliveira', desc: 'Lembrete no dia — Sessão às 11h', type: 'wp' },
-    { time: '07:00', date: '20 mai', name: 'Sofia Andrade', desc: 'Lembrete no dia — Sessão às 15h', type: 'wp' },
+    { time: '08:00', date: 'amanhã', name: 'Lucas Martins', desc: 'Confirmação — Anotação #15 às 09h', type: 'em' },
+    { time: '08:00', date: 'amanhã', name: 'Rafael Ferreira', desc: 'Confirmação — Anotação #8 às 14h', type: 'em' },
+    { time: '07:00', date: '20 mai', name: 'João Oliveira', desc: 'Lembrete no dia — Anotação às 11h', type: 'em' },
+    { time: '07:00', date: '20 mai', name: 'Sofia Andrade', desc: 'Lembrete no dia — Anotação às 15h', type: 'em' },
   ]
 
   const enviados = [
-    { time: '08:00', date: 'ontem', name: 'Beatriz Lima', desc: 'Confirmação ✓ respondeu SIM', type: 'wp' },
-    { time: '08:00', date: 'ontem', name: 'Marina Costa', desc: 'Confirmação ✓ respondeu SIM', type: 'wp' },
+    { time: '08:00', date: 'ontem', name: 'Beatriz Lima', desc: 'Confirmação ✓ respondeu SIM', type: 'em' },
+    { time: '08:00', date: 'ontem', name: 'Marina Costa', desc: 'Confirmação ✓ respondeu SIM', type: 'em' },
   ]
 
   return (
@@ -76,12 +75,8 @@ export default function Lembretes() {
                     <div className="lembrete-cfg-title">{c.title}</div>
                     <div className="lembrete-cfg-desc">{c.desc}</div>
                     <div className="lembrete-cfg-channel">
-                      {c.channels.includes('whatsapp') && (
-                        <span className={`channel-chip active whatsapp`}><WaIcon /> WhatsApp</span>
-                      )}
-                      {c.channels.includes('email') && (
-                        <span className={`channel-chip active email`}><EmailIcon /> Email</span>
-                      )}
+                      <span className="channel-chip active email"><EmailIcon /> Email</span>
+                      <span style={{ fontSize: '10px', color: 'var(--gr4)', marginLeft: 6 }}>Em breve: WhatsApp · Instagram</span>
                     </div>
                   </div>
                   <label className="toggle-switch">
@@ -103,7 +98,7 @@ export default function Lembretes() {
                 <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--gr5)', marginBottom: '8px', letterSpacing: '0.3px' }}>CONFIRMAÇÃO — 24H ANTES</div>
                 <textarea
                   style={{ width: '100%', border: '1px solid var(--gr2)', borderRadius: 'var(--r)', padding: '10px 12px', fontSize: '13px', fontFamily: "'DM Sans', sans-serif", color: 'var(--d)', background: 'var(--ow)', resize: 'vertical', minHeight: '80px', outline: 'none' }}
-                  defaultValue="Olá, {{nome}}! 👋 Lembrando da sua sessão amanhã, {{dia}} de {{mes}}, às {{hora}}. Para confirmar, responda SIM. Para reagendar, me avise com antecedência. — Dra. Ana Ferreira"
+                  defaultValue="Olá, {{nome}}! Lembrando da sua anotação amanhã, {{dia}} de {{mes}}, às {{hora}}. Para confirmar, basta responder este email. Para reagendar, me avise com antecedência. — Dra. Ana Ferreira"
                 />
                 <div style={{ fontSize: '11px', color: 'var(--gr4)', marginTop: '4px' }}>Variáveis: {'{{nome}}'}, {'{{dia}}'}, {'{{mes}}'}, {'{{hora}}'}</div>
               </div>
@@ -111,7 +106,7 @@ export default function Lembretes() {
                 <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--gr5)', marginBottom: '8px', letterSpacing: '0.3px' }}>LEMBRETE NO DIA</div>
                 <textarea
                   style={{ width: '100%', border: '1px solid var(--gr2)', borderRadius: 'var(--r)', padding: '10px 12px', fontSize: '13px', fontFamily: "'DM Sans', sans-serif", color: 'var(--d)', background: 'var(--ow)', resize: 'vertical', minHeight: '80px', outline: 'none' }}
-                  defaultValue="Oi, {{nome}}! Sua sessão é hoje às {{hora}}. Te espero! 🌱"
+                  defaultValue="Oi, {{nome}}! Sua anotação é hoje às {{hora}}. Te espero! 🌱"
                 />
               </div>
               <button className="btn-primary" style={{ marginTop: '16px', fontSize: '12px' }} onClick={() => {
@@ -140,7 +135,7 @@ export default function Lembretes() {
                     <div className="lembrete-date">{f.date}</div>
                   </div>
                   <div className="lembrete-msg"><strong>{f.name}</strong><br />{f.desc}</div>
-                  <div className={`lembrete-channel-icon ${f.type}`}>{f.type === 'wp' ? '💬' : '✉️'}</div>
+                  <div className="lembrete-channel-icon em">✉️</div>
                 </div>
               ))}
             </div>
@@ -156,7 +151,7 @@ export default function Lembretes() {
                     <div className="lembrete-date">{e.date}</div>
                   </div>
                   <div className="lembrete-msg"><strong>{e.name}</strong><br />{e.desc}</div>
-                  <div className={`lembrete-channel-icon ${e.type}`}>💬</div>
+                  <div className="lembrete-channel-icon em">✉️</div>
                 </div>
               ))}
             </div>
