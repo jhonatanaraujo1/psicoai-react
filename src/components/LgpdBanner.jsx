@@ -63,7 +63,10 @@ export default function LgpdBanner({ onShowTermos }) {
           backdropFilter: 'blur(12px)',
           WebkitBackdropFilter: 'blur(12px)',
           borderTop: '1px solid rgba(255,255,255,0.08)',
-          paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 56px)',
+          // +56px apenas em mobile (BottomNav oculto em ≥641px via CSS)
+          paddingBottom: typeof window !== 'undefined' && window.innerWidth <= 640
+            ? 'calc(env(safe-area-inset-bottom, 0px) + 56px)'
+            : 'env(safe-area-inset-bottom, 0px)',
           animation: 'lgpd-up 0.28s cubic-bezier(0.4,0,0.2,1)',
         }}
       >

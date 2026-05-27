@@ -128,8 +128,9 @@ export default function OnboardingTour({ isOpen, onClose }) {
       cardPos = { top: rect.y + rect.h + PAD + GUTTER }
     }
   } else {
-    // Sem spotlight → card centralizado verticalmente (aparece acima do safe area)
-    cardPos = { bottom: Math.max(100, 0.15 * vh) }
+    // Sem spotlight → posiciona no terço superior para não colidir com o banner LGPD
+    // (que fica na parte de baixo). Terço superior = 18%–28% do viewport.
+    cardPos = { top: Math.round(vh * 0.18) }
   }
 
   const spreadPx = Math.round(Math.max(vw, vh) * 2.5)

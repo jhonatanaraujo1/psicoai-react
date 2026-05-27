@@ -457,7 +457,18 @@ export default function App() {
     }
     api.createSession({ patientId: currentPatient?.id, type: 'canvas' })
       .then(s => setSession(s.id))
-      .catch(e => console.warn('[PsicoAI] createSession (canvas) failed:', e))
+      .catch(e => {
+        const isOpenSession = e.message?.includes('sessão aberta')
+        if (isOpenSession) {
+          showToast('Sessão em andamento', 'warning', {
+            description: `${currentPatient?.name || 'Este paciente'} já tem uma sessão aberta no backend. As anotações serão salvas localmente.`,
+            action: { label: 'Ver sessões →', onClick: () => setSessionsPanelOpen(true) },
+            duration: 8000,
+          })
+        } else {
+          console.warn('[PsicoAI] createSession (canvas) failed:', e)
+        }
+      })
     setCanvasOpen(true)
   }
 
@@ -482,7 +493,18 @@ export default function App() {
     // autosaveSession only fires after 30s, so the ID will be ready well before it's needed.
     api.createSession({ patientId: currentPatient?.id, type, meetLink })
       .then(session => setSession(session.id))
-      .catch(e => console.warn('[PsicoAI] createSession failed, session will not be persisted:', e))
+      .catch(e => {
+        const isOpenSession = e.message?.includes('sessão aberta')
+        if (isOpenSession) {
+          showToast('Sessão em andamento', 'warning', {
+            description: `${currentPatient?.name || 'Este paciente'} já tem uma sessão aberta no backend. As anotações serão salvas localmente.`,
+            action: { label: 'Ver sessões →', onClick: () => setSessionsPanelOpen(true) },
+            duration: 8000,
+          })
+        } else {
+          console.warn('[PsicoAI] createSession failed, session will not be persisted:', e)
+        }
+      })
 
     setCanvasOpen(true)
   }

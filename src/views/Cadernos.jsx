@@ -175,25 +175,28 @@ export default function Cadernos({ onOpenCanvas }) {
   // Enriquece cada paciente com dados do localStorage
   const enriched = patients.map(p => ({ patient: p, canvas: readCanvasData(p.id) }))
 
+  // "com anotações" = tem canvas local OU tem sessões no backend
+  const hasNotes = ({ canvas, patient }) => !!canvas || (patient.sessions ?? 0) > 0
+
   // Ordena: primeiro quem tem páginas (por lastModified desc), depois os sem notas (alfabético)
   const sorted = [
     ...enriched.filter(c => c.canvas).sort((a, b) => (b.canvas.lastModified || 0) - (a.canvas.lastModified || 0)),
     ...enriched.filter(c => !c.canvas).sort((a, b) => a.patient.name.localeCompare(b.patient.name, 'pt-BR')),
   ]
 
-  // Aplica filtros
+  // Aplica filtros — usa mesma lógica do contador acima
   const afterFilter = filter === 'com-notas'
-    ? sorted.filter(c => c.canvas)
+    ? sorted.filter(hasNotes)
     : filter === 'sem-notas'
-      ? sorted.filter(c => !c.canvas)
+      ? sorted.filter(c => !hasNotes(c))
       : sorted
 
   const afterSearch = search.trim()
     ? afterFilter.filter(c => c.patient.name.toLowerCase().includes(search.toLowerCase()))
     : afterFilter
 
-  const comNotas   = enriched.filter(c => c.canvas).length
-  const semNotas   = enriched.filter(c => !c.canvas).length
+  const comNotas   = enriched.filter(hasNotes).length
+  const semNotas   = enriched.filter(c => !hasNotes(c)).length
   const totalPages = enriched.reduce((a, c) => a + (c.canvas?.pageCount || 0), 0)
 
   return (
