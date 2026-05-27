@@ -42,7 +42,7 @@ function PatientCard({ p, onClick }) {
               {p.statusLabel}
             </span>
             <span style={{ fontSize: '11px', color: 'var(--gr4)' }}>
-              {p.sessions ?? 0} {(p.sessions ?? 0) !== 1 ? 'sessões' : 'sessão'}{p.months != null ? ` · ${p.months}m` : ''}
+              {p.sessions ?? 0} {(p.sessions ?? 0) !== 1 ? 'anotações' : 'anotação'}{p.months != null ? ` · ${p.months}m` : ''}
             </span>
           </div>
         </div>

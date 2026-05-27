@@ -106,7 +106,7 @@ function AnnotationCard({ session, query, onPatientClick, onOpenCanvas, expanded
             </span>
             {session.num && (
               <span style={{ fontSize: '11px', color: 'var(--gr4)', fontFamily: "'Fraunces', serif" }}>
-                Sessão {session.num}
+                Anotação {session.num}
               </span>
             )}
             {hasAi && (
@@ -264,10 +264,10 @@ export default function Anotacoes({ setCurrentView, onOpenCanvas }) {
       {/* Header */}
       <div style={{ marginBottom: '20px' }}>
         <div style={{ fontFamily: "'Fraunces', serif", fontSize: '22px', fontWeight: 400, color: 'var(--d)' }}>
-          Anotações de Sessão
+          Anotações
         </div>
         <div style={{ fontSize: '13px', color: 'var(--gr5)', marginTop: '4px' }}>
-          {loading ? '…' : `${sessions.length} sessão${sessions.length !== 1 ? 'ões' : ''} · ${withText.length} com anotações · ${totalWords.toLocaleString('pt-BR')} palavras`}
+          {loading ? '…' : `${sessions.length} anotação${sessions.length !== 1 ? 'ões' : ''} · ${withText.length} com texto · ${totalWords.toLocaleString('pt-BR')} palavras`}
         </div>
       </div>
 
@@ -326,12 +326,12 @@ export default function Anotacoes({ setCurrentView, onOpenCanvas }) {
             <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
           </svg>
           <div style={{ fontSize: '15px', fontWeight: 600, color: 'var(--d)', marginBottom: '8px' }}>
-            {search || filterPatient ? 'Nenhuma anotação encontrada' : 'Nenhuma sessão registrada ainda'}
+            {search || filterPatient ? 'Nenhuma anotação encontrada' : 'Nenhuma anotação registrada ainda'}
           </div>
           <div style={{ fontSize: '13px', color: 'var(--gr4)', lineHeight: 1.6, maxWidth: '320px', margin: '0 auto' }}>
             {search || filterPatient
               ? 'Tente outros termos ou remova os filtros.'
-              : 'Suas anotações de sessão aparecem aqui. Comece anotando uma sessão.'}
+              : 'Suas anotações aparecem aqui. Comece anotando a partir de um paciente.'}
           </div>
         </div>
       ) : (
@@ -351,7 +351,7 @@ export default function Anotacoes({ setCurrentView, onOpenCanvas }) {
           {/* Summary footer */}
           {sessions.length >= 5 && (
             <div style={{ textAlign: 'center', padding: '16px 0 0', fontSize: '12px', color: 'var(--gr4)' }}>
-              {sessions.length} sessões · {withText.length} com texto · {withoutText.length} sem texto (canvas ou sem anotações)
+              {sessions.length} anotações · {withText.length} com texto · {withoutText.length} sem texto (canvas ou sem conteúdo)
             </div>
           )}
         </div>

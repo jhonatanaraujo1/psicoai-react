@@ -82,7 +82,7 @@ function CadernoCard({ patient, canvas, onOpen }) {
   const subLabel = !isEmpty
     ? fmtRelative(canvas.lastModified) || 'Editado recentemente'
     : sessionCount > 0
-      ? `${sessionCount} sessão${sessionCount !== 1 ? 'ões' : ''} no prontuário · sem canvas`
+      ? `${sessionCount} anotação${sessionCount !== 1 ? 'ões' : ''} no prontuário · sem canvas`
       : 'Nenhuma anotação ainda'
 
   return (

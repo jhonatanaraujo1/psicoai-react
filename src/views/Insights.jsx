@@ -80,7 +80,10 @@ export default function Insights({ onGoToPatient }) {
   }, [])
 
   const handlePatientClick = async (item) => {
-    if (!item.analyzed) return
+    if (!item.analyzed) {
+      onGoToPatient && onGoToPatient({ id: item.id, name: item.name })
+      return
+    }
     setDrawerPatient({ name: item.name, id: item.id })
     setDrawerOpen(true)
     setDrawerResult(null)
@@ -204,9 +207,9 @@ export default function Insights({ onGoToPatient }) {
               <div
                 key={i}
                 onClick={() => handlePatientClick(item)}
-                style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 12px', borderRadius: 'var(--r)', background: item.analyzed ? 'var(--g50)' : 'var(--ow)', border: `1px solid ${item.analyzed ? 'var(--g100)' : 'var(--gr2)'}`, marginBottom: '8px', cursor: item.analyzed ? 'pointer' : 'default', transition: 'background 0.15s, border-color 0.15s' }}
-                onMouseEnter={item.analyzed ? e => { e.currentTarget.style.background = 'var(--g100)'; e.currentTarget.style.borderColor = 'var(--g300)' } : undefined}
-                onMouseLeave={item.analyzed ? e => { e.currentTarget.style.background = 'var(--g50)'; e.currentTarget.style.borderColor = 'var(--g100)' } : undefined}
+                style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 12px', borderRadius: 'var(--r)', background: item.analyzed ? 'var(--g50)' : 'var(--ow)', border: `1px solid ${item.analyzed ? 'var(--g100)' : 'var(--gr2)'}`, marginBottom: '8px', cursor: 'pointer', transition: 'background 0.15s, border-color 0.15s' }}
+                onMouseEnter={e => { e.currentTarget.style.background = item.analyzed ? 'var(--g100)' : 'var(--g50)'; e.currentTarget.style.borderColor = item.analyzed ? 'var(--g300)' : 'var(--g200)' }}
+                onMouseLeave={e => { e.currentTarget.style.background = item.analyzed ? 'var(--g50)' : 'var(--ow)'; e.currentTarget.style.borderColor = item.analyzed ? 'var(--g100)' : 'var(--gr2)' }}
               >
                 <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: item.avatarBg || 'var(--g100)', color: item.avatarColor || 'var(--g600)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 600, flexShrink: 0 }}>
                   {item.initials || item.name?.split(' ').slice(0, 2).map(w => w[0]).join('')}
@@ -216,7 +219,7 @@ export default function Insights({ onGoToPatient }) {
                   <div style={{ fontSize: '11px', color: 'var(--gr5)', marginTop: '1px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {item.analyzed
                       ? item.summary || `Última análise: ${item.lastAnalysis}`
-                      : `${item.sessionCount} sessões · ainda sem análise IA`}
+                      : `${item.sessionCount} anotações · ainda sem análise IA`}
                   </div>
                 </div>
                 {item.analyzed ? (
@@ -224,9 +227,12 @@ export default function Insights({ onGoToPatient }) {
                     Ver análise →
                   </span>
                 ) : (
-                  <span style={{ fontSize: '11px', color: 'var(--gr4)', whiteSpace: 'nowrap', flexShrink: 0 }}>
-                    Sem análise ainda
-                  </span>
+                  <button
+                    onClick={e => { e.stopPropagation(); handlePatientClick(item) }}
+                    style={{ fontSize: '11px', fontWeight: 600, padding: '3px 10px', borderRadius: '20px', background: 'linear-gradient(135deg, #5C8F6A 0%, #4A7C59 100%)', color: '#fff', border: 'none', cursor: 'pointer', flexShrink: 0, whiteSpace: 'nowrap', fontFamily: "'DM Sans', sans-serif" }}
+                  >
+                    Analisar com IA →
+                  </button>
                 )}
               </div>
             ))

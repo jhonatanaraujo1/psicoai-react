@@ -111,7 +111,7 @@ export default function Paciente({ patient: propPatient, setCurrentView, onSessa
       evolution: s.evolution,
       date: fmtMonthDay(s.finishedAt || s.createdAt),
       num,
-      tip: `Sessão ${num} — ${s.statusLabel || 'Finalizada'}\n${s.summary?.slice(0, 60) || ''}`,
+      tip: `Anotação ${num} — ${s.statusLabel || 'Finalizada'}\n${s.summary?.slice(0, 60) || ''}`,
       isOpen: s.status === 'open',
     }
   })
@@ -219,7 +219,7 @@ export default function Paciente({ patient: propPatient, setCurrentView, onSessa
             <div className="pat-stats">
               <div className="pat-stat">
                 <div className="pat-stat-val">{summary?.sessionCount || p.sessions}</div>
-                <div className="pat-stat-label">Sessões</div>
+                <div className="pat-stat-label">Anotações</div>
               </div>
               <div className="pat-stat">
                 <div className="pat-stat-val">{p.months || 0}</div>
@@ -252,7 +252,7 @@ export default function Paciente({ patient: propPatient, setCurrentView, onSessa
       {/* Timeline */}
       {timelineDots.length > 0 && !loading && (
         <div className="timeline-wrap">
-          <div className="timeline-label">Linha do Tempo das Sessões</div>
+          <div className="timeline-label">Linha do Tempo das Anotações</div>
           <div className="timeline-track">
             <div className="timeline-line" />
             <div className="timeline-dots">
@@ -267,7 +267,7 @@ export default function Paciente({ patient: propPatient, setCurrentView, onSessa
             </div>
           </div>
           <div style={{ display: 'flex', gap: '16px', marginTop: '8px' }}>
-            {[['#27AE60', 'Evolução'], ['#F39C12', 'Neutro'], ['#E74C3C', 'Regressão/Alerta'], ['var(--g500)', 'Sessão aberta']].map(([c, l]) => (
+            {[['#27AE60', 'Evolução'], ['#F39C12', 'Neutro'], ['#E74C3C', 'Regressão/Alerta'], ['var(--g500)', 'Em aberto']].map(([c, l]) => (
               <div key={l} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: 'var(--gr5)' }}>
                 <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: c, display: 'inline-block' }} />
                 {l}
@@ -281,8 +281,8 @@ export default function Paciente({ patient: propPatient, setCurrentView, onSessa
       <div className="card">
         <div className="card-header">
           <div>
-            <div className="card-title">Histórico de Sessões</div>
-            <div className="card-sub">{sessions.length} sessões registradas · clique para ver detalhes</div>
+            <div className="card-title">Histórico de Anotações</div>
+            <div className="card-sub">{sessions.length} anotações registradas · clique para ver detalhes</div>
           </div>
           <div style={{ display: 'flex', gap: '6px' }}>
             {onViewProntuario && (
@@ -315,12 +315,12 @@ export default function Paciente({ patient: propPatient, setCurrentView, onSessa
           </div>
         ) : sessions.length === 0 ? (
           <div style={{ padding: '40px', textAlign: 'center' }}>
-            <div style={{ fontSize: '13px', color: 'var(--gr4)' }}>Nenhuma sessão registrada ainda.</div>
+            <div style={{ fontSize: '13px', color: 'var(--gr4)' }}>Nenhuma anotação registrada ainda.</div>
           </div>
         ) : (
           <>
             <div style={{ display: 'grid', gridTemplateColumns: '52px 48px 1fr 96px 80px 110px 28px 28px', borderBottom: '2px solid var(--gr2)', padding: '8px 20px', background: 'var(--ow)' }}>
-              {['Sessão', 'Tipo', 'Resumo / Anotações', 'Criado', 'Duração', 'Status', '', ''].map((h, i) => (
+              {['Nº', 'Tipo', 'Resumo / Anotações', 'Criado', 'Duração', 'Status', '', ''].map((h, i) => (
                 <div key={i} style={{ fontSize: '10px', fontWeight: 600, letterSpacing: '0.8px', textTransform: 'uppercase', color: 'var(--gr4)' }}>{h}</div>
               ))}
             </div>
@@ -382,7 +382,7 @@ export default function Paciente({ patient: propPatient, setCurrentView, onSessa
                     <div>
                       <button
                         onClick={e => { e.stopPropagation(); setSessionDeleteId(isConfirmingDelete ? null : s.id) }}
-                        title="Excluir sessão"
+                        title="Excluir anotação"
                         style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px', color: 'var(--gr3)', display: 'flex', alignItems: 'center' }}
                       >
                         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
@@ -435,7 +435,7 @@ export default function Paciente({ patient: propPatient, setCurrentView, onSessa
                       ) : s.type === 'canvas' ? (
                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '14px 16px', background: 'var(--w)', borderRadius: 'var(--r)', border: '1px solid var(--gr2)' }}>
                           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--g500)" strokeWidth="1.8"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
-                          <span style={{ fontSize: '13px', color: 'var(--gr5)' }}>Sessão feita no Canvas. Clique em "Continuar anotando" para reabrir.</span>
+                          <span style={{ fontSize: '13px', color: 'var(--gr5)' }}>Anotação feita no Canvas. Clique em "Continuar anotando" para reabrir.</span>
                         </div>
                       ) : (
                         <div style={{ fontSize: '13px', color: 'var(--gr4)', textAlign: 'center', padding: '16px' }}>
@@ -471,7 +471,7 @@ export default function Paciente({ patient: propPatient, setCurrentView, onSessa
 
                   {isConfirmingDelete && (
                     <div style={{ background: 'var(--danger-l)', border: '1px solid #E8B4B0', borderRadius: 'var(--r)', margin: '0 20px 8px', padding: '10px 14px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                      <span style={{ fontSize: '12px', color: 'var(--danger)', flex: 1 }}>Excluir sessão {sessionNum}? Esta ação não pode ser desfeita.</span>
+                      <span style={{ fontSize: '12px', color: 'var(--danger)', flex: 1 }}>Excluir anotação {sessionNum}? Esta ação não pode ser desfeita.</span>
                       <button onClick={() => setSessionDeleteId(null)} style={{ ...btnSt, background: 'none', border: '1px solid var(--danger)', color: 'var(--danger)', fontSize: '11px', padding: '5px 10px' }}>Cancelar</button>
                       <button onClick={async () => {
                         try {
