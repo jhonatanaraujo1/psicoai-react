@@ -1089,7 +1089,7 @@ export default function AnnotationSession({
                   ref={editorRef}
                   contentEditable
                   suppressContentEditableWarning
-                  data-placeholder="Escreva o que aconteceu na sessão — o que o paciente trouxe, o que você observou, o que emergiu..."
+                  data-placeholder="Escreva livremente — o que o paciente trouxe, o que você observou, o que emergiu..."
                   style={{
                     minHeight: 600, outline: 'none',
                     fontSize: 15, lineHeight: 1.85,

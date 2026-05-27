@@ -38,22 +38,21 @@ export default function Teleatendimento() {
       <div className="tele-grid">
         <div>
           <div className="tele-stats-mini">
-            <div className="tele-stat"><div className="tele-stat-val">6</div><div className="tele-stat-label">Sessões remotas em maio</div></div>
-            <div className="tele-stat"><div className="tele-stat-val">42<span style={{ fontSize: '14px' }}>min</span></div><div className="tele-stat-label">Duração média</div></div>
+            <div className="tele-stat"><div className="tele-stat-val">6</div><div className="tele-stat-label">Anotações remotas em maio</div></div>
           </div>
 
           <button className="btn-primary" style={{ fontSize: '12px', padding: '8px 14px', marginBottom: '16px' }} onClick={() => setTeleModal(true)}>
-            + Agendar sessão remota
+            + Agendar anotação remota
           </button>
 
-          <div style={{ fontFamily: "'Fraunces', serif", fontSize: '13px', color: 'var(--gr5)', marginBottom: '12px' }}>Próximas sessões remotas</div>
+          <div style={{ fontFamily: "'Fraunces', serif", fontSize: '13px', color: 'var(--gr5)', marginBottom: '12px' }}>Próximas anotações remotas</div>
 
           <div className="tele-session-card live">
             <div className="tele-av" style={{ background: 'var(--g400)' }}>LM</div>
             <div className="tele-info">
               <div className="tele-name">Lucas Martins</div>
-              <div className="tele-meta">Sessão #15 · Hoje às <strong>09:00</strong> · 50 min · Remota</div>
-              <div style={{ fontSize: '11px', color: 'var(--g600)', marginTop: '4px', fontWeight: 600 }}>● Sessão em andamento — 12:34 decorridos</div>
+              <div className="tele-meta">Anotação #15 · Hoje às <strong>09:00</strong> · Remota</div>
+              <div style={{ fontSize: '11px', color: 'var(--g600)', marginTop: '4px', fontWeight: 600 }}>● Em andamento</div>
             </div>
             <div className="tele-actions">
               <button className="btn-start-call" onClick={() => alert('Entrando na sala de Lucas Martins...')}>
@@ -67,7 +66,7 @@ export default function Teleatendimento() {
             <div className="tele-av">RF</div>
             <div className="tele-info">
               <div className="tele-name">Rafael Ferreira</div>
-              <div className="tele-meta">Sessão #8 · <strong>19 mai (amanhã)</strong> às 14:00 · Remota</div>
+              <div className="tele-meta">Anotação #8 · <strong>19 mai (amanhã)</strong> às 14:00 · Remota</div>
               <div style={{ fontSize: '11px', color: 'var(--gr4)', marginTop: '4px' }}>Link de sala gerado · Lembrete enviado</div>
             </div>
             <div className="tele-actions">
@@ -83,7 +82,7 @@ export default function Teleatendimento() {
             <div className="tele-av">JO</div>
             <div className="tele-info">
               <div className="tele-name">João Oliveira</div>
-              <div className="tele-meta">Sessão #4 · <strong>20 mai</strong> às 11:00 · Remota</div>
+              <div className="tele-meta">Anotação #4 · <strong>20 mai</strong> às 11:00 · Remota</div>
               <div style={{ fontSize: '11px', color: 'var(--warn)', marginTop: '4px' }}>⚠ Confirmação pendente</div>
             </div>
             <div className="tele-actions">
@@ -92,12 +91,12 @@ export default function Teleatendimento() {
           </div>
 
           <div className="card" style={{ marginTop: '20px' }}>
-            <div className="card-header"><div className="card-title">Histórico de sessões remotas</div></div>
+            <div className="card-header"><div className="card-title">Histórico de anotações remotas</div></div>
             <div style={{ padding: 0 }}>
               {[
-                { initials: 'CS', name: 'Carla Silva', meta: 'Sessão #5 · 12 mai 2026 · Google Meet', dur: '48 min' },
-                { initials: 'BL', name: 'Beatriz Lima', meta: 'Sessão #4 · 10 mai 2026 · Whereby', dur: '45 min' },
-                { initials: 'MA', name: 'Marina Costa', meta: 'Sessão #8 · 8 mai 2026 · Google Meet', dur: '38 min' },
+                { initials: 'CS', name: 'Carla Silva', meta: 'Anotação #5 · 12 mai 2026 · Google Meet' },
+                { initials: 'BL', name: 'Beatriz Lima', meta: 'Anotação #4 · 10 mai 2026 · Whereby' },
+                { initials: 'MA', name: 'Marina Costa', meta: 'Anotação #8 · 8 mai 2026 · Google Meet' },
               ].map((h, i) => (
                 <div key={i} className="tele-hist-item">
                   <div className="tele-av" style={{ width: '36px', height: '36px', fontSize: '13px', borderRadius: '10px', background: 'var(--g50)', color: 'var(--g600)' }}>{h.initials}</div>
@@ -105,7 +104,6 @@ export default function Teleatendimento() {
                     <div style={{ fontSize: '13px', fontWeight: 500 }}>{h.name}</div>
                     <div style={{ fontSize: '11px', color: 'var(--gr5)', marginTop: '2px' }}>{h.meta}</div>
                   </div>
-                  <div className="tele-hist-dur">{h.dur}</div>
                   <span className="card-badge badge-green" style={{ marginLeft: '8px' }}>Concluída</span>
                 </div>
               ))}
@@ -176,7 +174,7 @@ export default function Teleatendimento() {
         <div style={{ background: 'var(--w)', borderRadius: 'var(--r2)', width: '100%', maxWidth: '480px', maxHeight: 'min(90dvh,90svh,90vh)', overflowY: 'auto', boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
           {/* Header */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '20px 24px', borderBottom: '1px solid var(--gr1)' }}>
-            <div style={{ fontSize: '15px', fontWeight: 700, color: 'var(--d)', fontFamily: "'DM Sans', sans-serif" }}>Agendar Sessão Remota</div>
+            <div style={{ fontSize: '15px', fontWeight: 700, color: 'var(--d)', fontFamily: "'DM Sans', sans-serif" }}>Agendar Anotação Remota</div>
             <button onClick={() => setTeleModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--gr4)', padding: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
             </button>
@@ -241,7 +239,7 @@ export default function Teleatendimento() {
               <textarea
                 value={teleForm.notes}
                 onChange={e => setTeleForm(f => ({ ...f, notes: e.target.value }))}
-                placeholder="Observações sobre a sessão…"
+                placeholder="Observações sobre a anotação…"
                 rows={3}
                 style={{ ...inputSt, resize: 'vertical', lineHeight: 1.5 }}
               />
