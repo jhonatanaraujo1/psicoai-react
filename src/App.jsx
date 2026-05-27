@@ -97,22 +97,52 @@ export default function App() {
     }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Navigation ───────────────────────────────────────────────────────────
-  const [currentView, setCurrentView] = useState('agenda')
+  // ── Navigation — persiste em sessionStorage (por aba, não cross-tab) ────────
+  // sessionStorage sobrevive reload mas não fechar aba — comportamento correto
+  const [currentView, setCurrentViewRaw] = useState(() => {
+    try {
+      const saved = sessionStorage.getItem('psicoai_nav_view')
+      // Vistas que requerem contexto de paciente — só restaura se houver paciente salvo
+      const needsPatient = ['paciente']
+      if (saved && needsPatient.includes(saved)) {
+        const hasPat = !!sessionStorage.getItem('psicoai_nav_patient') ||
+                       !!JSON.parse(localStorage.getItem('psicoai_active_session') || 'null')?.patient
+        return hasPat ? saved : 'agenda'
+      }
+      return saved || 'agenda'
+    } catch { return 'agenda' }
+  })
+
+  const setCurrentView = (view) => {
+    setCurrentViewRaw(view)
+    try { sessionStorage.setItem('psicoai_nav_view', view) } catch {}
+  }
+
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   // ── Patient context ──────────────────────────────────────────────────────
-  // Inicializa do localStorage — prioridade: sessão ativa (canvas/text) > quicknote
-  const [currentPatient, setCurrentPatient] = useState(() => {
+  // Inicializa do localStorage — prioridade: sessão ativa (canvas/text) > quicknote > nav context
+  const [currentPatient, setCurrentPatientRaw] = useState(() => {
     try {
       const s = JSON.parse(localStorage.getItem('psicoai_active_session') || 'null')
       if (s?.patient) return s.patient
-      // Fallback: quicknote aberto antes do refresh
+      // Fallback: quicknote
       const qn = JSON.parse(localStorage.getItem('psicoai_quicknote_state') || 'null')
       if (qn?.open && qn?.patientId) return { id: qn.patientId, name: qn.patientName }
-      return null
+      // Fallback: contexto de navegação da sessão anterior
+      const nav = JSON.parse(sessionStorage.getItem('psicoai_nav_patient') || 'null')
+      return nav || null
     } catch { return null }
   })
+
+  const setCurrentPatient = (pat) => {
+    setCurrentPatientRaw(pat)
+    // Persiste contexto de navegação para sobreviver reload
+    try {
+      if (pat) sessionStorage.setItem('psicoai_nav_patient', JSON.stringify(pat))
+      else sessionStorage.removeItem('psicoai_nav_patient')
+    } catch {}
+  }
 
   // ── Active session tracking ────────────────────────────────────────────────
   const activeSessionRef  = useRef(null)

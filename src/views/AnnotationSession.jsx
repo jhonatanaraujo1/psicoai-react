@@ -42,18 +42,30 @@ const GUIDE = [
 ]
 
 // ── Canvas localStorage ───────────────────────────────────────────────────────
-const canvasKey = (id) => `psicoai_canvas2_p${id}`
+// Chave por sessionId (preferencial) ou patientId (fallback para sessões antigas)
+const canvasKey    = (sessionId) => `psicoai_canvas2_s${sessionId}`
+const canvasKeyPat = (patientId) => `psicoai_canvas2_p${patientId}` // legado
 
 let _pid = 0
 const newPageId = () => `pg-${Date.now()}-${_pid++}`
 
-// SEC-003: chave derivada do JWT (muda por login, impede leitura cross-user)
-// Não é perfeito (key é JS-acessível), mas bloqueia extensions que só lêem localStorage
+// SEC-003: chave de encriptação ESTÁVEL (não muda com refresh do token)
+// Derivada do userId do usuário logado — persiste enquanto a conta estiver logada.
+// Bug anterior: usava JWT que rota a cada 15min → chave mudava → dados perdidos.
 const getEncKey = () => {
   try {
-    const tok = localStorage.getItem('psicoai_token') || ''
-    return tok.length > 16 ? `psicoai-v1:${tok.slice(-32)}` : 'psicoai-clinical-v1-dev'
-  } catch { return 'psicoai-clinical-v1-dev' }
+    // Prioridade 1: userId do psicoai_user (estável entre token refreshes)
+    const user = JSON.parse(localStorage.getItem('psicoai_user') || '{}')
+    const uid = user?.id || user?.email || ''
+    if (uid.length > 4) return `psicoai-clinical-v2:${uid.slice(0, 40)}`
+    // Prioridade 2: chave aleatória gerada uma vez por dispositivo
+    let devKey = localStorage.getItem('psicoai_enc_key')
+    if (!devKey) {
+      devKey = `dk-${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`
+      localStorage.setItem('psicoai_enc_key', devKey)
+    }
+    return devKey
+  } catch { return 'psicoai-clinical-v2-fallback' }
 }
 
 // ── Shape tool list ───────────────────────────────────────────────────────────
@@ -108,26 +120,43 @@ function drawShape(ctx, shape, x1, y1, x2, y2, color, lineWidth) {
   ctx.restore()
 }
 
-function loadCanvasPages(patientId) {
+// Tenta descriptografar com a chave atual; se falhar, tenta JSON puro (dados legados)
+function tryParse(raw, key) {
   try {
-    const raw = localStorage.getItem(canvasKey(patientId))
-    if (!raw) return null
-    let parsed
-    try {
-      // Tenta descriptografar (formato novo — AES)
-      const decrypted = AES.decrypt(raw, getEncKey()).toString(CryptoEnc.Utf8)
-      parsed = JSON.parse(decrypted)
-    } catch {
-      // Fallback: tenta JSON puro (migração de dados legados não-criptografados)
-      parsed = JSON.parse(raw)
-      // Re-salva criptografado imediatamente
-      if (Array.isArray(parsed) && parsed.length > 0) saveCanvasPages(patientId, parsed)
+    const dec = AES.decrypt(raw, key).toString(CryptoEnc.Utf8)
+    if (!dec) throw new Error('empty')
+    return JSON.parse(dec)
+  } catch { /* tenta plaintext abaixo */ }
+  try { return JSON.parse(raw) } catch { return null }
+}
+
+// sessionId como chave primária — evita múltiplas sessões do mesmo paciente colidirem
+function loadCanvasPages(sessionId, patientId) {
+  try {
+    const key = getEncKey()
+    // 1. Tenta chave por sessão (formato novo)
+    const rawSession = sessionId ? localStorage.getItem(canvasKey(sessionId)) : null
+    if (rawSession) {
+      const parsed = tryParse(rawSession, key)
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed
     }
-    return Array.isArray(parsed) && parsed.length > 0 ? parsed : null
+    // 2. Fallback: chave legada por paciente (migração de dados existentes)
+    if (patientId) {
+      const rawPat = localStorage.getItem(canvasKeyPat(patientId))
+      if (rawPat) {
+        const parsed = tryParse(rawPat, key)
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          // Migra para chave por sessão imediatamente (se sessionId disponível)
+          if (sessionId) saveCanvasPages(sessionId, patientId, parsed)
+          return parsed
+        }
+      }
+    }
+    return null
   } catch { return null }
 }
 
-function saveCanvasPages(patientId, pages) {
+function saveCanvasPages(sessionId, patientId, pages) {
   try {
     const data = JSON.stringify(pages.map(p => ({
       id: p.id,
@@ -135,11 +164,11 @@ function saveCanvasPages(patientId, pages) {
       dataUrl: p.dataUrl || null,
       textHtml: p.textHtml || null,
     })))
-    if (data.length < 4 * 1024 * 1024) {
-      // SEC-003: criptografar dados clínicos antes de persistir
-      const encrypted = AES.encrypt(data, getEncKey()).toString()
-      localStorage.setItem(canvasKey(patientId), encrypted)
-    }
+    if (data.length >= 4 * 1024 * 1024) return // muito grande
+    const encrypted = AES.encrypt(data, getEncKey()).toString()
+    // Salva sempre na chave por sessão (primária)
+    const key = sessionId ? canvasKey(sessionId) : canvasKeyPat(patientId)
+    localStorage.setItem(key, encrypted)
   } catch { /* quota */ }
 }
 
@@ -477,8 +506,8 @@ export default function AnnotationSession({
     setShowEndModal(false)
     penDetectedRef.current = false // C-1: reset palm rejection on every new session
 
-    // Carrega histórico do paciente do localStorage
-    const saved = loadCanvasPages(patient.id)
+    // Carrega rascunho do localStorage — prioridade: sessionId > patientId (legado)
+    const saved = loadCanvasPages(sessionId, patient.id)
     const restored = saved
       ? saved.map(p => ({ id: p.id, pageType: p.pageType || 'draw', canvasRef: { current: null }, dataUrl: p.dataUrl || null, textHtml: p.textHtml || null }))
       : []
@@ -543,7 +572,7 @@ export default function AnnotationSession({
         if (p.id !== pageId) return p
         return { ...p, dataUrl: p.canvasRef.current?.toDataURL('image/png') || p.dataUrl }
       })
-      if (patient?.id) saveCanvasPages(patient.id, updated)
+      if (patient?.id) saveCanvasPages(sessionIdRef.current, patient.id, updated)
       return updated
     })
   }, [patient?.id, pushUndo])
@@ -553,7 +582,7 @@ export default function AnnotationSession({
     const newPage = { id: newPageId(), pageType, canvasRef: { current: null }, dataUrl: null, textHtml: null }
     setPages(prev => {
       const next = [...prev, newPage]
-      if (patient?.id) saveCanvasPages(patient.id, next)
+      if (patient?.id) saveCanvasPages(sessionIdRef.current, patient.id, next)
       return next
     })
     setActivePage(p => p + 1)
@@ -571,7 +600,7 @@ export default function AnnotationSession({
       const deletedIdx = prev.findIndex(p => p.id === pageId)
       if (deletedIdx === -1) return prev
       const next = prev.filter(p => p.id !== pageId)
-      if (patient?.id) saveCanvasPages(patient.id, next)
+      if (patient?.id) saveCanvasPages(sessionIdRef.current, patient.id, next)
       // Ajusta página ativa
       setActivePage(ap => {
         if (ap > deletedIdx) return ap - 1          // apagou antes da ativa
@@ -588,7 +617,7 @@ export default function AnnotationSession({
     setIsDirty(true)
     setPages(prev => {
       const updated = prev.map(p => p.id === pageId ? { ...p, textHtml: html } : p)
-      if (patient?.id) saveCanvasPages(patient.id, updated)
+      if (patient?.id) saveCanvasPages(sessionIdRef.current, patient.id, updated)
       return updated
     })
   }, [patient?.id])
