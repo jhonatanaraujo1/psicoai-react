@@ -361,7 +361,7 @@ export default function Agenda({ currentUser }) {
 
           {/* Upcoming */}
           <div className="agenda-upcoming">
-            <div className="card-header" style={{ padding: '0 0 12px' }}>
+            <div className="card-header" style={{ padding: '16px 16px 14px' }}>
               <div className="card-title">Próximas sessões</div>
             </div>
             {loading
