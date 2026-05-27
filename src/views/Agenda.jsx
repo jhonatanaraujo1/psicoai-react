@@ -586,18 +586,34 @@ export default function Agenda({ currentUser }) {
               {['S','T','Q','Q','S','S','D'].map((d, i) => (
                 <div key={i} className="mini-cal-dow">{d}</div>
               ))}
-              {miniDays.map((day, i) => (
+              {miniDays.map((day, i) => {
+                const isToday = day && day === today.getDate() && miniMonth === today.getMonth() && miniYear === today.getFullYear()
+                const isInWeek = day && weekDates.some(wd => wd.getDate() === day && wd.getMonth() === miniMonth && wd.getFullYear() === miniYear)
+                return (
                 <div
                   key={i}
-                  className={`mini-cal-day${day && day === today.getDate() && miniMonth === today.getMonth() && miniYear === today.getFullYear() ? ' today' : ''}${!day ? ' other-month' : ''}`}
-                  style={day && daysWithEvents.has(day) ? { position: 'relative' } : {}}
+                  className={`mini-cal-day${isToday ? ' today' : ''}${!day ? ' other-month' : ''}${isInWeek && !isToday ? ' in-week' : ''}`}
+                  style={{
+                    ...(day && daysWithEvents.has(day) ? { position: 'relative' } : {}),
+                    ...(day ? { cursor: 'pointer' } : {}),
+                  }}
+                  onClick={() => {
+                    if (!day) return
+                    const clicked = new Date(miniYear, miniMonth, day)
+                    const clickedMonday = getMondayOf(clicked)
+                    const todayMonday = getMondayOf(today)
+                    const diffMs = clickedMonday - todayMonday
+                    const diffWeeks = Math.round(diffMs / (7 * 24 * 60 * 60 * 1000))
+                    setWeekOffset(diffWeeks)
+                  }}
                 >
                   {day || ''}
                   {day && daysWithEvents.has(day) && (
                     <span style={{ position: 'absolute', bottom: '1px', left: '50%', transform: 'translateX(-50%)', width: '4px', height: '4px', borderRadius: '50%', background: 'var(--g500)', display: 'block' }} />
                   )}
                 </div>
-              ))}
+                )
+              })}
             </div>
           </div>
 

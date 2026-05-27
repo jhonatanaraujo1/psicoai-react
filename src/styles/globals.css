@@ -292,6 +292,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--ow);color:var(--d);displa
 .mini-cal-day{height:28px;display:flex;align-items:center;justify-content:center;border-radius:6px;font-size:12px;color:var(--d);cursor:pointer;transition:var(--t)}
 .mini-cal-day:hover{background:var(--g50);color:var(--g600)}
 .mini-cal-day.today{background:var(--g500);color:#fff;font-weight:600}
+.mini-cal-day.in-week{background:var(--g50);color:var(--g700);font-weight:500}
 .mini-cal-day.other-month{color:var(--gr2)}
 .agenda-upcoming{background:var(--w);border-radius:var(--r2);box-shadow:var(--sh);border:1px solid var(--gr2);margin-top:16px;overflow:hidden}
 .upcoming-item{display:flex;align-items:center;gap:12px;padding:11px 16px;border-bottom:1px solid var(--gr1);cursor:pointer;transition:var(--t)}
@@ -771,13 +772,23 @@ body{font-family:'DM Sans',sans-serif;background:var(--ow);color:var(--d);displa
    hamburger. Rota direta pelo ícone. Labels aparecem como tooltip nativo
    (atributo title). pointer:coarse exclui laptops com janela estreita.        */
 @media (orientation:portrait) and (min-width:641px) and (max-width:900px) and (pointer:coarse){
-  /* Icon sidebar: sempre visível, 56px de largura */
+  /* Icon sidebar: sempre visível, 56px de largura — expande como overlay ao abrir */
   :root{--sw:56px}
-  .sidebar{transform:none !important;width:56px;overflow:hidden;transition:none}
-  .sidebar.open{transform:none !important}
+  .sidebar{transform:none !important;width:56px;overflow:hidden;transition:width 0.26s cubic-bezier(0.4,0,0.2,1)}
+  .sidebar.open{width:252px !important;overflow:visible !important;z-index:300 !important}
+  .sidebar.open .nav-label{display:block !important}
+  .sidebar.open .sb-brand{display:flex !important}
+  .sidebar.open .nav-section{display:block !important}
+  .sidebar.open .av-info{display:flex !important}
+  .sidebar.open .sb-plan-info{display:block !important}
+  .sidebar.open .sb-logo{justify-content:flex-start;padding:16px 20px}
+  .sidebar.open .nav-item{padding:10px 16px;justify-content:flex-start;gap:10px;margin:0 8px}
+  .sidebar.open .sb-avatar button{display:flex !important}
+  .sidebar.open .sb-footer{padding:12px 8px}
   .sidebar-overlay{display:none !important}
+  .sidebar-overlay.visible{display:block !important;z-index:299 !important}
   .main{margin-left:56px !important}
-  .hamburger{display:none !important}
+  .hamburger{display:flex !important}
 
   /* Ocultar texto, manter apenas ícones */
   .nav-label{display:none}
