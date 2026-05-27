@@ -45,11 +45,33 @@ function Excerpt({ text, query }) {
   )
 }
 
+// Verifica se há dados de canvas no localStorage para uma sessão
+function checkLocalCanvas(sessionId, patientId) {
+  try {
+    if (sessionId) {
+      const bySession = localStorage.getItem(`psicoai_canvas2_s${sessionId}`)
+      if (bySession) {
+        const pages = JSON.parse(bySession)
+        if (Array.isArray(pages) && pages.length > 0) return true
+      }
+    }
+    if (patientId) {
+      const byPatient = localStorage.getItem(`psicoai_canvas2_p${patientId}`)
+      if (byPatient) {
+        const pages = JSON.parse(byPatient)
+        if (Array.isArray(pages) && pages.length > 0) return true
+      }
+    }
+  } catch { /* ignore */ }
+  return false
+}
+
 function AnnotationCard({ session, query, onPatientClick, onOpenCanvas, expanded, onToggle }) {
   const hasText = !!session.textContent
   const hasAi = session.hasAnalysis
-  // Canvas badge only when actual canvas data exists — type alone is not enough
-  const hasCanvas = session.type === 'canvas' && !!session.canvasDataJson
+  // Canvas: tem dados no backend OU no localStorage
+  const hasCanvas = session.type === 'canvas' &&
+    (!!session.canvasDataJson || checkLocalCanvas(session.id, session.patientId))
 
   return (
     <div

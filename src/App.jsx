@@ -460,9 +460,9 @@ export default function App() {
       .catch(e => {
         const isOpenSession = e.message?.includes('sessão aberta')
         if (isOpenSession) {
-          showToast('Sessão em andamento', 'warning', {
-            description: `${currentPatient?.name || 'Este paciente'} já tem uma sessão aberta no backend. As anotações serão salvas localmente.`,
-            action: { label: 'Ver sessões →', onClick: () => setSessionsPanelOpen(true) },
+          showToast('Anotação em andamento', 'warning', {
+            description: `${currentPatient?.name || 'Este paciente'} já tem uma anotação em aberto. As novas anotações serão salvas localmente.`,
+            action: { label: 'Ver em aberto →', onClick: () => setSessionsPanelOpen(true) },
             duration: 8000,
           })
         } else {
@@ -496,9 +496,9 @@ export default function App() {
       .catch(e => {
         const isOpenSession = e.message?.includes('sessão aberta')
         if (isOpenSession) {
-          showToast('Sessão em andamento', 'warning', {
-            description: `${currentPatient?.name || 'Este paciente'} já tem uma sessão aberta no backend. As anotações serão salvas localmente.`,
-            action: { label: 'Ver sessões →', onClick: () => setSessionsPanelOpen(true) },
+          showToast('Anotação em andamento', 'warning', {
+            description: `${currentPatient?.name || 'Este paciente'} já tem uma anotação em aberto. As novas anotações serão salvas localmente.`,
+            action: { label: 'Ver em aberto →', onClick: () => setSessionsPanelOpen(true) },
             duration: 8000,
           })
         } else {
@@ -779,11 +779,17 @@ export default function App() {
       case 'formularios': return <Formularios />
       // Cadernos: cada paciente é um caderno. Clicar abre o canvas diretamente.
       // Paciente com páginas → recovery mode. Sem páginas → nova página de texto.
-      case 'cadernos':    return <Cadernos onOpenCanvas={(patient) => {
-        setCurrentPatient(patient)
-        if (_hasAnnotations(patient.id)) { _openExistingAnnotation(patient) }
-        else { _openTextSession(patient) }
-      }} />
+      case 'cadernos':    return <Cadernos
+        onOpenCanvas={(patient) => {
+          setCurrentPatient(patient)
+          if (_hasAnnotations(patient.id)) { _openExistingAnnotation(patient) }
+          else { _openTextSession(patient) }
+        }}
+        onOpenPatient={(patient) => {
+          setCurrentPatient(patient)
+          setCurrentView('paciente')
+        }}
+      />
       case 'anotacoes':   return <Anotacoes setCurrentView={handleSetView} onOpenCanvas={handleOpenCanvasFromHistory} />
       case 'teleatendimento': return <Teleatendimento />
       case 'configuracoes': return <Configuracoes currentUser={currentUser} onProfileUpdate={(data) => setCurrentUser(u => ({ ...u, ...data }))} onOpenOnboarding={() => setOnboardingOpen(true)} onOpenTermos={() => setCurrentView('termos')} />
