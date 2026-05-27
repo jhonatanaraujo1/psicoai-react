@@ -433,6 +433,9 @@ export default function App() {
       }))
     }
 
+    // Define o tipo de página inicial: canvas livre → draw, texto → text
+    setCanvasInitialPageType(type === 'canvas' ? 'draw' : 'text')
+
     // Open the session view immediately (no wait) and create the backend record in background.
     // autosaveSession only fires after 30s, so the ID will be ready well before it's needed.
     api.createSession({ patientId: currentPatient?.id, type, meetLink })

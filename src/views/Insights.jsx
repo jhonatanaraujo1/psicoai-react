@@ -157,7 +157,7 @@ export default function Insights({ onGoToPatient }) {
             <div className="card-sub">
               {loading ? '…' : (
                 analyzedCount === 0
-                  ? `${totalCount} pacientes · nenhuma análise IA gerada ainda`
+                  ? `${totalCount} ${totalCount !== 1 ? 'pacientes' : 'paciente'} · nenhuma análise IA gerada ainda`
                   : `${analyzedCount} com análise IA · ${unanalyzedCount > 0 ? `${unanalyzedCount} ainda sem análise` : 'todos analisados'}`
               )}
             </div>

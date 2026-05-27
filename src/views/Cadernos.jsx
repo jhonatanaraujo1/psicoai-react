@@ -200,7 +200,7 @@ export default function Cadernos({ onOpenCanvas }) {
         <div style={{ fontSize: '13px', color: 'var(--gr5)', marginTop: '4px' }}>
           {loading
             ? '…'
-            : `${patients.length} pacientes · ${comNotas} com anotações · ${totalPages} páginas`}
+            : `${patients.length} ${patients.length !== 1 ? 'pacientes' : 'paciente'} · ${comNotas} com anotações · ${totalPages} ${totalPages !== 1 ? 'páginas' : 'página'}`}
         </div>
       </div>
 

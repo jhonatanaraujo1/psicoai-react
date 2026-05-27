@@ -264,7 +264,7 @@ export default function Agenda({ currentUser }) {
             Semana de {weekRange}
           </div>
           <div style={{ fontSize: '13px', color: 'var(--gr5)', marginTop: '3px' }}>
-            {loading ? '…' : `${sessionsThisWeek} sessão${sessionsThisWeek !== 1 ? 'ões' : ''} agendada${sessionsThisWeek !== 1 ? 's' : ''} esta semana`}
+            {loading ? '…' : `${sessionsThisWeek} ${sessionsThisWeek !== 1 ? 'sessões' : 'sessão'} agendada${sessionsThisWeek !== 1 ? 's' : ''} esta semana`}
           </div>
         </div>
         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>

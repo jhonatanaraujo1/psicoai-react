@@ -38,20 +38,20 @@ export default function Teleatendimento() {
       <div className="tele-grid">
         <div>
           <div className="tele-stats-mini">
-            <div className="tele-stat"><div className="tele-stat-val">6</div><div className="tele-stat-label">Anotações remotas em maio</div></div>
+            <div className="tele-stat"><div className="tele-stat-val">6</div><div className="tele-stat-label">Sessões remotas em maio</div></div>
           </div>
 
           <button className="btn-primary" style={{ fontSize: '12px', padding: '8px 14px', marginBottom: '16px' }} onClick={() => setTeleModal(true)}>
-            + Agendar anotação remota
+            + Agendar sessão remota
           </button>
 
-          <div style={{ fontFamily: "'Fraunces', serif", fontSize: '13px', color: 'var(--gr5)', marginBottom: '12px' }}>Próximas anotações remotas</div>
+          <div style={{ fontFamily: "'Fraunces', serif", fontSize: '13px', color: 'var(--gr5)', marginBottom: '12px' }}>Próximas sessões remotas</div>
 
           <div className="tele-session-card live">
             <div className="tele-av" style={{ background: 'var(--g400)' }}>LM</div>
             <div className="tele-info">
               <div className="tele-name">Lucas Martins</div>
-              <div className="tele-meta">Anotação #15 · Hoje às <strong>09:00</strong> · Remota</div>
+              <div className="tele-meta">Sessão #15 · Hoje às <strong>09:00</strong> · Remota</div>
               <div style={{ fontSize: '11px', color: 'var(--g600)', marginTop: '4px', fontWeight: 600 }}>● Em andamento</div>
             </div>
             <div className="tele-actions">
@@ -66,7 +66,7 @@ export default function Teleatendimento() {
             <div className="tele-av">RF</div>
             <div className="tele-info">
               <div className="tele-name">Rafael Ferreira</div>
-              <div className="tele-meta">Anotação #8 · <strong>19 mai (amanhã)</strong> às 14:00 · Remota</div>
+              <div className="tele-meta">Sessão #8 · <strong>19 mai (amanhã)</strong> às 14:00 · Remota</div>
               <div style={{ fontSize: '11px', color: 'var(--gr4)', marginTop: '4px' }}>Link de sala gerado · Lembrete enviado</div>
             </div>
             <div className="tele-actions">
@@ -82,7 +82,7 @@ export default function Teleatendimento() {
             <div className="tele-av">JO</div>
             <div className="tele-info">
               <div className="tele-name">João Oliveira</div>
-              <div className="tele-meta">Anotação #4 · <strong>20 mai</strong> às 11:00 · Remota</div>
+              <div className="tele-meta">Sessão #4 · <strong>20 mai</strong> às 11:00 · Remota</div>
               <div style={{ fontSize: '11px', color: 'var(--warn)', marginTop: '4px' }}>⚠ Confirmação pendente</div>
             </div>
             <div className="tele-actions">
@@ -91,12 +91,12 @@ export default function Teleatendimento() {
           </div>
 
           <div className="card" style={{ marginTop: '20px' }}>
-            <div className="card-header"><div className="card-title">Histórico de anotações remotas</div></div>
+            <div className="card-header"><div className="card-title">Histórico de sessões remotas</div></div>
             <div style={{ padding: 0 }}>
               {[
-                { initials: 'CS', name: 'Carla Silva', meta: 'Anotação #5 · 12 mai 2026 · Google Meet' },
-                { initials: 'BL', name: 'Beatriz Lima', meta: 'Anotação #4 · 10 mai 2026 · Whereby' },
-                { initials: 'MA', name: 'Marina Costa', meta: 'Anotação #8 · 8 mai 2026 · Google Meet' },
+                { initials: 'CS', name: 'Carla Silva', meta: 'Sessão #5 · 12 mai 2026 · Google Meet' },
+                { initials: 'BL', name: 'Beatriz Lima', meta: 'Sessão #4 · 10 mai 2026 · Whereby' },
+                { initials: 'MA', name: 'Marina Costa', meta: 'Sessão #8 · 8 mai 2026 · Google Meet' },
               ].map((h, i) => (
                 <div key={i} className="tele-hist-item">
                   <div className="tele-av" style={{ width: '36px', height: '36px', fontSize: '13px', borderRadius: '10px', background: 'var(--g50)', color: 'var(--g600)' }}>{h.initials}</div>
