@@ -31,13 +31,13 @@ export default function SessionTypePicker({ patient, onText, onCanvas, onCancel 
         {/* Header */}
         <div style={{ marginBottom: '20px' }}>
           <p style={{ fontSize: '12px', color: 'var(--text-muted, #888)', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-            Nova sessão
+            Nova anotação
           </p>
           <h2 style={{ fontSize: '18px', fontWeight: 600, color: 'var(--text, #f0f0f0)', margin: 0 }}>
             {patient.name}
           </h2>
           <p style={{ fontSize: '13px', color: 'var(--text-muted, #888)', marginTop: '4px' }}>
-            Como quer registrar esta sessão?
+            Como quer registrar esta anotação?
           </p>
         </div>
 

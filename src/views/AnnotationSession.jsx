@@ -659,28 +659,46 @@ export default function AnnotationSession({
               </span>
             </button>
           ))}
-          {/* Add page button + mini-menu */}
-          <div ref={addMenuRef} style={{ position: 'relative', marginTop: 8 }}>
+          {/* Add page buttons — dois botões inline, sem popup, sem conflito de ref */}
+          <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
             <button
-              onClick={() => setShowAddMenu(p => !p)} title="Nova página"
+              onClick={() => addPage('draw')}
+              title="Nova página de desenho"
               style={{
-                width: 72, height: 36,
-                border: `1.5px dashed ${showAddMenu ? '#5C8F6A' : 'rgba(255,255,255,0.2)'}`,
-                borderRadius: 4,
-                background: showAddMenu ? 'rgba(74,124,89,0.15)' : 'transparent',
-                color: showAddMenu ? '#5C8F6A' : 'rgba(255,255,255,0.35)',
-                cursor: 'pointer', fontSize: 20,
+                width: 44, height: 34,
+                border: '1.5px dashed rgba(255,255,255,0.2)',
+                borderRadius: 4, background: 'transparent',
+                color: 'rgba(255,255,255,0.35)', cursor: 'pointer',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                transition: 'all 0.15s',
+                transition: 'all 0.15s', flexShrink: 0,
               }}
-              onMouseEnter={e => { if (!showAddMenu) { e.currentTarget.style.borderColor = '#5C8F6A'; e.currentTarget.style.color = '#5C8F6A' } }}
-              onMouseLeave={e => { if (!showAddMenu) { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)'; e.currentTarget.style.color = 'rgba(255,255,255,0.35)' } }}
-            >+</button>
-            {showAddMenu && (
-              <div style={{ position: 'absolute', bottom: '100%', left: '50%', transform: 'translateX(-50%)', marginBottom: 6 }}>
-                <AddPageMenu />
-              </div>
-            )}
+              onMouseEnter={e => { e.currentTarget.style.borderColor = '#5C8F6A'; e.currentTarget.style.color = '#5C8F6A'; e.currentTarget.style.background = 'rgba(74,124,89,0.12)' }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)'; e.currentTarget.style.color = 'rgba(255,255,255,0.35)'; e.currentTarget.style.background = 'transparent' }}
+            >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/>
+              </svg>
+            </button>
+            <button
+              onClick={() => addPage('text')}
+              title="Nova página de texto"
+              style={{
+                width: 44, height: 34,
+                border: '1.5px dashed rgba(255,255,255,0.2)',
+                borderRadius: 4, background: 'transparent',
+                color: 'rgba(255,255,255,0.35)', cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                transition: 'all 0.15s', flexShrink: 0,
+              }}
+              onMouseEnter={e => { e.currentTarget.style.borderColor = '#5C8F6A'; e.currentTarget.style.color = '#5C8F6A'; e.currentTarget.style.background = 'rgba(74,124,89,0.12)' }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)'; e.currentTarget.style.color = 'rgba(255,255,255,0.35)'; e.currentTarget.style.background = 'transparent' }}
+            >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                <polyline points="14 2 14 8 20 8"/>
+                <line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="13" y2="17"/>
+              </svg>
+            </button>
           </div>
         </>
       )
