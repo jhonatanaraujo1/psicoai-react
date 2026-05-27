@@ -903,8 +903,7 @@ export default function App() {
 
       {/* Banner de inadimplência em período de graça */}
       {currentUser?.graceDaysRemaining > 0 && !paymentRequired && (
-        <div style={{
-          position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 900,
+        <div className="grace-banner" style={{
           background: '#7C4D00', color: '#FFF3E0',
           padding: '10px 20px', fontSize: '13px',
           display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px',

@@ -69,7 +69,7 @@ function saveCanvasPages(patientId, pages) {
 }
 
 // ── A4 canvas page (modo canvas) ──────────────────────────────────────────────
-function CanvasPage({ page, isActive, toolRef, colorRef, sizeRef, onStrokeEnd, onClick }) {
+function CanvasPage({ page, isActive, toolRef, colorRef, sizeRef, onStrokeEnd, onClick, penDetectedRef }) {
   const canvasRef    = useRef(null)
   const isDrawing    = useRef(false)
   const lastPos      = useRef({ x: 0, y: 0 })
@@ -100,6 +100,9 @@ function CanvasPage({ page, isActive, toolRef, colorRef, sizeRef, onStrokeEnd, o
 
   const onPointerDown = useCallback((e) => {
     if (e.button !== undefined && e.button > 0) return
+    // Palm rejection: once a stylus is detected, block touch (finger) input
+    if (e.pointerType === 'pen' && penDetectedRef) penDetectedRef.current = true
+    if (penDetectedRef?.current && e.pointerType === 'touch') return
     e.preventDefault()
     canvasRef.current?.setPointerCapture(e.pointerId)
     isDrawing.current = true
@@ -118,6 +121,7 @@ function CanvasPage({ page, isActive, toolRef, colorRef, sizeRef, onStrokeEnd, o
 
   const onPointerMove = useCallback((e) => {
     if (!isDrawing.current) return
+    if (penDetectedRef?.current && e.pointerType === 'touch') return
     e.preventDefault()
     const ctx = canvasRef.current?.getContext('2d')
     if (!ctx) return
@@ -147,6 +151,7 @@ function CanvasPage({ page, isActive, toolRef, colorRef, sizeRef, onStrokeEnd, o
   return (
     <div
       id={`page-${page.id}`}
+      className="as-page-wrap"
       onClick={onClick}
       style={{
         flexShrink: 0, width: PAGE_W, height: PAGE_H,
@@ -159,6 +164,7 @@ function CanvasPage({ page, isActive, toolRef, colorRef, sizeRef, onStrokeEnd, o
     >
       <canvas
         ref={canvasRef}
+        className="as-canvas"
         width={PAGE_W * SCALE} height={PAGE_H * SCALE}
         style={{ width: PAGE_W, height: PAGE_H, display: 'block' }}
         onPointerDown={onPointerDown} onPointerMove={onPointerMove}
@@ -180,6 +186,7 @@ function TextPage({ page, isActive, onTextChange, onClick }) {
   return (
     <div
       id={`page-${page.id}`}
+      className="as-page-wrap"
       onClick={onClick}
       style={{
         flexShrink: 0, width: PAGE_W, minHeight: PAGE_H,
@@ -299,9 +306,11 @@ export default function AnnotationSession({
   useEffect(() => { patientIdRef.current = patient?.id }, [patient?.id])
 
   // ── Refs compartilhados ────────────────────────────────────────────────────
-  const mainScrollRef = useRef(null)
-  const sidebarRef    = useRef(null)
-  const sessionIdRef  = useRef(sessionId)
+  const mainScrollRef   = useRef(null)
+  const sidebarRef      = useRef(null)
+  const sessionIdRef    = useRef(sessionId)
+  // Palm rejection: set to true on first pen event — blocks touch (fingers) in canvas
+  const penDetectedRef  = useRef(false)
   useEffect(() => { sessionIdRef.current = sessionId }, [sessionId])
 
   // ── Inicializa ao abrir ────────────────────────────────────────────────────
@@ -827,12 +836,20 @@ export default function AnnotationSession({
           {COLORS.map(c => (
             <button key={c} onClick={() => { setColor(c); setTool('pen') }} title={c}
               style={{
-                width: 22, height: 22, borderRadius: '50%', background: c,
+                // 44×44 tap target wrapping a 22px dot — WCAG minimum
+                width: 44, height: 44, borderRadius: 8, background: 'transparent',
                 border: 'none', cursor: 'pointer', flexShrink: 0,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent',
+                transition: 'background 0.15s',
+              }}
+            >
+              <div style={{
+                width: 22, height: 22, borderRadius: '50%', background: c, flexShrink: 0,
                 boxShadow: color === c && tool === 'pen' ? `0 0 0 2px #1A1A1A, 0 0 0 3.5px ${c}` : 'none',
                 transition: 'box-shadow 0.15s',
-              }}
-            />
+              }} />
+            </button>
           ))}
 
           <Sep />
@@ -944,6 +961,8 @@ export default function AnnotationSession({
       display: 'flex', flexDirection: 'column',
       fontFamily: "'DM Sans', sans-serif",
       background: '#1E1E1E',
+      // iOS notch: fixed elements start at physical y=0 (behind status bar)
+      paddingTop: 'env(safe-area-inset-top, 0px)',
     }}>
 
       {/* ── Header ──────────────────────────────────────────────────────── */}
@@ -1028,6 +1047,7 @@ export default function AnnotationSession({
               padding: '7px 14px', background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)',
               borderRadius: 8, color: 'rgba(255,255,255,0.85)', fontSize: 12, fontWeight: 600,
               cursor: 'pointer', transition: 'all 0.15s', display: 'flex', alignItems: 'center', gap: 6,
+              touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent',
             }}
             onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.16)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.35)' }}
             onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.1)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.2)' }}
@@ -1035,7 +1055,7 @@ export default function AnnotationSession({
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
             </svg>
-            Analisar
+            <span className="as-btn-txt">Analisar</span>
           </button>
           {/* Salvar */}
           <button
@@ -1044,11 +1064,13 @@ export default function AnnotationSession({
               padding: '7px 18px', background: '#4A7C59', border: 'none', borderRadius: 8,
               color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer',
               transition: 'background 0.15s',
+              touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent',
             }}
             onMouseEnter={e => e.currentTarget.style.background = '#3D6B4A'}
             onMouseLeave={e => e.currentTarget.style.background = '#4A7C59'}
           >
-            Salvar anotação
+            <span className="as-btn-txt">Salvar</span>
+            <span className="as-btn-full-txt"> anotação</span>
           </button>
         </div>
       </div>
@@ -1106,6 +1128,7 @@ export default function AnnotationSession({
             display: 'flex', flexDirection: 'column',
             alignItems: 'center',
             padding: '32px 24px 80px', gap: 32,
+            overscrollBehavior: 'contain', // prevents iOS rubber-band from disrupting drawing
           }}
         >
           {pages.map((p, i) => (
@@ -1122,6 +1145,7 @@ export default function AnnotationSession({
                   toolRef={toolRef} colorRef={colorRef} sizeRef={sizeRef}
                   onStrokeEnd={handleStrokeEnd}
                   onClick={() => setActivePage(i)}
+                  penDetectedRef={penDetectedRef}
                 />
           ))}
         </div>
@@ -1129,12 +1153,14 @@ export default function AnnotationSession({
 
       {/* ── Toolbar ──────────────────────────────────────────────────────── */}
       <div className="as-toolbar" style={{
-        height: 52, flexShrink: 0,
+        height: 56, flexShrink: 0,
         background: '#1A1A1A',
         borderTop: '1px solid rgba(255,255,255,0.08)',
         display: 'flex', alignItems: 'center',
-        justifyContent: 'center', gap: 6, padding: '0 16px',
+        justifyContent: 'center', gap: 4, padding: '0 12px',
         overflowX: 'auto',
+        // Safe area bottom: Apple Pencil often used in portrait iPad with home indicator
+        paddingBottom: 'env(safe-area-inset-bottom, 0px)',
       }}>
         <ToolbarContent />
       </div>
@@ -1471,10 +1497,37 @@ export default function AnnotationSession({
         @media (hover: none) { .as-kbd-hint { display: none } }
 
         @media (max-width: 640px) {
-          .as-main { padding: 16px 10px 72px !important; }
+          .as-main { padding: 16px 10px 80px !important; gap: 20px !important; }
         }
         @media (max-width: 900px) {
-          .as-main { padding: 20px 14px 72px !important; }
+          .as-main { padding: 20px 14px 80px !important; }
+        }
+
+        /* ── Responsive A4 page scaling ─────────────────────────────────────
+           On narrow viewports the 794px page overflows. Scale it down
+           proportionally using CSS — getPos() uses getBoundingClientRect()
+           so coordinates automatically correct with CSS scaling.             */
+        @media (max-width: 860px) {
+          .as-page-wrap {
+            width: min(794px, 100%) !important;
+            height: auto !important;
+            min-height: unset !important;
+            aspect-ratio: 794 / 1123;
+          }
+          .as-canvas {
+            width: 100% !important;
+            height: auto !important;
+          }
+        }
+
+        /* ── Narrow phone header: compress buttons ──────────────────────────
+           375px – 480px: hide "anotação" suffix, keep "Salvar"
+           < 375px: hide all text labels, show icon-only                      */
+        @media (max-width: 480px) {
+          .as-btn-full-txt { display: none; }
+        }
+        @media (max-width: 360px) {
+          .as-btn-txt { display: none; }
         }
       `}</style>
     </div>
@@ -1485,11 +1538,12 @@ export default function AnnotationSession({
 function TBtn({ active, onClick, title, children }) {
   return (
     <button onClick={onClick} title={title} style={{
-      width: 36, height: 36, borderRadius: 8, border: 'none',
+      width: 44, height: 44, borderRadius: 8, border: 'none',
       background: active ? 'rgba(255,255,255,0.18)' : 'transparent',
       color: active ? '#fff' : 'rgba(255,255,255,0.55)',
       cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
       transition: 'all 0.15s', flexShrink: 0,
+      touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent',
     }}
     onMouseEnter={e => { if (!active) { e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; e.currentTarget.style.color = 'rgba(255,255,255,0.85)' }}}
     onMouseLeave={e => { if (!active) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'rgba(255,255,255,0.55)' }}}
