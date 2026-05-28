@@ -12,9 +12,10 @@ function fmtDate(iso) {
 }
 
 const STATUS_STYLE = {
-  received: { bg: 'var(--g50)',      color: 'var(--g600)',   dot: '#27AE60', label: 'Recebido' },
-  pending:  { bg: 'var(--warn-l)',   color: 'var(--warn)',   dot: '#F39C12', label: 'Pendente' },
-  overdue:  { bg: 'var(--danger-l)', color: 'var(--danger)', dot: '#E74C3C', label: 'Atrasado' },
+  received:  { bg: 'var(--g50)',      color: 'var(--g600)',   dot: '#27AE60', label: 'Recebido' },
+  pending:   { bg: 'var(--warn-l)',   color: 'var(--warn)',   dot: '#F39C12', label: 'Pendente' },
+  overdue:   { bg: 'var(--danger-l)', color: 'var(--danger)', dot: '#E74C3C', label: 'Atrasado' },
+  cancelled: { bg: 'var(--gr1)',      color: 'var(--gr4)',    dot: '#aaa',    label: 'Cancelado' },
 }
 
 const METHOD_LABELS = {
@@ -43,7 +44,7 @@ function Skeleton({ style }) {
   return <div className="skel-pulse" style={{ borderRadius: '6px', background: 'var(--gr2)', ...style }} />
 }
 
-const LANC_FORM_DEFAULT = { patientId: '', patientName: '', description: '', amount: '', direction: 'credit', status: 'pending', dueDate: '', paymentMethod: 'pix' }
+const LANC_FORM_DEFAULT = { patientId: '', patientName: '', description: '', amount: '', direction: 'credit', status: 'pending', dueDate: '', paymentMethod: 'pix', rescheduledDueDate: '' }
 
 export default function Financeiro() {
   const [events, setEvents] = useState([])
@@ -105,6 +106,7 @@ export default function Financeiro() {
       status: row.status || 'pending',
       dueDate: row.dueDate ? row.dueDate.slice(0, 10) : '',
       paymentMethod: row.paymentMethod || 'pix',
+      rescheduledDueDate: row.rescheduledDueDate ? row.rescheduledDueDate.slice(0, 10) : '',
     })
     setLancModal({ open: true, mode: 'edit', data: row })
   }
@@ -125,9 +127,23 @@ export default function Financeiro() {
         amount: parseFloat(lancForm.amount) || 0,
       }
       if (lancModal.mode === 'create') {
+        delete payload.rescheduledDueDate // não aplica em criação
         await api.createFinancialEvent(payload)
       } else {
-        await api.updateFinancialEvent(lancModal.data.id, payload)
+        // Envia rescheduledDueDate se preenchido, ou clearRescheduledDueDate se foi apagado
+        const original = lancModal.data
+        const newReschedule = lancForm.rescheduledDueDate || ''
+        const oldReschedule = original?.rescheduledDueDate ? original.rescheduledDueDate.slice(0, 10) : ''
+        const updatePayload = {
+          status: payload.status,
+          paymentMethod: payload.paymentMethod,
+        }
+        if (newReschedule && newReschedule !== oldReschedule) {
+          updatePayload.rescheduledDueDate = newReschedule
+        } else if (!newReschedule && oldReschedule) {
+          updatePayload.clearRescheduledDueDate = true
+        }
+        await api.updateFinancialEvent(original.id, updatePayload)
       }
       await reloadEvents()
       closeLanc()
@@ -139,16 +155,22 @@ export default function Financeiro() {
   async function deleteLanc() {
     if (!window.confirm('Excluir este lançamento?')) return
     setLancSaving(true)
+    const removedId = lancModal.data.id
+    closeLanc()
+    // Optimistic: remove imediatamente da lista local
+    setEvents(prev => prev.filter(e => e.id !== removedId))
     try {
-      await api.deleteFinancialEvent(lancModal.data.id)
+      await api.deleteFinancialEvent(removedId)
+    } catch {
+      // Em caso de erro, recarrega para sincronizar
       await reloadEvents()
-      closeLanc()
     } finally {
       setLancSaving(false)
     }
   }
 
   const filtered = events.filter(e => {
+    if (e.status === 'cancelled') return false
     const matchSearch = !search || (e.patientName || '').toLowerCase().includes(search.toLowerCase()) || (e.description || '').toLowerCase().includes(search.toLowerCase())
     const matchStatus = !statusFilter || e.status === statusFilter
     return matchSearch && matchStatus
@@ -306,7 +328,19 @@ export default function Financeiro() {
                             : <span style={{ fontSize: '11px', background: 'var(--g50)', color: 'var(--g600)', padding: '2px 7px', borderRadius: '10px', fontWeight: 600 }}>Receita</span>
                           }
                         </td>
-                        <td style={{ fontSize: '12px', color: 'var(--gr5)' }}>{fmtDate(row.dueDate)}</td>
+                        <td style={{ fontSize: '12px', color: 'var(--gr5)' }}>
+                          {row.rescheduledDueDate ? (
+                            <div>
+                              <div style={{ color: 'var(--g600)', fontWeight: 600 }}>{fmtDate(row.rescheduledDueDate)}</div>
+                              <div style={{ textDecoration: 'line-through', fontSize: '10px', color: 'var(--gr4)', marginTop: '1px' }}>{fmtDate(row.dueDate)}</div>
+                              {row.rescheduledCount > 0 && (
+                                <div style={{ fontSize: '9px', color: 'var(--warn)', fontWeight: 700, marginTop: '1px', textTransform: 'uppercase', letterSpacing: '0.3px' }}>
+                                  {row.rescheduledCount}× renegociado
+                                </div>
+                              )}
+                            </div>
+                          ) : fmtDate(row.dueDate)}
+                        </td>
                         <td style={{ fontFamily: "'Fraunces', serif", fontSize: '14px', color: row.amount === 0 ? 'var(--gr4)' : isExpense ? 'var(--danger)' : 'var(--d)' }}>
                           {row.amount === 0 ? 'Convênio' : (isExpense ? '- ' : '') + fmtBRL(row.amount)}
                         </td>
@@ -434,6 +468,22 @@ export default function Financeiro() {
                         <option value="corporate">Plano empresarial</option>
                       </select>
                     </div>
+
+                    {lancModal.mode === 'edit' && (
+                      <div>
+                        <label style={lbSt}>DATA RENEGOCIADA (opcional)</label>
+                        <DatePicker
+                          value={lancForm.rescheduledDueDate}
+                          onChange={v => setLancForm(f => ({ ...f, rescheduledDueDate: v }))}
+                          style={inSt}
+                        />
+                        {lancModal.data?.rescheduledCount > 0 && (
+                          <div style={{ fontSize: '11px', color: 'var(--warn)', marginTop: '4px' }}>
+                            Renegociado {lancModal.data.rescheduledCount}× — vencimento atual: {fmtDate(lancModal.data.rescheduledDueDate)}
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </>
                 )
               })()}

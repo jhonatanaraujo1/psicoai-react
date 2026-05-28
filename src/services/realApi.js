@@ -180,7 +180,7 @@ function normalizeUser(u) {
     plan: u.plan || 'base',
     analysesRemaining: u.analysesRemaining ?? 0,
     analysesUsedThisMonth: u.analysesUsedThisMonth ?? 0,
-    subscriptionStatus: u.subscriptionStatus || 'trial',
+    subscriptionStatus: u.subscriptionStatus || 'trialing',
     trialDaysRemaining: u.trialDaysRemaining ?? null,
     preferences: u.preferences || {
       defaultApproach: 'TCC',
@@ -341,6 +341,10 @@ export const api = {
 
   async deleteSession(sessionId) {
     return del(`/api/v1/sessions/${sessionId}`)
+  },
+
+  async getSessionAnalysis(sessionId) {
+    return get(`/api/v1/sessions/${sessionId}/analysis`)
   },
 
   // Analyses

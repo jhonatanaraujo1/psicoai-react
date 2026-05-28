@@ -235,8 +235,8 @@ const ANALYSES = {
       evolution: 'negative',
       summary: 'A sessão revelou padrão consistente de evitação ao tema familiar, com terceiro registro consecutivo de comportamento evasivo. O paciente demonstrou ativação emocional intensa ao mencionar o pai, incluindo lapsus verbal e alteração no ritmo da fala. O vínculo terapêutico permanece sólido, mas a resistência ao aprofundamento do trauma aumentou.',
       hypotheses: JSON.stringify([
-        { label: 'Estresse e reatividade a tema traumático', sessionCount: 3, description: 'Comportamento evasivo recorrente, flashback verbal e ativação emocional intensa ao mencionar o tema apareceram nas últimas 3 sessões' },
-        { label: 'Ruminação ansiosa com foco específico', sessionCount: 2, description: 'Preocupações circulam em torno do mesmo episódio; não há generalização para outros temas' },
+        { label: 'Estresse pós-traumático (TEPT)', code: 'F43.1', system: 'CID-11', probability: 72, sessionCount: 3, rationale: 'Comportamento evasivo recorrente, flashback verbal e ativação emocional intensa ao mencionar o tema apareceram nas últimas 3 sessões' },
+        { label: 'Transtorno de ansiedade — ruminação focalizada', code: 'F41.1', system: 'CID-11', probability: 48, sessionCount: 2, rationale: 'Preocupações circulam em torno do mesmo episódio; não há generalização para outros temas' },
       ]),
       patterns: JSON.stringify([
         { type: 'avoidance', description: 'Desvio de assunto ao mencionar relação paterna — 4 ocorrências nesta sessão', severity: 'high' },
@@ -260,7 +260,7 @@ const ANALYSES = {
       evolution: 'neutral',
       summary: 'Sessão de processamento com abertura moderada. O paciente conseguiu nomear a memória traumática pela segunda vez, sinal positivo de progresso. Resistência presente mas manejável.',
       hypotheses: JSON.stringify([
-        { label: 'Reatividade ao tema traumático', sessionCount: 2, description: 'Critérios mantidos; leve melhora na resposta de evitação em relação à sessão anterior' },
+        { label: 'Estresse pós-traumático (TEPT)', code: 'F43.1', system: 'CID-11', probability: 65, sessionCount: 2, rationale: 'Critérios mantidos; leve melhora na resposta de evitação em relação à sessão anterior' },
       ]),
       patterns: JSON.stringify([
         { type: 'avoidance', description: 'Evitação presente mas com menor intensidade vs sessão anterior', severity: 'medium' },
@@ -280,9 +280,9 @@ const ANALYSES = {
       evolution: 'neutral',
       summary: 'Paciente apresenta quadro consistente com segundo episódio de burnout. Despersonalização marcante — relata se sentir "robô" no trabalho. Há sinais de melhora na consciência dos próprios limites, mas ainda sem mudança comportamental concreta.',
       hypotheses: JSON.stringify([
-        { label: 'Exaustão emocional e despersonalização', sessionCount: 2, description: 'Segundo episódio identificado nos seus registros. Exaustão emocional, sensação de distanciamento e redução da realização profissional aparecem consistentemente' },
-        { label: 'Humor persistentemente rebaixado', sessionCount: 2, description: 'Aparece nos registros dos últimos 3 meses, mas paciente ainda funcional. Monitorar evolução' },
-        { label: 'Preocupação excessiva com desempenho', sessionCount: 1, description: 'Controle e performance como temas recorrentes — acompanhar se persiste nas próximas sessões' },
+        { label: 'Síndrome de Burnout (esgotamento ocupacional)', code: 'QD85', system: 'CID-11', probability: 84, sessionCount: 2, rationale: 'Segundo episódio identificado. Exaustão emocional, despersonalização e redução da realização profissional aparecem consistentemente' },
+        { label: 'Episódio depressivo leve-moderado', code: 'F32.1', system: 'CID-11', probability: 51, sessionCount: 2, rationale: 'Humor rebaixado persistente nos últimos 3 meses, mas paciente ainda funcional' },
+        { label: 'Transtorno de ansiedade — preocupação excessiva', code: 'F41.1', system: 'CID-11', probability: 38, sessionCount: 1, rationale: 'Controle e performance como temas recorrentes — acompanhar se persiste nas próximas sessões' },
       ]),
       patterns: JSON.stringify([
         { type: 'rumination', description: 'Pensamentos repetitivos sobre falhas no trabalho — relata "loop mental" antes de dormir há 6 semanas', severity: 'high' },
@@ -309,7 +309,7 @@ const ANALYSES = {
       evolution: 'positive',
       summary: 'Sessão marcada por avanço significativo. Pela primeira vez, a paciente participou de uma reunião presencial sem apresentar sintomas de pânico. O relato foi entusiasmado e com senso de autoeficácia elevado.',
       hypotheses: JSON.stringify([
-        { label: 'Ansiedade social com exposição progressiva', sessionCount: 3, description: 'Padrão de ansiedade antecipatória e evitação em redução — resposta positiva às intervenções registradas' },
+        { label: 'Fobia social / Transtorno de ansiedade social', code: 'F40.1', system: 'CID-11', probability: 78, sessionCount: 3, rationale: 'Padrão de ansiedade antecipatória e evitação em redução — resposta positiva às intervenções registradas' },
       ]),
       patterns: JSON.stringify([
         { type: 'avoidance', description: 'Evitação em redução progressiva — melhor resultado desde início do tratamento', severity: 'low' },
@@ -349,7 +349,7 @@ const FINANCIAL_EVENTS = [
   { id: 'f-003', patientId: 'p-003', patientName: 'Rafael Fonseca', type: 'session_payment', description: 'Sessão 22', amount: 200, direction: 'credit', status: 'received', dueDate: '2026-05-17', paidAt: '2026-05-17T11:00:00Z', paymentMethod: 'transfer', createdAt: '2026-05-17T09:00:00Z' },
   { id: 'f-004', patientId: 'p-008', patientName: 'Sofia Andrade', type: 'session_payment', description: 'Sessão 11', amount: 0, direction: 'credit', status: 'received', dueDate: '2026-05-15', paidAt: '2026-05-15T10:00:00Z', paymentMethod: 'insurance', notes: 'Convênio processado', createdAt: '2026-05-15T09:00:00Z' },
   { id: 'f-005', patientId: 'p-007', patientName: 'Pedro Alves', type: 'session_payment', description: 'Sessão 18', amount: 0, direction: 'credit', status: 'pending', dueDate: '2026-05-14', paidAt: null, paymentMethod: 'corporate', notes: 'Plano empresarial — aguardando processamento', createdAt: '2026-05-14T09:00:00Z' },
-  { id: 'f-006', patientId: 'p-006', patientName: 'Beatriz Almeida', type: 'session_payment', description: 'Sessão 5', amount: 200, direction: 'credit', status: 'overdue', dueDate: '2026-05-12', paidAt: null, paymentMethod: null, createdAt: '2026-05-12T09:00:00Z' },
+  { id: 'f-006', patientId: 'p-006', patientName: 'Beatriz Almeida', type: 'session_payment', description: 'Sessão 5', amount: 200, direction: 'credit', status: 'pending', dueDate: '2026-05-12', rescheduledDueDate: '2026-06-05', rescheduledCount: 1, rescheduleHistory: JSON.stringify([{ from: '2026-05-12', to: '2026-06-05', changedAt: '2026-05-20T10:00:00Z' }]), paidAt: null, paymentMethod: null, createdAt: '2026-05-12T09:00:00Z' },
   { id: 'f-007', patientId: 'p-004', patientName: 'Marina Costa', type: 'session_payment', description: 'Sessão 9', amount: 180, direction: 'credit', status: 'received', dueDate: '2026-05-10', paidAt: '2026-05-10T11:00:00Z', paymentMethod: 'pix', createdAt: '2026-05-10T09:00:00Z' },
   { id: 'f-008', patientId: null, patientName: null, type: 'expense', description: 'Supervisão clínica — Dr. Menezes', amount: 300, direction: 'debit', status: 'received', dueDate: '2026-05-08', paidAt: '2026-05-08T09:00:00Z', paymentMethod: 'pix', createdAt: '2026-05-08T08:00:00Z' },
 ]
@@ -843,11 +843,25 @@ export const api = {
     await delay(400)
     const idx = FINANCIAL_EVENTS.findIndex(e => e.id === id)
     if (idx === -1) throw new Error('Lançamento não encontrado')
-    if (data.status === 'received' && !FINANCIAL_EVENTS[idx].paidAt) {
+    const ev = FINANCIAL_EVENTS[idx]
+    if (data.status === 'received' && !ev.paidAt) {
       data.paidAt = new Date().toISOString()
     }
-    Object.assign(FINANCIAL_EVENTS[idx], data)
-    return FINANCIAL_EVENTS[idx]
+    if (data.clearRescheduledDueDate) {
+      ev.rescheduledDueDate = null
+      ev.rescheduledCount = 0
+      ev.rescheduleHistory = null
+      delete data.clearRescheduledDueDate
+    } else if (data.rescheduledDueDate) {
+      const prev = ev.rescheduledDueDate || ev.dueDate || 'sem vencimento'
+      const history = ev.rescheduleHistory ? JSON.parse(ev.rescheduleHistory) : []
+      history.push({ from: prev, to: data.rescheduledDueDate, changedAt: new Date().toISOString() })
+      ev.rescheduleHistory = JSON.stringify(history)
+      ev.rescheduledCount = (ev.rescheduledCount || 0) + 1
+      if (ev.status === 'overdue') ev.status = 'pending'
+    }
+    Object.assign(ev, data)
+    return ev
   },
 
   // Forms

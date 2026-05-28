@@ -132,7 +132,7 @@ export default function Dashboard({ setCurrentView, currentUser }) {
           <div className="stat-icon green">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
           </div>
-          <div className="stat-val">{stats ? Math.round(stats.analyzedPatients / stats.activePatients * 100) : '—'}%</div>
+          <div className="stat-val">{stats ? Math.round(stats.analyzedPatients / Math.max(1, stats.activePatients) * 100) : '—'}%</div>
           <div className="stat-label">Cobertura IA</div>
           <div className="stat-delta">{stats?.analyzedPatients ?? 0} de {stats?.activePatients ?? 0} pacientes</div>
         </div>
