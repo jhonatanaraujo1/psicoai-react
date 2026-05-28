@@ -166,7 +166,24 @@ async function reqMultipart(method, path, formData) {
 
 // ── Normalize backend user → frontend user shape ───────────────────────────────
 
+const DEFAULT_PREFERENCES = {
+  defaultApproach: 'TCC',
+  defaultSessionDuration: 50,
+  defaultSessionValue: 200,
+  workingHours: { start: 8, end: 18 },
+  notifyOnAlert: true,
+  notifyByEmail: true,
+  notifyByWhatsApp: false,
+  theme: 'light',
+}
+
 function normalizeUser(u) {
+  // Backend can send workingHours as { start, end } or flat workingHoursStart/workingHoursEnd
+  const prefs = u.preferences || {}
+  const workingHours = prefs.workingHours || {
+    start: prefs.workingHoursStart ?? DEFAULT_PREFERENCES.workingHours.start,
+    end:   prefs.workingHoursEnd   ?? DEFAULT_PREFERENCES.workingHours.end,
+  }
   return {
     id: u.id,
     email: u.email,
@@ -182,15 +199,11 @@ function normalizeUser(u) {
     analysesUsedThisMonth: u.analysesUsedThisMonth ?? 0,
     subscriptionStatus: u.subscriptionStatus || 'trialing',
     trialDaysRemaining: u.trialDaysRemaining ?? null,
-    preferences: u.preferences || {
-      defaultApproach: 'TCC',
-      defaultSessionDuration: 50,
-      defaultSessionValue: 200,
-      workingHours: { start: 8, end: 18 },
-      notifyOnAlert: true,
-      notifyByEmail: true,
-      notifyByWhatsApp: false,
-      theme: 'light',
+    graceDaysRemaining: u.graceDaysRemaining ?? 0,
+    preferences: {
+      ...DEFAULT_PREFERENCES,
+      ...prefs,
+      workingHours,
     },
   }
 }
@@ -320,11 +333,16 @@ export const api = {
   },
 
   async finishSession(sessionId, data) {
-    // Backend field is `canvasData`; frontend sessions send `canvasDataJson` — normalize before POST
     const payload = { ...data }
+    // Backend field is `canvasData`; frontend sessions send `canvasDataJson` — normalize before POST
     if (payload.canvasDataJson !== undefined) {
       payload.canvasData = payload.canvasDataJson
       delete payload.canvasDataJson
+    }
+    // Canvas text content — backend expects it as `textContent`
+    if (payload.canvasTextContent !== undefined) {
+      if (!payload.textContent) payload.textContent = payload.canvasTextContent
+      delete payload.canvasTextContent
     }
     return post(`/api/v1/sessions/${sessionId}/finish`, payload)
   },
@@ -345,6 +363,10 @@ export const api = {
 
   async getSessionAnalysis(sessionId) {
     return get(`/api/v1/sessions/${sessionId}/analysis`)
+  },
+
+  async getOpenSessions() {
+    return get('/api/v1/sessions/open')
   },
 
   // Analyses

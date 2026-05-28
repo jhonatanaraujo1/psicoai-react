@@ -97,6 +97,27 @@ export default function App() {
     }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
+  // ── Sincroniza sessões abertas do backend ao iniciar ──────────────────────
+  // Garante que sessões abertas em outra aba ou antes de um reload apareçam no painel
+  useEffect(() => {
+    if (!currentUser) return
+    api.getOpenSessions().then(sessions => {
+      if (!sessions || sessions.length === 0) return
+      setBackgroundSessions(prev => {
+        const existingIds = new Set(prev.map(s => s.id))
+        const toAdd = sessions
+          .filter(s => s.status === 'open' && !existingIds.has(s.id))
+          .map(s => ({
+            id: s.id,
+            type: s.type,
+            patient: { id: s.patientId, name: s.patientName },
+            startedAt: new Date(s.createdAt).getTime(),
+          }))
+        return toAdd.length > 0 ? [...prev, ...toAdd] : prev
+      })
+    }).catch(e => console.warn('[PsicoAI] getOpenSessions failed:', e))
+  }, [currentUser?.id]) // eslint-disable-line react-hooks/exhaustive-deps
+
   // ── Navigation — persiste em sessionStorage (por aba, não cross-tab) ────────
   // sessionStorage sobrevive reload mas não fechar aba — comportamento correto
   const [currentView, setCurrentViewRaw] = useState(() => {
@@ -307,7 +328,7 @@ export default function App() {
         startedAt:   Date.now(),
       }))
     }
-    api.createSession({ patientId: pat?.id, type: 'canvas' })
+    api.createSession({ patientId: pat?.id, type: 'text' })
       .then(session => setSession(session.id))
       .catch(e => console.warn('[PsicoAI] createSession failed:', e))
     setCanvasOpen(true)

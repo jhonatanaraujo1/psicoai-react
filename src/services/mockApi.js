@@ -1106,6 +1106,12 @@ export const api = {
     return { url: `${window.location.origin}/?billing=demo` }
   },
 
+  async getOpenSessions() {
+    await delay(150)
+    // No mock, sessões abertas são gerenciadas apenas via estado local — retorna vazio
+    return []
+  },
+
   // Busca análise IA de uma sessão específica pelo sessionId
   async getSessionAnalysis(sessionId) {
     await delay(280)
