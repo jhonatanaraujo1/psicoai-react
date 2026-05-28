@@ -370,6 +370,10 @@ export const api = {
   },
 
   // Analyses
+  async getAnalysis(analysisId) {
+    return get(`/api/v1/analyses/${analysisId}`)
+  },
+
   async getPatientAnalyses(patientId, { page = 0, size = 20 } = {}) {
     return get(`/api/v1/patients/${patientId}/analyses`, { page, size })
   },

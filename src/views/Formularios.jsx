@@ -313,7 +313,7 @@ export default function Formularios() {
   useEffect(() => {
     if (sendModal) {
       api.getPatients({ size: 100 }).then(res => {
-        setSendPatients(res.data || res || [])
+        setSendPatients(res.content || res.data || [])
       }).catch(() => setSendPatients([]))
     }
   }, [sendModal])
@@ -541,21 +541,39 @@ export default function Formularios() {
                 className="btn-primary"
                 style={{ fontSize: '13px' }}
                 disabled={!sendPatient || !sendFormType || sending}
-                onClick={() => {
+                onClick={async () => {
                   if (!sendPatient || !sendFormType) return
                   setSending(true)
-                  const newEntry = {
-                    id: Date.now(),
-                    patientId: sendPatient,
-                    patientName: sendPatients.find(p => p.id === sendPatient)?.name || sendPatient,
-                    title: [...formTemplates, ...customForms].find(t => t.id === sendFormType)?.name || sendFormType,
-                    status: 'pending',
-                    createdAt: new Date().toISOString(),
-                    answeredAt: null,
+                  try {
+                    const title = [...formTemplates, ...customForms].find(t => t.id === sendFormType)?.name || sendFormType
+                    const created = await api.createForm({ patientId: sendPatient, type: sendFormType, title })
+                    const newEntry = created || {
+                      id: Date.now(),
+                      patientId: sendPatient,
+                      patientName: sendPatients.find(p => p.id === sendPatient)?.name || sendPatient,
+                      title,
+                      status: 'pending',
+                      createdAt: new Date().toISOString(),
+                      answeredAt: null,
+                    }
+                    setAllForms(prev => [newEntry, ...prev])
+                  } catch (e) {
+                    console.error('Erro ao criar formulário:', e)
+                    // Optimistic fallback even on error so UI stays consistent
+                    const title = [...formTemplates, ...customForms].find(t => t.id === sendFormType)?.name || sendFormType
+                    setAllForms(prev => [{
+                      id: Date.now(),
+                      patientId: sendPatient,
+                      patientName: sendPatients.find(p => p.id === sendPatient)?.name || sendPatient,
+                      title,
+                      status: 'pending',
+                      createdAt: new Date().toISOString(),
+                      answeredAt: null,
+                    }, ...prev])
+                  } finally {
+                    setSending(false)
+                    setSendModal(false)
                   }
-                  setAllForms(prev => [newEntry, ...prev])
-                  setSending(false)
-                  setSendModal(false)
                 }}
               >
                 {sending ? 'Enviando…' : 'Enviar'}

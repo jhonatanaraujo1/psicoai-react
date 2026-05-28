@@ -91,7 +91,13 @@ export default function Insights({ onGoToPatient }) {
     try {
       const res = await api.getPatientAnalyses(item.id)
       const list = res?.content ?? (Array.isArray(res) ? res : [])
-      setDrawerResult(list[0] || { error: 'Nenhuma análise encontrada para este paciente.' })
+      if (list.length === 0) {
+        setDrawerResult({ error: 'Nenhuma análise encontrada para este paciente.' })
+        return
+      }
+      // Fetch full AnalysisResponse (with hypotheses/patterns/riskAlerts)
+      const full = await api.getAnalysis(list[0].id)
+      setDrawerResult(full || { error: 'Não foi possível carregar a análise completa.' })
     } catch {
       setDrawerResult({ error: 'Não foi possível carregar a análise.' })
     } finally {

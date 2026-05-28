@@ -674,6 +674,12 @@ export const api = {
   },
 
   // Analyses
+  async getAnalysis(analysisId) {
+    await delay(200)
+    const all = Object.values(ANALYSES).flat()
+    return all.find(a => a.id === analysisId) || null
+  },
+
   async getPatientAnalyses(patientId, { page = 0, size = 20 } = {}) {
     await delay(350)
     const analyses = ANALYSES[patientId] || []

@@ -91,7 +91,7 @@ export default function Paciente({ patient: propPatient, setCurrentView, onSessa
     ]).then(([sum, sess, frms, als]) => {
       setSummary(sum)
       setSessions(sess.content || [])
-      setForms(frms || [])
+      setForms(frms?.content || frms || [])
       setAnalyses(als.content || [])
       setNotes((sum?.patient?.notes) || (propPatient?.notes) || '')
     })
@@ -448,7 +448,7 @@ export default function Paciente({ patient: propPatient, setCurrentView, onSessa
                         <div style={{ marginTop: '16px' }}>
                           <AiAnalysisPanel
                             sessionId={s.id}
-                            analysis={analyses.find(a => a.sessionId === s.id) || null}
+                            analysis={null}
                             createdAt={analyses.find(a => a.sessionId === s.id)?.createdAt}
                           />
                         </div>
@@ -614,6 +614,12 @@ export default function Paciente({ patient: propPatient, setCurrentView, onSessa
           history: form.historico, medication: form.medicacao,
           approach: form.abordagem, frequency: form.frequencia,
           cid: form.cid, payment: form.pagamento, sessionValue: form.valor,
+          notes: form.notes,
+          recurringDayOfWeek: form.recurringDayOfWeek,
+          recurringTime: form.recurringTime,
+          recurringDurationMin: form.recurringDurationMin,
+          billingType: form.billingType,
+          monthlyValue: form.monthlyValue,
         })
         setEditOpen(false)
         api.getPatientSummary(patientId).then(setSummary)

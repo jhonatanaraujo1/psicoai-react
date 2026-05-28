@@ -74,7 +74,8 @@ function Skeleton() {
 
 function CadernoCard({ patient, canvas, onOpen, onOpenPatient }) {
   const [hovered, setHovered] = useState(false)
-  const col = avatarColor(patient.id)
+  const _col = avatarColor(patient.id)
+  const col = { bg: patient.avatarBg || _col.bg, fg: patient.avatarColor || _col.fg }
   const isEmpty = !canvas
   const sessionCount = patient.sessions ?? 0
   // Paciente que só tem anotações no prontuário (sem canvas local) → ir ao prontuário

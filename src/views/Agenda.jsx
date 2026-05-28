@@ -147,7 +147,7 @@ export default function Agenda({ currentUser }) {
   const [saving, setSaving] = useState(false)
   const [agendaView, setAgendaView] = useState(() => window.innerWidth <= 640 ? 'list' : 'week')
   const [form, setForm] = useState({
-    title: '', type: 'session', patientId: '', date: '', startTime: '', endTime: '', meetLink: '', notes: ''
+    title: '', type: 'session', patientId: '', date: '', startTime: '', endTime: '', meetLink: '', description: ''
   })
 
   const today = new Date()
@@ -200,7 +200,7 @@ export default function Agenda({ currentUser }) {
     setForm({
       title: '', type: 'session', patientId: '',
       date: dateStr, startTime: '09:00', endTime: '10:00',
-      meetLink: '', notes: '',
+      meetLink: '', description: '',
       ...prefill,
     })
     setEventModal({ open: true, mode: 'create', data: null })
@@ -228,7 +228,7 @@ export default function Agenda({ currentUser }) {
       startTime,
       endTime,
       meetLink: evt.meetLink || '',
-      notes: evt.notes || '',
+      description: evt.description || '',
     })
     setEventModal({ open: true, mode: 'edit', data: evt })
   }
@@ -240,20 +240,16 @@ export default function Agenda({ currentUser }) {
   function buildPayload() {
     const [h1, m1] = form.startTime.split(':').map(Number)
     const [h2, m2] = form.endTime.split(':').map(Number)
-    const startAt = new Date(form.date)
-    startAt.setHours(h1, m1, 0, 0)
-    const endAt = new Date(form.date)
-    endAt.setHours(h2, m2, 0, 0)
-    const patient = allPatients.find(p => String(p.id) === String(form.patientId))
+    const startAt = new Date(form.date); startAt.setHours(h1, m1, 0, 0)
+    const endAt   = new Date(form.date); endAt.setHours(h2, m2, 0, 0)
     return {
       title: form.title,
       type: form.type,
       patientId: form.type === 'session' ? form.patientId || null : null,
-      patientName: form.type === 'session' && patient ? (patient.name || patient.fullName) : null,
       startAt: startAt.toISOString(),
       endAt: endAt.toISOString(),
       meetLink: form.meetLink || null,
-      notes: form.notes || null,
+      description: form.description || null,
     }
   }
 
@@ -702,14 +698,14 @@ export default function Agenda({ currentUser }) {
                 />
               </div>
 
-              {/* Notas */}
+              {/* Descrição */}
               <div>
                 <label style={{ fontSize: '11px', fontWeight: 600, color: 'var(--gr5)', letterSpacing: '0.05em', display: 'block', marginBottom: '6px' }}>NOTAS</label>
                 <textarea
                   style={{ ...inSt, resize: 'vertical', minHeight: '72px' }}
                   placeholder="Observações opcionais…"
-                  value={form.notes}
-                  onChange={e => setForm(f => ({ ...f, notes: e.target.value }))}
+                  value={form.description}
+                  onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
                 />
               </div>
             </div>
