@@ -13,7 +13,7 @@ import { useEffect } from 'react'
 
 export default function Landing() {
   useEffect(() => {
-    fetch('/landing.html')
+    fetch('/landing.html?v=' + Date.now())
       .then(r => r.text())
       .then(html => {
         // document.open/write/close substitui o documento inteiro
