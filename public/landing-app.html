@@ -234,7 +234,8 @@ section{padding:96px 40px}
 
 /* PRECOS */
 #precos{background:var(--ow)}
-.pricing-grid{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:52px;max-width:780px;margin-left:auto;margin-right:auto}
+.pricing-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-top:52px;max-width:900px;margin-left:auto;margin-right:auto}
+@media(max-width:860px){.pricing-grid{grid-template-columns:1fr;max-width:440px}.plan-card.featured{transform:none !important}}
 .plan-card{background:var(--w);border-radius:var(--r2);border:1.5px solid var(--gr2);padding:32px;transition:all 0.3s ease;position:relative}
 .plan-card:hover{box-shadow:var(--sh2);transform:translateY(-3px)}
 .plan-card.featured{border-color:var(--g500);box-shadow:0 0 0 3px rgba(74,124,89,0.12)}
@@ -658,45 +659,87 @@ fbq('track', 'PageView');
   <div class="section-inner">
     <div class="reveal" style="text-align:center">
       <div class="section-eyebrow">Precos</div>
-      <h2 class="section-title">Simples e <em>previsivel</em></h2>
-      <p class="section-sub" style="margin:14px auto 0">Um plano. Tudo incluido. Sem limite de IA. Sem surpresa no bolso.</p>
+      <h2 class="section-title">Escolha o seu <em>ritmo</em></h2>
+      <p class="section-sub" style="margin:14px auto 0">Comece gratis. Escale conforme sua carteira cresce.</p>
       <div style="display:inline-flex;align-items:center;gap:8px;background:var(--warn-l);border:1px solid #F0D08A;border-radius:20px;padding:6px 16px;font-size:12px;font-weight:600;color:var(--warn);margin-top:18px">
-        ⏳ Preco beta — congelado para quem entrar agora
+        ⏳ Precos beta — congelados para quem entrar agora
       </div>
     </div>
-    <div class="pricing-grid reveal" style="grid-template-columns:1fr;max-width:480px">
-      <div class="plan-card featured" style="padding:40px">
-        <div class="plan-badge">14 dias gratis</div>
-        <div class="plan-name">PsicoAI</div>
-        <p class="plan-desc">Prontuario moderno + canvas de anotacoes + analises IA ilimitadas. Tudo que voce precisa, sem racionamento.</p>
 
-        <!-- Preco com risco no "futuro" -->
-        <div style="margin:24px 0 0">
-          <div style="display:flex;align-items:baseline;gap:8px">
-            <div class="plan-price" style="margin:0"><span class="plan-curr">R$</span><span class="plan-num">79</span><span class="plan-period">/mes</span></div>
-            <div style="font-size:11px;color:var(--gr4);text-decoration:line-through;opacity:0.7">R$97 apos beta</div>
-          </div>
-          <div style="font-size:11px;color:var(--g500);margin-top:4px;font-weight:600">Preco garantido enquanto for beta-user</div>
-        </div>
+    <div class="pricing-grid reveal" style="grid-template-columns:repeat(3,1fr);max-width:900px;gap:20px">
 
+      <!-- PLANO 1: Essencial -->
+      <div class="plan-card">
+        <div class="plan-name" style="font-size:18px">Essencial</div>
+        <p class="plan-desc">Para comecar a explorar o PsicoAI com sua pratica clinica.</p>
+        <div class="plan-price"><span class="plan-curr">R$</span><span class="plan-num" style="font-size:42px">49</span><span class="plan-period">/mes</span></div>
         <div class="plan-divider"></div>
-        <ul class="plan-features">
+        <ul class="plan-features" style="font-size:12.5px">
           <li>Prontuario eletronico ilimitado</li>
-          <li>Canvas de anotacoes com desenho e texto</li>
+          <li>Canvas de anotacoes</li>
           <li>Agenda integrada</li>
-          <li>Linha do tempo clinica por paciente</li>
-          <li>Alertas de padrao comportamental</li>
-          <li style="font-weight:600;color:var(--g700)">Analises IA ilimitadas — sem cap</li>
-          <li>5 templates clinicos: reflexao, risco, evolucao, supervisao, psicodinamica</li>
-          <li>Conformidade CFP 09/2024</li>
-          <li>Suporte em portugues</li>
           <li>Pacientes ilimitados</li>
+          <li style="font-weight:600;color:var(--g700)">5 analises IA / mes</li>
+          <li>Conformidade CFP 09/2024</li>
+          <li class="neg">Templates clinicos avancados</li>
+          <li class="neg">Alertas de padrao comportamental</li>
         </ul>
-        <a href="#cta-final" class="btn-plan" data-plan="base">Comecar 14 dias gratis</a>
-        <div style="text-align:center;font-size:11px;color:var(--gr4);margin-top:14px">Sem cartao de credito · Cancele quando quiser</div>
+        <a href="#cta-final" class="btn-plan outline" data-plan="essencial">Comecar gratis</a>
+        <div style="text-align:center;font-size:11px;color:var(--gr4);margin-top:12px">14 dias gratis · Sem cartao</div>
       </div>
+
+      <!-- PLANO 2: Clinico (destaque) -->
+      <div class="plan-card featured" style="padding:32px;transform:translateY(-8px)">
+        <div class="plan-badge">Mais popular</div>
+        <div class="plan-name" style="font-size:18px">Clinico</div>
+        <p class="plan-desc">Para psicologos que querem usar a IA como parte da rotina clinica.</p>
+        <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:4px">
+          <div class="plan-price" style="margin:0"><span class="plan-curr">R$</span><span class="plan-num" style="font-size:42px">79</span><span class="plan-period">/mes</span></div>
+          <div style="font-size:10px;color:var(--gr4);text-decoration:line-through">R$99</div>
+        </div>
+        <div style="font-size:11px;color:var(--g500);font-weight:600;margin-bottom:16px">Preco beta garantido</div>
+        <div class="plan-divider"></div>
+        <ul class="plan-features" style="font-size:12.5px">
+          <li>Prontuario eletronico ilimitado</li>
+          <li>Canvas de anotacoes com desenho</li>
+          <li>Agenda integrada</li>
+          <li>Pacientes ilimitados</li>
+          <li style="font-weight:600;color:var(--g700)">20 analises IA / mes</li>
+          <li>5 templates clinicos especializados</li>
+          <li>Alertas de padrao comportamental</li>
+          <li>Linha do tempo clinica</li>
+          <li>Conformidade CFP 09/2024</li>
+        </ul>
+        <a href="#cta-final" class="btn-plan" data-plan="clinico">Comecar 14 dias gratis</a>
+        <div style="text-align:center;font-size:11px;color:var(--gr4);margin-top:12px">Sem cartao de credito</div>
+      </div>
+
+      <!-- PLANO 3: Pro -->
+      <div class="plan-card">
+        <div class="plan-name" style="font-size:18px">Pro</div>
+        <p class="plan-desc">Para psicologos com carteira cheia que nao querem pensar em limites.</p>
+        <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:4px">
+          <div class="plan-price" style="margin:0"><span class="plan-curr">R$</span><span class="plan-num" style="font-size:42px">97</span><span class="plan-period">/mes</span></div>
+          <div style="font-size:10px;color:var(--gr4);text-decoration:line-through">R$129</div>
+        </div>
+        <div style="font-size:11px;color:var(--g500);font-weight:600;margin-bottom:16px">Preco beta garantido</div>
+        <div class="plan-divider"></div>
+        <ul class="plan-features" style="font-size:12.5px">
+          <li>Tudo do plano Clinico</li>
+          <li style="font-weight:600;color:var(--g700)">Analises IA ilimitadas — sem cap</li>
+          <li>Todos os 5 templates clinicos</li>
+          <li>Historico longitudinal completo</li>
+          <li>Relatorios de evolucao por paciente</li>
+          <li>Prioridade no suporte</li>
+          <li>Acesso antecipado a novas features</li>
+        </ul>
+        <a href="#cta-final" class="btn-plan outline" data-plan="pro">Comecar 14 dias gratis</a>
+        <div style="text-align:center;font-size:11px;color:var(--gr4);margin-top:12px">14 dias gratis · Sem cartao</div>
+      </div>
+
     </div>
-    <p class="pricing-footer reveal">Sem fidelidade · Sem cartao no trial · Dados exportaveis a qualquer momento</p>
+
+    <p class="pricing-footer reveal" style="margin-top:24px">Sem fidelidade · Sem cartao no trial · Mude de plano quando quiser · Dados exportaveis</p>
   </div>
 </section>
 
