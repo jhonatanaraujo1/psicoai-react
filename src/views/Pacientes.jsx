@@ -201,13 +201,25 @@ export default function Pacientes({ setCurrentView, onNovoCadastro }) {
             onChange={e => setSearch(e.target.value)}
           />
         </div>
-        <select
-          style={{ height: '38px', padding: '0 12px', border: '1px solid var(--gr2)', borderRadius: 'var(--r)', fontSize: '13px', background: 'var(--w)', color: 'var(--d)', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", outline: 'none' }}
-          value={statusFilter}
-          onChange={e => setStatusFilter(e.target.value)}
-        >
-          {statusOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-        </select>
+        <div style={{ position: 'relative', flexShrink: 0 }}>
+          <select
+            style={{
+              height: '38px', paddingLeft: '12px', paddingRight: '32px',
+              border: '1px solid var(--gr2)', borderRadius: 'var(--r)',
+              fontSize: '13px', background: 'var(--w)', color: statusFilter ? 'var(--d)' : 'var(--gr4)',
+              cursor: 'pointer', fontFamily: "'DM Sans', sans-serif",
+              outline: 'none', appearance: 'none', WebkitAppearance: 'none',
+              transition: 'border-color 0.15s',
+            }}
+            value={statusFilter}
+            onChange={e => setStatusFilter(e.target.value)}
+            onFocus={e => e.target.style.borderColor = 'var(--g300)'}
+            onBlur={e => e.target.style.borderColor = 'var(--gr2)'}
+          >
+            {statusOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+          </select>
+          <svg style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--gr4)" strokeWidth="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+        </div>
       </div>
 
       {/* Grid */}

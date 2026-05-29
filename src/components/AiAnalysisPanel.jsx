@@ -20,6 +20,12 @@ const SEV = {
   low:    { label: 'Baixa',    color: '#4ade80', bg: 'rgba(74,222,128,0.10)',  dot: '#4ade80' },
 }
 
+const EV_STRENGTH = {
+  strong:   { label: 'Evidência forte',    color: '#4ade80', bg: 'rgba(74,222,128,0.12)' },
+  moderate: { label: 'Evidência moderada', color: '#f59e0b', bg: 'rgba(245,158,11,0.10)' },
+  weak:     { label: 'Evidência fraca',    color: '#94a3b8', bg: 'rgba(148,163,184,0.10)' },
+}
+
 const RISK = {
   high:     { color: '#ef4444', bg: 'rgba(239,68,68,0.10)',  border: 'rgba(239,68,68,0.25)',  icon: '🔴', label: 'ALTO' },
   critical: { color: '#dc2626', bg: 'rgba(220,38,38,0.12)',  border: 'rgba(220,38,38,0.3)',   icon: '🚨', label: 'CRÍTICO' },
@@ -87,6 +93,11 @@ function HypothesisBar({ h, index }) {
           <span style={{ fontSize: '10px', fontWeight: 700, color: 'rgba(255,255,255,0.4)', letterSpacing: '0.6px', background: 'rgba(255,255,255,0.06)', padding: '2px 7px', borderRadius: '20px', whiteSpace: 'nowrap' }}>
             {h.code}{h.system ? ` · ${h.system}` : ''}
           </span>
+          {h.evidenceStrength && EV_STRENGTH[h.evidenceStrength] && (
+            <span style={{ fontSize: '9.5px', fontWeight: 600, color: EV_STRENGTH[h.evidenceStrength].color, background: EV_STRENGTH[h.evidenceStrength].bg, padding: '2px 7px', borderRadius: '20px', whiteSpace: 'nowrap', letterSpacing: '0.3px' }}>
+              {EV_STRENGTH[h.evidenceStrength].label}
+            </span>
+          )}
         </div>
         {/* Barra de progresso */}
         <div style={{ height: '3px', background: 'rgba(255,255,255,0.07)', borderRadius: '2px', margin: '8px 0', overflow: 'hidden' }}>

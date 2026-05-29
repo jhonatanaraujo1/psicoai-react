@@ -110,15 +110,15 @@ export default function Dashboard({ setCurrentView, currentUser }) {
           </div>
           <div className="stat-val">{stats?.activePatients ?? '—'}</div>
           <div className="stat-label">Pacientes ativos</div>
-          <div className="stat-delta">↑ 2 este mês</div>
+          <div className="stat-delta">{stats?.activePatients > 0 ? 'Em acompanhamento' : 'Nenhum cadastrado'}</div>
         </div>
         <div className="stat-card">
           <div className="stat-icon blue">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
           </div>
           <div className="stat-val">{stats?.sessionsThisMonth ?? '—'}</div>
-          <div className="stat-label">Anotações este mês</div>
-          <div className="stat-delta">↑ 6 vs mês anterior</div>
+          <div className="stat-label">Sessões este mês</div>
+          <div className="stat-delta">{stats?.sessionsThisMonth > 0 ? 'Registradas' : 'Nenhuma ainda'}</div>
         </div>
         <div className="stat-card">
           <div className="stat-icon warn">
@@ -181,7 +181,7 @@ export default function Dashboard({ setCurrentView, currentUser }) {
                   </div>
                   <div className="sess-right">
                     <div className="sess-time">{fmt(s.startAt)}</div>
-                    <div style={{ fontSize: 11, color: 'var(--gr4)', marginTop: 2 }}>50 min</div>
+                    {s.endAt && <div style={{ fontSize: 11, color: 'var(--gr4)', marginTop: 2 }}>até {fmt(s.endAt)}</div>}
                   </div>
                 </div>
               )

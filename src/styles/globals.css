@@ -676,6 +676,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--ow);color:var(--d);displa
   .tb-right{gap:8px;flex-shrink:0}
   .tb-btn{width:34px;height:34px}
   .content{padding:16px}
+  .dash-grid{grid-template-columns:1fr !important}
   .dash-grid-3{grid-template-columns:1fr !important}
   .pac-grid{grid-template-columns:1fr 1fr !important}
   .pat-detail-grid{grid-template-columns:1fr !important}

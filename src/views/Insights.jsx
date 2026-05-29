@@ -1,17 +1,6 @@
 import { useState, useEffect } from 'react'
-import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 import { api } from '../services'
 import AiDrawer from '../components/AiDrawer'
-import { showToast } from '../components/Toast'
-
-const evolutionData = [
-  { month: 'Dez', value: 58 },
-  { month: 'Jan', value: 62 },
-  { month: 'Fev', value: 59 },
-  { month: 'Mar', value: 65 },
-  { month: 'Abr', value: 63 },
-  { month: 'Mai', value: 68 },
-]
 
 // Tradução dos padrões para linguagem acessível
 const PATTERN_INFO = {
@@ -120,13 +109,14 @@ export default function Insights({ onGoToPatient }) {
 
   const totalAlerts = Object.values(data?.alertCount || {}).reduce((a, b) => a + b, 0)
 
-  // Tendência do gráfico — linguagem factual, não interpretativa
-  // Mostrar o dado bruto; a interpretação clínica é do psicólogo.
-  const firstVal = evolutionData[0]?.value || 0
-  const lastVal = evolutionData[evolutionData.length - 1]?.value || 0
-  const trend = lastVal > firstVal + 3 ? 'subindo' : lastVal < firstVal - 3 ? 'caindo' : 'estável'
-  const trendText = { subindo: '↑ Mais sessões positivas', caindo: '↓ Mais sessões de atenção', estável: '→ Distribuição estável' }[trend]
-  const trendColor = { subindo: 'var(--g600)', caindo: 'var(--danger)', estável: 'var(--warn)' }[trend]
+  // Evolução real baseada nos campos "evolution" das análises recentes
+  const analyses = data?.recentAnalyses || []
+  const evCounts = analyses.reduce((acc, a) => {
+    const k = a.evolution || 'neutral'
+    acc[k] = (acc[k] || 0) + 1
+    return acc
+  }, { positive: 0, neutral: 0, negative: 0 })
+  const evTotal = analyses.length || 1
 
   return (
     <div className="view">
@@ -370,34 +360,41 @@ export default function Insights({ onGoToPatient }) {
               </div>
             </div>
 
-            {/* Evolução — com interpretação em palavras */}
+            {/* Evolução real — baseada nos campos "evolution" das análises geradas */}
             <div className="card">
               <div className="card-header">
                 <div>
-                  <div className="card-title">Como a carteira evoluiu</div>
-                  <div className="card-sub">Últimos 6 meses · pacientes analisados</div>
+                  <div className="card-title">Distribuição de evolução</div>
+                  <div className="card-sub">{analyses.length} análise{analyses.length !== 1 ? 's' : ''} · classificadas pela IA</div>
                 </div>
-                <span style={{ fontSize: '12px', fontWeight: 600, color: trendColor, background: `${trendColor}18`, padding: '3px 10px', borderRadius: '20px', border: `1px solid ${trendColor}33`, whiteSpace: 'nowrap' }}>
-                  {trendText}
-                </span>
               </div>
               <div className="card-body">
-                <div style={{ height: '140px' }}>
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={evolutionData} margin={{ top: 4, right: 4, bottom: 0, left: -20 }}>
-                      <XAxis dataKey="month" tick={{ fontSize: 11, fill: '#8B8B8B' }} axisLine={false} tickLine={false} />
-                      <YAxis tick={{ fontSize: 10, fill: '#8B8B8B' }} axisLine={false} tickLine={false} domain={[50, 75]} />
-                      <Tooltip
-                        contentStyle={{ background: '#1C1C1C', border: 'none', borderRadius: '8px', fontSize: '12px', color: '#fff' }}
-                        formatter={(v) => [`${v}%`, 'Índice de evolução']}
-                      />
-                      <Line type="monotone" dataKey="value" stroke="var(--g500)" strokeWidth={2.5} dot={{ fill: 'var(--g500)', r: 4 }} activeDot={{ r: 6 }} />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </div>
-                <div style={{ marginTop: '10px', padding: '8px 12px', background: 'var(--ow)', borderRadius: 'var(--r)', border: '1px solid var(--gr2)' }}>
+                {[
+                  { key: 'positive', label: 'Evolução positiva', color: 'var(--g500)', bg: 'var(--g50)', border: 'var(--g100)', desc: 'Melhora, novo insight ou maior engajamento registrado' },
+                  { key: 'neutral',  label: 'Sessão descritiva',  color: 'var(--warn)',   bg: 'var(--warn-l)',   border: 'rgba(200,134,10,0.25)', desc: 'Sem indicação clara de direção ou dados insuficientes' },
+                  { key: 'negative', label: 'Requer atenção',    color: 'var(--danger)', bg: 'var(--danger-l)', border: 'rgba(176,58,46,0.25)',  desc: 'Piora, recaída ou desengajamento registrado' },
+                ].map(({ key, label, color, bg, border, desc }) => {
+                  const count = evCounts[key] || 0
+                  const pct = Math.round((count / evTotal) * 100)
+                  return (
+                    <div key={key} style={{ marginBottom: '12px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '5px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
+                          <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: color, display: 'inline-block', flexShrink: 0 }} />
+                          <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--d)' }}>{label}</span>
+                        </div>
+                        <span style={{ fontSize: '12px', fontWeight: 700, color, fontFamily: "'Fraunces', serif" }}>{count}</span>
+                      </div>
+                      <div style={{ height: '6px', background: 'var(--gr2)', borderRadius: '3px', overflow: 'hidden', marginBottom: '3px' }}>
+                        <div style={{ height: '100%', width: `${pct}%`, background: color, borderRadius: '3px', transition: 'width 0.8s cubic-bezier(0.22,1,0.36,1)' }} />
+                      </div>
+                      <div style={{ fontSize: '10px', color: 'var(--gr4)', lineHeight: 1.4 }}>{pct}% · {desc}</div>
+                    </div>
+                  )
+                })}
+                <div style={{ marginTop: '14px', padding: '8px 12px', background: 'var(--ow)', borderRadius: 'var(--r)', border: '1px solid var(--gr2)' }}>
                   <div style={{ fontSize: '11px', color: 'var(--gr5)', lineHeight: 1.5 }}>
-                    <strong style={{ color: 'var(--d)' }}>Como ler:</strong> Proporção de sessões marcadas como evolução positiva vs. atenção, nos pacientes que você analisou com IA. É um dado descritivo — a interpretação clínica é sempre sua.
+                    Classificação feita pela IA com base nas suas anotações. A interpretação clínica é sempre sua.
                   </div>
                 </div>
               </div>
