@@ -95,10 +95,28 @@ export default function Dashboard({ setCurrentView, currentUser }) {
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--warn)" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
             <span style={{ fontSize: 13, color: 'var(--warn)' }}>
-              Período de teste — <strong>{account.trialDaysRemaining} dias restantes</strong>. Adicione um cartão para continuar após o trial.
+              Período de teste — <strong>{account.trialDaysRemaining} dias restantes</strong>. Escolha um plano para continuar após o trial.
             </span>
           </div>
-          <button className="btn-primary" style={{ padding: '6px 14px', fontSize: 12, whiteSpace: 'nowrap' }}>Assinar agora</button>
+          <button className="btn-primary" style={{ padding: '6px 14px', fontSize: 12, whiteSpace: 'nowrap' }} onClick={() => setCurrentView('configuracoes')}>Ver planos</button>
+        </div>
+      )}
+
+      {/* Banner análises restantes — só para plano consultorio */}
+      {account?.plan === 'consultorio' && account?.subscriptionStatus === 'active' && (
+        <div style={{ background: 'var(--g50)', border: '1px solid var(--g100)', borderRadius: 'var(--r)', padding: '10px 16px', marginBottom: 20, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--g600)" strokeWidth="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+            <span style={{ fontSize: 13, color: 'var(--g700)' }}>
+              Plano Consultório — <strong>{account.analysesRemaining} análise{account.analysesRemaining !== 1 ? 's' : ''} IA restante{account.analysesRemaining !== 1 ? 's' : ''}</strong> este mês.
+              {account.analysesRemaining <= 1 && ' Faça upgrade para análises ilimitadas.'}
+            </span>
+          </div>
+          {account.analysesRemaining <= 2 && (
+            <button className="btn-primary" style={{ padding: '6px 14px', fontSize: 12, whiteSpace: 'nowrap' }} onClick={() => setCurrentView('configuracoes')}>
+              Upgrade → Especialista
+            </button>
+          )}
         </div>
       )}
 
