@@ -1,0 +1,1003 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PsicoAI — O primeiro assistente de raciocínio clínico para psicólogos</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --g900:#1E3328;--g800:#2D4A38;--g700:#3D6B4A;--g600:#4A7C59;--g500:#5C8F6A;--g300:#8BB89A;--g100:#D4E8DA;--g50:#EBF4EE;
+  --ow:#F5F2EC;--cream:#EDE9E1;--w:#FFFFFF;
+  --d:#1C1C1C;--d2:#2C2C2C;--d3:#3C3C3C;
+  --gr6:#555555;--gr5:#6B6B6B;--gr4:#8B8B8B;--gr2:#E8E5E0;--gr1:#F0EDE8;
+  --warn:#C8860A;--warn-l:#FDF3DC;
+  --danger:#B03A2E;--danger-l:#FDECEA;
+  --r:10px;--r2:16px;--r3:24px;
+  --sh:0 2px 12px rgba(28,28,28,0.07);--sh2:0 8px 32px rgba(28,28,28,0.12);--sh3:0 20px 60px rgba(28,28,28,0.15);
+  --t:all 0.22s ease;
+}
+html{scroll-behavior:smooth}
+body{font-family:'DM Sans',sans-serif;background:var(--ow);color:var(--d);line-height:1.6;overflow-x:hidden}
+
+body::after{
+  content:'';position:fixed;inset:0;pointer-events:none;z-index:9999;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
+  opacity:0.028;mix-blend-mode:multiply;background-size:180px 180px;
+}
+
+/* NAV */
+nav{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(245,242,236,0.88);backdrop-filter:blur(16px);border-bottom:1px solid transparent;transition:border-color 0.3s,box-shadow 0.3s;padding:0 40px}
+nav.scrolled{border-bottom-color:var(--gr2);box-shadow:0 2px 20px rgba(28,28,28,0.06)}
+.nav-inner{max-width:1140px;margin:0 auto;height:64px;display:flex;align-items:center;gap:32px}
+.nav-logo{display:flex;align-items:center;gap:9px;text-decoration:none;flex-shrink:0}
+.nav-psi{width:34px;height:34px;background:var(--g600);border-radius:9px;display:flex;align-items:center;justify-content:center;font-family:'Instrument Serif',serif;font-size:18px;color:#fff}
+.nav-brand{font-family:'Instrument Serif',serif;font-size:17px;color:var(--d);letter-spacing:-0.3px}
+.nav-brand span{color:var(--g600);font-style:italic}
+.nav-links{display:flex;align-items:center;gap:4px;margin-left:auto}
+.nav-link{text-decoration:none;color:var(--gr5);font-size:13.5px;font-weight:400;padding:6px 14px;border-radius:var(--r);transition:var(--t)}
+.nav-link:hover{color:var(--d);background:rgba(74,124,89,0.08)}
+.nav-cta{
+  background:var(--g600);color:#fff;font-size:13px;font-weight:500;padding:9px 20px;
+  border-radius:var(--r);border:none;cursor:pointer;font-family:'DM Sans',sans-serif;
+  text-decoration:none;transition:var(--t);margin-left:8px;white-space:nowrap;
+  position:relative;overflow:hidden;
+}
+.nav-cta::after{
+  content:'';position:absolute;top:-50%;left:-60%;width:40%;height:200%;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,0.2),transparent);
+  transform:skewX(-20deg);transition:left 0.5s ease;
+}
+.nav-cta:hover{background:var(--g700)}
+.nav-cta:hover::after{left:130%}
+
+/* HERO */
+.hero-wrap{position:relative;overflow:hidden;min-height:100vh}
+.hero-bg{position:absolute;inset:0;pointer-events:none;z-index:0}
+.hero-blob{position:absolute;border-radius:50%;filter:blur(80px);opacity:0.25;animation:blobFloat 12s ease-in-out infinite}
+.hero-blob-1{width:600px;height:600px;background:var(--g100);top:-100px;right:-100px;animation-delay:0s}
+.hero-blob-2{width:400px;height:400px;background:var(--g50);bottom:0;left:-80px;animation-delay:-4s;animation-duration:16s}
+.hero-blob-3{width:300px;height:300px;background:var(--cream);top:50%;right:20%;animation-delay:-8s;animation-duration:14s}
+@keyframes blobFloat{
+  0%,100%{transform:translate(0,0) scale(1)}
+  33%{transform:translate(30px,-20px) scale(1.05)}
+  66%{transform:translate(-20px,30px) scale(0.97)}
+}
+
+.hero{padding:140px 40px 80px;max-width:1140px;margin:0 auto;display:grid;grid-template-columns:1fr 1fr;gap:60px;align-items:center;position:relative;z-index:1}
+.hero-left{position:relative}
+.hero-eyebrow{display:inline-flex;align-items:center;gap:8px;background:var(--g50);border:1px solid var(--g100);color:var(--g700);font-size:12px;font-weight:600;padding:5px 12px;border-radius:20px;margin-bottom:28px;letter-spacing:0.3px;opacity:0;animation:fadeUp 0.6s ease 0s forwards}
+.hero-eyebrow-dot{width:6px;height:6px;background:var(--g500);border-radius:50%;animation:pulse-green 2s infinite}
+@keyframes pulse-green{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.6;transform:scale(1.3)}}
+
+.hero-h1{
+  font-family:'Instrument Serif',serif;font-size:clamp(36px,4.5vw,56px);font-weight:400;
+  line-height:1.08;color:var(--d);letter-spacing:-1px;margin-bottom:20px;
+  clip-path:inset(0 0 100% 0);animation:revealDown 0.8s cubic-bezier(0.22,1,0.36,1) 0.1s forwards;
+}
+.hero-h1 em{font-style:italic;color:var(--g600)}
+.hero-sub{
+  font-size:16px;color:var(--gr5);line-height:1.65;max-width:460px;margin-bottom:36px;
+  opacity:0;animation:fadeUp 0.6s ease 0.35s forwards;
+}
+.hero-sub strong{color:var(--d);font-weight:500}
+.hero-actions{
+  display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:36px;
+  opacity:0;animation:fadeUp 0.6s ease 0.5s forwards;
+}
+.hero-trust{opacity:0;animation:fadeUp 0.6s ease 0.65s forwards}
+
+@keyframes revealDown{to{clip-path:inset(0 0 0% 0)}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+
+.btn-primary{
+  background:var(--g600);color:#fff;font-size:14px;font-weight:600;padding:14px 28px;
+  border-radius:var(--r2);border:none;cursor:pointer;font-family:'DM Sans',sans-serif;
+  transition:all 0.3s cubic-bezier(0.22,1,0.36,1);text-decoration:none;
+  display:inline-flex;align-items:center;gap:8px;
+  box-shadow:0 4px 16px rgba(74,124,89,0.35);
+  position:relative;overflow:hidden;
+}
+.btn-primary::after{
+  content:'';position:absolute;top:-50%;left:-60%;width:40%;height:200%;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,0.25),transparent);
+  transform:skewX(-20deg);transition:left 0.55s ease;
+}
+.btn-primary:hover{background:var(--g700);box-shadow:0 8px 28px rgba(74,124,89,0.5);transform:translateY(-2px)}
+.btn-primary:hover::after{left:130%}
+.btn-ghost{background:transparent;color:var(--d);font-size:14px;font-weight:500;padding:14px 20px;border-radius:var(--r2);border:1.5px solid var(--gr2);cursor:pointer;font-family:'DM Sans',sans-serif;transition:var(--t);text-decoration:none;display:inline-flex;align-items:center;gap:8px}
+.btn-ghost:hover{border-color:var(--g300);color:var(--g600);transform:translateX(2px)}
+.trust-bar{display:flex;flex-wrap:wrap;gap:6px 20px;align-items:center}
+.trust-item{display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--gr5);font-weight:400}
+.trust-item svg{color:var(--g500)}
+
+/* HERO MOCKUP */
+.hero-right{position:relative;display:flex;justify-content:center;opacity:0;animation:fadeUp 0.8s ease 0.2s forwards}
+.hero-mockup-wrap{position:relative;animation:mockupFloat 6s ease-in-out infinite}
+@keyframes mockupFloat{
+  0%,100%{transform:translateY(0)}
+  50%{transform:translateY(-10px)}
+}
+.hero-mockup{width:100%;max-width:500px;background:var(--w);border-radius:var(--r2);box-shadow:0 30px 80px rgba(28,28,28,0.18),0 0 0 1px rgba(28,28,28,0.05);overflow:hidden;position:relative}
+.mock-topbar{background:var(--g800);padding:10px 14px;display:flex;align-items:center;gap:8px}
+.mock-dots{display:flex;gap:5px}
+.mock-dot{width:10px;height:10px;border-radius:50%}
+.mock-patient{font-size:11px;color:rgba(255,255,255,0.5);margin-left:8px;font-family:'DM Sans',sans-serif}
+.mock-timer{font-size:11px;color:rgba(255,255,255,0.6);margin-left:auto;background:rgba(255,255,255,0.1);padding:3px 10px;border-radius:20px;font-variant-numeric:tabular-nums}
+.mock-body{padding:14px;background:var(--ow)}
+.mock-warn{background:var(--warn-l);border:1px solid #F0D08A;border-radius:8px;padding:8px 10px;font-size:10px;color:var(--warn);line-height:1.5;margin-bottom:10px}
+.mock-section{background:var(--w);border-radius:8px;border:1px solid var(--gr2);margin-bottom:8px;overflow:hidden}
+.mock-sec-head{padding:8px 10px;font-size:9px;font-weight:600;color:var(--gr4);letter-spacing:0.8px;text-transform:uppercase;border-bottom:1px solid var(--gr1);background:var(--gr1)}
+.mock-sec-body{padding:10px}
+.mock-hyp-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.mock-hyp-row:last-child{margin-bottom:0}
+.mock-hyp-name{font-size:11px;font-weight:500;color:var(--d)}
+.mock-hyp-code{font-size:10px;color:var(--gr4)}
+.mock-hyp-pct{font-family:'Instrument Serif',serif;font-size:18px;color:var(--g600);min-width:42px;text-align:right}
+.mock-bar-wrap{flex:1;margin:0 10px}
+.mock-bar-track{height:4px;background:var(--gr2);border-radius:2px;overflow:hidden}
+.mock-bar-fill{height:100%;border-radius:2px;background:linear-gradient(90deg,var(--g600),var(--g500));transform-origin:left;animation:barGrow 1s cubic-bezier(0.22,1,0.36,1) 0.8s both}
+@keyframes barGrow{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+.mock-footer{background:var(--g800);padding:9px 14px;display:flex;align-items:center;justify-content:space-between}
+.mock-save{font-size:10px;color:rgba(255,255,255,0.4);display:flex;align-items:center;gap:5px}
+.mock-save-dot{width:5px;height:5px;border-radius:50%;background:#27AE60;animation:pulse-green 2s infinite}
+.mock-analyze-btn{background:var(--g500);color:#fff;font-size:10px;font-weight:600;padding:5px 12px;border-radius:6px;border:none;cursor:pointer;font-family:'DM Sans',sans-serif;display:flex;align-items:center;gap:4px}
+
+.floating-badge{
+  position:absolute;top:-18px;right:-18px;background:var(--w);border:1px solid var(--gr2);
+  border-radius:12px;padding:10px 14px;box-shadow:var(--sh2);font-size:11px;font-weight:600;
+  color:var(--d);display:flex;align-items:center;gap:6px;
+  transition:transform 0.08s linear;will-change:transform;
+  animation:mockupFloat 6s ease-in-out infinite;animation-delay:-1s;
+}
+.floating-badge-dot{width:8px;height:8px;border-radius:50%;background:#E74C3C;animation:pulse-danger 1.5s infinite}
+@keyframes pulse-danger{0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(231,76,60,0.4)}50%{opacity:0.8;box-shadow:0 0 0 5px rgba(231,76,60,0)}}
+.floating-badge2{
+  position:absolute;bottom:-14px;left:-14px;background:var(--g50);border:1px solid var(--g100);
+  border-radius:10px;padding:8px 12px;box-shadow:var(--sh);font-size:10px;color:var(--g700);font-weight:500;
+  animation:mockupFloat 6s ease-in-out infinite;animation-delay:-3s;
+}
+
+/* MARQUEE */
+.trust-section{background:var(--w);border-top:1px solid var(--gr2);border-bottom:1px solid var(--gr2);padding:16px 0;overflow:hidden;position:relative}
+.trust-section::before,.trust-section::after{
+  content:'';position:absolute;top:0;bottom:0;width:80px;z-index:2;pointer-events:none;
+}
+.trust-section::before{left:0;background:linear-gradient(90deg,#fff,transparent)}
+.trust-section::after{right:0;background:linear-gradient(-90deg,#fff,transparent)}
+.marquee-track{display:flex;gap:0;width:max-content;animation:marquee 30s linear infinite}
+.marquee-track:hover{animation-play-state:paused}
+.marquee-set{display:flex;align-items:center;gap:32px;padding:0 16px;flex-shrink:0}
+.trust-chip{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--gr5);font-weight:500;padding:6px 14px;border-radius:20px;border:1px solid var(--gr2);white-space:nowrap;background:var(--w)}
+.trust-chip svg{color:var(--g600)}
+@keyframes marquee{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+
+/* SECTIONS */
+section{padding:96px 40px}
+.section-inner{max-width:1140px;margin:0 auto}
+.section-eyebrow{font-size:11px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--g600);margin-bottom:14px}
+.section-title{font-family:'Instrument Serif',serif;font-size:clamp(28px,3.5vw,44px);font-weight:400;color:var(--d);line-height:1.1;letter-spacing:-0.5px}
+.section-title em{font-style:italic;color:var(--g600)}
+.section-sub{font-size:16px;color:var(--gr5);line-height:1.7;margin-top:14px;max-width:560px}
+
+/* PROBLEMA */
+#problema{background:var(--cream)}
+.problema-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:20px;margin-top:52px}
+.pain-card{background:var(--w);border-radius:var(--r2);border:1px solid var(--gr2);padding:28px 24px;position:relative;overflow:hidden;transition:box-shadow 0.4s ease,transform 0.4s ease}
+.pain-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#E74C3C,#C0392B)}
+.pain-card:hover{box-shadow:var(--sh2);transform:translateY(-4px)}
+.pain-icon{width:42px;height:42px;background:var(--danger-l);border-radius:10px;display:flex;align-items:center;justify-content:center;margin-bottom:16px}
+.pain-icon svg{color:var(--danger)}
+.pain-title{font-family:'Instrument Serif',serif;font-size:18px;color:var(--d);margin-bottom:10px;line-height:1.3}
+.pain-desc{font-size:13.5px;color:var(--gr5);line-height:1.6}
+.pain-quote{font-size:12px;color:var(--gr4);font-style:italic;margin-top:12px;padding-top:12px;border-top:1px solid var(--gr1)}
+
+/* FEATURES */
+#funcionalidades{background:var(--ow)}
+.feat-layout{display:grid;grid-template-columns:1fr 1fr;gap:60px;align-items:start;margin-top:56px}
+.feat-tabs{display:flex;flex-direction:column;gap:4px}
+.feat-tab{display:flex;align-items:flex-start;gap:14px;padding:16px 18px;border-radius:var(--r);cursor:pointer;transition:var(--t);border:1.5px solid transparent}
+.feat-tab:hover{background:var(--w);border-color:var(--gr2)}
+.feat-tab.active{background:var(--w);border-color:var(--g100);box-shadow:var(--sh)}
+.feat-tab-icon{width:38px;height:38px;border-radius:9px;display:flex;align-items:center;justify-content:center;flex-shrink:0;background:var(--g50);transition:var(--t)}
+.feat-tab.active .feat-tab-icon{background:var(--g600)}
+.feat-tab.active .feat-tab-icon svg{color:#fff}
+.feat-tab-icon svg{color:var(--g500)}
+.feat-tab-title{font-size:14px;font-weight:600;color:var(--d);margin-bottom:4px}
+.feat-tab-sub{font-size:12.5px;color:var(--gr5);line-height:1.5}
+.feat-preview{
+  background:var(--w);border-radius:var(--r2);border:1px solid var(--gr2);padding:28px;
+  box-shadow:var(--sh);position:sticky;top:90px;min-height:380px;
+  display:flex;flex-direction:column;gap:16px;
+  transition:opacity 0.25s ease,transform 0.25s ease;
+}
+.feat-preview.switching{opacity:0;transform:translateY(8px)}
+.fp-title{font-family:'Instrument Serif',serif;font-size:20px;color:var(--d)}
+.fp-body{font-size:14px;color:var(--gr5);line-height:1.7}
+.fp-demo{background:var(--ow);border-radius:var(--r);border:1px solid var(--gr2);padding:16px;margin-top:8px}
+.fp-demo-label{font-size:10px;font-weight:600;color:var(--gr4);letter-spacing:0.8px;text-transform:uppercase;margin-bottom:12px}
+
+/* DEPOIMENTOS */
+#depoimentos{background:var(--cream)}
+.testimonials{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-top:52px}
+.testimonial{background:var(--w);border-radius:var(--r2);border:1px solid var(--gr2);padding:28px;transition:all 0.4s cubic-bezier(0.22,1,0.36,1);position:relative}
+.testimonial:hover{box-shadow:0 16px 48px rgba(28,28,28,0.12);transform:translateY(-5px) scale(1.01)}
+.testimonial::before{content:'"';font-family:'Instrument Serif',serif;font-size:80px;color:var(--g100);position:absolute;top:10px;left:22px;line-height:1}
+.test-quote{font-size:14px;color:var(--d2);line-height:1.75;margin-bottom:20px;position:relative;z-index:1;padding-top:24px}
+.test-quote em{color:var(--g700);font-style:normal;font-weight:600;background:var(--g50);padding:1px 5px;border-radius:4px}
+.test-author{display:flex;align-items:center;gap:12px;padding-top:16px;border-top:1px solid var(--gr1)}
+.test-av{width:38px;height:38px;border-radius:50%;background:var(--g600);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;color:#fff;flex-shrink:0;font-family:'Instrument Serif',serif}
+.test-name{font-size:13px;font-weight:600;color:var(--d)}
+.test-crp{font-size:11px;color:var(--gr4);margin-top:1px}
+.stars{color:#F39C12;font-size:13px;margin-bottom:4px}
+
+/* PRECOS */
+#precos{background:var(--ow)}
+.pricing-grid{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:52px;max-width:780px;margin-left:auto;margin-right:auto}
+.plan-card{background:var(--w);border-radius:var(--r2);border:1.5px solid var(--gr2);padding:32px;transition:all 0.3s ease;position:relative}
+.plan-card:hover{box-shadow:var(--sh2);transform:translateY(-3px)}
+.plan-card.featured{border-color:var(--g500);box-shadow:0 0 0 3px rgba(74,124,89,0.12)}
+.plan-badge{position:absolute;top:-12px;left:50%;transform:translateX(-50%);background:var(--g600);color:#fff;font-size:11px;font-weight:700;padding:4px 16px;border-radius:20px;white-space:nowrap;letter-spacing:0.3px}
+.plan-name{font-family:'Instrument Serif',serif;font-size:22px;color:var(--d);margin-bottom:6px}
+.plan-desc{font-size:12.5px;color:var(--gr5);margin-bottom:20px;line-height:1.5}
+.plan-price{display:flex;align-items:flex-end;gap:4px;margin-bottom:6px}
+.plan-curr{font-size:14px;color:var(--gr5);margin-bottom:6px;font-weight:500}
+.plan-num{font-family:'Instrument Serif',serif;font-size:48px;color:var(--d);line-height:1}
+.plan-period{font-size:13px;color:var(--gr4);margin-bottom:4px}
+.plan-divider{height:1px;background:var(--gr2);margin-bottom:20px}
+.plan-features{list-style:none;margin-bottom:28px;display:flex;flex-direction:column;gap:10px}
+.plan-features li{font-size:13.5px;color:var(--d2);display:flex;align-items:flex-start;gap:10px;line-height:1.5}
+.plan-features li::before{content:'✓';color:var(--g600);font-weight:700;flex-shrink:0;margin-top:1px}
+.plan-features li.neg::before{content:'—';color:var(--gr4)}
+.plan-features li.neg{color:var(--gr4)}
+.btn-plan{width:100%;background:var(--g600);color:#fff;font-size:14px;font-weight:600;padding:13px;border-radius:var(--r);border:none;cursor:pointer;font-family:'DM Sans',sans-serif;transition:var(--t);display:block;text-align:center;text-decoration:none;position:relative;overflow:hidden}
+.btn-plan::after{content:'';position:absolute;top:-50%;left:-60%;width:40%;height:200%;background:linear-gradient(90deg,transparent,rgba(255,255,255,0.2),transparent);transform:skewX(-20deg);transition:left 0.55s ease}
+.btn-plan:hover{background:var(--g700)}
+.btn-plan:hover::after{left:130%}
+.btn-plan.outline{background:transparent;border:1.5px solid var(--gr2);color:var(--d)}
+.btn-plan.outline::after{display:none}
+.btn-plan.outline:hover{border-color:var(--g300);color:var(--g600);background:var(--g50)}
+.pricing-avulso{text-align:center;margin-top:12px;font-size:11.5px;color:var(--gr4);max-width:780px;margin-left:auto;margin-right:auto}
+.pricing-footer{text-align:center;margin-top:16px;font-size:12.5px;color:var(--gr4)}
+
+/* CTA FINAL */
+#cta-final{
+  background:var(--g800);padding:120px 40px;text-align:center;
+  position:relative;overflow:hidden;
+}
+#cta-final::before{
+  content:'';position:absolute;inset:0;
+  background:
+    radial-gradient(ellipse 60% 50% at 20% 50%,rgba(74,124,89,0.3),transparent),
+    radial-gradient(ellipse 40% 60% at 80% 30%,rgba(93,143,106,0.2),transparent);
+  animation:ctaBg 8s ease-in-out infinite alternate;
+}
+@keyframes ctaBg{from{opacity:0.6}to{opacity:1}}
+#cta-final::after{
+  content:'';position:absolute;inset:0;
+  background:url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%234A7C59' fill-opacity='0.06'%3E%3Ccircle cx='30' cy='30' r='1.5'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+  pointer-events:none;
+}
+.cta-final-inner{max-width:640px;margin:0 auto;position:relative;z-index:1}
+.cta-final-eyebrow{font-size:11px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--g300);margin-bottom:18px}
+.cta-final-title{font-family:'Instrument Serif',serif;font-size:clamp(30px,4vw,52px);color:#fff;line-height:1.08;letter-spacing:-0.5px;margin-bottom:16px}
+.cta-final-title em{font-style:italic;color:var(--g300)}
+.cta-final-sub{font-size:16px;color:rgba(255,255,255,0.55);margin-bottom:40px;line-height:1.6}
+.cta-form{display:flex;gap:10px;max-width:480px;margin:0 auto 16px}
+.cta-input{flex:1;background:rgba(255,255,255,0.1);border:1.5px solid rgba(255,255,255,0.2);border-radius:var(--r);padding:14px 18px;font-size:14px;color:#fff;font-family:'DM Sans',sans-serif;outline:none;transition:var(--t)}
+.cta-input::placeholder{color:rgba(255,255,255,0.35)}
+.cta-input:focus{border-color:var(--g300);background:rgba(255,255,255,0.14)}
+.btn-cta{
+  background:var(--g500);color:#fff;font-size:14px;font-weight:600;padding:14px 24px;
+  border-radius:var(--r);border:none;cursor:pointer;font-family:'DM Sans',sans-serif;
+  transition:all 0.3s cubic-bezier(0.22,1,0.36,1);white-space:nowrap;
+  box-shadow:0 4px 20px rgba(74,124,89,0.5);
+  position:relative;overflow:hidden;
+}
+.btn-cta::after{content:'';position:absolute;top:-50%;left:-60%;width:40%;height:200%;background:linear-gradient(90deg,transparent,rgba(255,255,255,0.25),transparent);transform:skewX(-20deg);transition:left 0.55s ease}
+.btn-cta:hover{background:var(--g600);transform:translateY(-2px);box-shadow:0 8px 30px rgba(74,124,89,0.6)}
+.btn-cta:hover::after{left:130%}
+.cta-note{font-size:12px;color:rgba(255,255,255,0.3)}
+
+/* FOOTER */
+footer{background:var(--g900);padding:48px 40px 32px;border-top:1px solid rgba(255,255,255,0.06)}
+.footer-inner{max-width:1140px;margin:0 auto}
+.footer-top{display:grid;grid-template-columns:2fr 1fr 1fr;gap:40px;margin-bottom:36px}
+.footer-logo{display:flex;align-items:center;gap:9px;margin-bottom:12px}
+.footer-tagline{font-size:13px;color:rgba(255,255,255,0.35);line-height:1.6;max-width:260px}
+.footer-col-title{font-size:11px;font-weight:600;letter-spacing:1px;color:rgba(255,255,255,0.25);text-transform:uppercase;margin-bottom:14px}
+.footer-link{display:block;font-size:13px;color:rgba(255,255,255,0.45);text-decoration:none;margin-bottom:8px;transition:var(--t)}
+.footer-link:hover{color:rgba(255,255,255,0.8)}
+.footer-bottom{border-top:1px solid rgba(255,255,255,0.06);padding-top:24px;display:flex;justify-content:space-between;align-items:flex-start;gap:20px;flex-wrap:wrap}
+.footer-legal{font-size:11.5px;color:rgba(255,255,255,0.2);line-height:1.6;max-width:680px}
+.footer-crp{font-size:11px;color:rgba(255,255,255,0.15)}
+
+/* SCROLL REVEAL */
+.reveal{opacity:0;transform:translateY(28px);transition:opacity 0.7s cubic-bezier(0.22,1,0.36,1),transform 0.7s cubic-bezier(0.22,1,0.36,1)}
+.reveal.visible{opacity:1;transform:translateY(0)}
+.reveal-delay-1{transition-delay:0.1s}
+.reveal-delay-2{transition-delay:0.22s}
+.reveal-delay-3{transition-delay:0.34s}
+.reveal-clip{clip-path:inset(0 0 100% 0);transition:clip-path 0.8s cubic-bezier(0.22,1,0.36,1)}
+.reveal-clip.visible{clip-path:inset(0 0 0% 0)}
+
+.parallax-slow{will-change:transform}
+
+/* HERO SOCIAL PROOF */
+.hero-social-proof{
+  display:inline-flex;align-items:center;gap:10px;
+  background:var(--w);border:1px solid var(--gr2);border-radius:10px;
+  padding:8px 14px;box-shadow:var(--sh);margin-bottom:20px;
+  opacity:0;animation:fadeUp 0.6s ease 0.15s forwards;
+}
+.hero-proof-avatars{display:flex}
+.hero-proof-avatar{
+  width:26px;height:26px;border-radius:50%;border:2px solid #fff;
+  display:flex;align-items:center;justify-content:center;
+  font-family:'Instrument Serif',serif;font-size:9px;color:#fff;
+  margin-left:-7px;flex-shrink:0;
+}
+.hero-proof-avatar:first-child{margin-left:0}
+.hero-proof-text{font-size:12px;color:var(--gr5)}
+.hero-proof-text strong{color:var(--d);font-weight:600}
+
+/* RESPONSIVE */
+@media(max-width:900px){
+  .hero{grid-template-columns:1fr;padding:120px 24px 60px;gap:40px}
+  .hero-right{order:-1}
+  .problema-grid,.testimonials,.pricing-grid{grid-template-columns:1fr}
+  .feat-layout{grid-template-columns:1fr}
+  .footer-top{grid-template-columns:1fr}
+  section{padding:64px 24px}
+  nav{padding:0 24px}
+  .cta-form{flex-direction:column}
+  .hero-mockup-wrap{animation:none}
+}
+@media(max-width:600px){
+  .testimonials{grid-template-columns:1fr}
+}
+</style>
+
+<meta property="og:type"        content="website" />
+<meta property="og:site_name"   content="PsicoAI" />
+<meta property="og:title"       content="PsicoAI — O primeiro assistente de raciocínio clínico para psicólogos" />
+<meta property="og:description" content="Hipóteses diagnósticas DSM-5/CID-11, alertas de padrão e canvas de anotações. 14 dias grátis." />
+<meta property="og:url"         content="https://psicoai.com.br" />
+<meta property="og:image"       content="https://psicoai.com.br/og-image.png" />
+<meta name="twitter:card"       content="summary_large_image" />
+<meta name="twitter:title"      content="PsicoAI — Raciocínio clínico com IA" />
+<meta name="twitter:description" content="O primeiro assistente de raciocínio clínico para psicólogos. DSM-5, CID-11, alertas de risco." />
+<meta name="description"        content="PsicoAI — hipóteses diagnósticas DSM-5/CID-11, alertas de padrão clínico e canvas de anotações. 14 dias grátis, sem cartão." />
+
+<script>
+!function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;
+n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;
+t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}
+(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');
+var FB_PIXEL_ID = 'SEU_PIXEL_ID_AQUI';
+fbq('init', FB_PIXEL_ID);
+fbq('track', 'PageView');
+</script>
+<noscript>
+  <img height="1" width="1" style="display:none"
+    src="https://www.facebook.com/tr?id=SEU_PIXEL_ID_AQUI&ev=PageView&noscript=1"/>
+</noscript>
+</head>
+<body>
+
+<!-- NAV -->
+<nav id="main-nav">
+  <div class="nav-inner">
+    <a href="#" class="nav-logo">
+      <div class="nav-psi">Psi</div>
+      <div class="nav-brand">Psico<span>AI</span></div>
+    </a>
+    <div class="nav-links" id="nav-links-guest">
+      <a href="#funcionalidades" class="nav-link">Funcionalidades</a>
+      <a href="#depoimentos" class="nav-link">Depoimentos</a>
+      <a href="#precos" class="nav-link">Precos</a>
+      <a href="#cta-final" class="nav-cta">Testar 14 dias gratis</a>
+    </div>
+    <div class="nav-links" id="nav-links-user" style="display:none">
+      <span id="nav-user-name" style="font-size:13px;color:var(--gr5);padding:6px 12px"></span>
+      <a href="/" class="nav-link" style="color:var(--g600);font-weight:500">Voltar ao app</a>
+    </div>
+  </div>
+</nav>
+
+<!-- HERO -->
+<div class="hero-wrap">
+  <div class="hero-bg">
+    <div class="hero-blob hero-blob-1"></div>
+    <div class="hero-blob hero-blob-2"></div>
+    <div class="hero-blob hero-blob-3"></div>
+  </div>
+  <div class="hero">
+    <div class="hero-left">
+      <div class="hero-eyebrow">
+        <span class="hero-eyebrow-dot"></span>
+        Gap global confirmado — unico com hipoteses DSM-5/CID-11
+      </div>
+      <h1 class="hero-h1">
+        A IA que pensa<br>
+        <em>junto com voce</em>
+      </h1>
+      <p class="hero-sub">
+        Apos cada sessao, o PsicoAI levanta <strong>hipoteses diagnosticas com probabilidade</strong> e detecta padroes de risco — antes que virem crise. Nenhum outro software no mundo entrega isso.
+      </p>
+      <div class="hero-social-proof">
+        <div class="hero-proof-avatars">
+          <div class="hero-proof-avatar" style="background:var(--g600)">CR</div>
+          <div class="hero-proof-avatar" style="background:var(--g700)">RM</div>
+          <div class="hero-proof-avatar" style="background:#5B7FA6">PS</div>
+          <div class="hero-proof-avatar" style="background:#7A5C8A">AK</div>
+          <div class="hero-proof-avatar" style="background:#8A5C5C">+</div>
+        </div>
+        <div class="hero-proof-text"><strong>400+ psicologos</strong> ja na lista de espera</div>
+      </div>
+      <div class="hero-actions">
+        <a href="#cta-final" class="btn-primary">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+          Testar 14 dias gratis
+        </a>
+        <a href="#funcionalidades" class="btn-ghost">Ver funcionalidades</a>
+      </div>
+      <div class="hero-trust trust-bar">
+        <div class="trust-item">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+          DSM-5 e CID-11
+        </div>
+        <div class="trust-item">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          LGPD · Criptografia E2E
+        </div>
+        <div class="trust-item">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+          CFP 09/2024
+        </div>
+      </div>
+    </div>
+
+    <!-- HERO MOCKUP -->
+    <div class="hero-right" id="hero-right">
+      <div style="position:relative" id="mockup-wrap">
+        <div class="floating-badge" id="badge1">
+          <span class="floating-badge-dot"></span>
+          Alerta: padrao de evitacao — Lucas M.
+        </div>
+        <div class="hero-mockup-wrap">
+          <div class="hero-mockup">
+            <div class="mock-topbar">
+              <div class="mock-dots">
+                <div class="mock-dot" style="background:#FF5F57"></div>
+                <div class="mock-dot" style="background:#FEBC2E"></div>
+                <div class="mock-dot" style="background:#28C840"></div>
+              </div>
+              <span class="mock-patient">Lucas Martins · Sessao 14 · 18 mai 2026</span>
+              <span class="mock-timer" id="mock-timer">24:17</span>
+            </div>
+            <div class="mock-body">
+              <div class="mock-warn">Analise gerada por IA como suporte ao raciocinio clinico. Diagnostico e responsabilidade exclusiva do psicologo.</div>
+              <div class="mock-section">
+                <div class="mock-sec-head">Hipotese diagnostica desta sessao</div>
+                <div class="mock-sec-body">
+                  <div class="mock-hyp-row">
+                    <div>
+                      <div class="mock-hyp-name">TEPT — Transtorno de Estresse Pos-Traumatico</div>
+                      <div class="mock-hyp-code">F43.1 · CID-11 6B40</div>
+                    </div>
+                    <div class="mock-bar-wrap">
+                      <div class="mock-bar-track"><div class="mock-bar-fill" style="width:72%"></div></div>
+                    </div>
+                    <div class="mock-hyp-pct">72%</div>
+                  </div>
+                  <div class="mock-hyp-row">
+                    <div>
+                      <div class="mock-hyp-name">Transtorno de Ansiedade Generalizada</div>
+                      <div class="mock-hyp-code">F41.1 · CID-11 6B00</div>
+                    </div>
+                    <div class="mock-bar-wrap">
+                      <div class="mock-bar-track"><div class="mock-bar-fill" style="width:45%"></div></div>
+                    </div>
+                    <div class="mock-hyp-pct" style="font-size:15px;color:var(--gr5)">45%</div>
+                  </div>
+                </div>
+              </div>
+              <div class="mock-section">
+                <div class="mock-sec-head">Padroes detectados</div>
+                <div class="mock-sec-body" style="display:flex;flex-direction:column;gap:6px">
+                  <div style="border-left:2px solid #E74C3C;padding:4px 8px;background:#FDECEA;border-radius:0 4px 4px 0;font-size:9.5px;color:var(--d2)"><b style="color:#B03A2E">Evitacao ativa</b> — 4a ocorrencia (S3,S8,S10,S14)</div>
+                  <div style="border-left:2px solid #F39C12;padding:4px 8px;background:#FDF3DC;border-radius:0 4px 4px 0;font-size:9.5px;color:var(--d2)"><b style="color:#C8860A">Hipervigilancia</b> — Moderada · pesadelos recorrentes</div>
+                </div>
+              </div>
+              <div class="mock-section">
+                <div class="mock-sec-head">Sugestao para S15</div>
+                <div class="mock-sec-body" style="display:flex;flex-direction:column;gap:5px">
+                  <div style="display:flex;gap:6px;font-size:9.5px;color:var(--d2)"><span style="width:14px;height:14px;border-radius:50%;background:var(--g50);border:1px solid var(--g100);display:flex;align-items:center;justify-content:center;font-size:8px;color:var(--g600);font-weight:700;flex-shrink:0">1</span>Tecnica cadeira vazia — explorar relacao pai</div>
+                  <div style="display:flex;gap:6px;font-size:9.5px;color:var(--d2)"><span style="width:14px;height:14px;border-radius:50%;background:var(--g50);border:1px solid var(--g100);display:flex;align-items:center;justify-content:center;font-size:8px;color:var(--g600);font-weight:700;flex-shrink:0">2</span>Avaliar protocolo EMDR — exposicao gradual</div>
+                </div>
+              </div>
+            </div>
+            <div class="mock-footer">
+              <div class="mock-save"><div class="mock-save-dot"></div> Salvo automaticamente</div>
+              <button class="mock-analyze-btn">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                Analisar com IA
+              </button>
+            </div>
+          </div>
+        </div>
+        <div class="floating-badge2" id="badge2">Conformidade CFP 09/2024</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MARQUEE TRUST BAR -->
+<div class="trust-section">
+  <div class="marquee-track">
+    <div class="marquee-set">
+      <div class="trust-chip"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>547.000 psicologos no Brasil (CFP)</div>
+      <div class="trust-chip"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>Unico com hipoteses DSM-5/CID-11</div>
+      <div class="trust-chip"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Sem diagnostico automatico — voce decide</div>
+      <div class="trust-chip"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>IA sob demanda · R$4,90/analise</div>
+      <div class="trust-chip"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>Criptografia E2E · LGPD compliance</div>
+      <div class="trust-chip"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>CFP 09/2024 · Prontuario certificado</div>
+      <div class="trust-chip"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>Suporte completo em portugues</div>
+      <div class="trust-chip"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Google Calendar + Meet integrado</div>
+    </div>
+    <div class="marquee-set">
+      <div class="trust-chip"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>547.000 psicologos no Brasil (CFP)</div>
+      <div class="trust-chip"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>Unico com hipoteses DSM-5/CID-11</div>
+      <div class="trust-chip"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Sem diagnostico automatico — voce decide</div>
+      <div class="trust-chip"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>IA sob demanda · R$4,90/analise</div>
+      <div class="trust-chip"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>Criptografia E2E · LGPD compliance</div>
+      <div class="trust-chip"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>CFP 09/2024 · Prontuario certificado</div>
+      <div class="trust-chip"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>Suporte completo em portugues</div>
+      <div class="trust-chip"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Google Calendar + Meet integrado</div>
+    </div>
+  </div>
+</div>
+
+<!-- PROBLEMA -->
+<section id="problema">
+  <div class="section-inner">
+    <div class="reveal">
+      <div class="section-eyebrow">O problema</div>
+      <h2 class="section-title">Voce documenta sessoes.<br><em>Mas quem analisa o paciente?</em></h2>
+      <p class="section-sub">Todos os softwares do mercado foram construidos para organizar. Nenhum foi construido para pensar junto com voce.</p>
+    </div>
+    <div class="problema-grid">
+      <div class="pain-card reveal reveal-delay-1">
+        <div class="pain-icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+        </div>
+        <div class="pain-title">Anotacoes sem segunda opiniao clinica</div>
+        <p class="pain-desc">A supervisao clinica existe por um motivo: nenhum profissional ve tudo sozinho. O PsicoAI e a segunda leitura que voce nao tem tempo de buscar.</p>
+        <div class="pain-quote">"Quantas vezes voce releu uma nota e percebeu algo que nao viu na hora?" — pergunta real de psicologos</div>
+      </div>
+      <div class="pain-card reveal reveal-delay-2">
+        <div class="pain-icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        </div>
+        <div class="pain-title">Padroes de risco aparecem so quando ja e tarde</div>
+        <p class="pain-desc">Evitacao recorrente, ruminacao crescente, sinais de crise — sem analise longitudinal, voce depende da memoria de dezenas de sessoes para conectar os pontos.</p>
+        <div class="pain-quote">"O padrao estava la nas ultimas 4 sessoes. Eu so nao tinha conseguido nomear." — Dra. Camila, SP</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FUNCIONALIDADES -->
+<section id="funcionalidades">
+  <div class="section-inner">
+    <div class="reveal">
+      <div class="section-eyebrow">Funcionalidades</div>
+      <h2 class="section-title">O que o PsicoAI faz<br><em>que nenhum outro faz</em></h2>
+    </div>
+    <div class="feat-layout reveal">
+      <div class="feat-tabs" id="feat-tabs">
+        <div class="feat-tab active" onclick="setFeat(0,this)">
+          <div class="feat-tab-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div>
+          <div class="feat-tab-text"><div class="feat-tab-title">Hipoteses diagnosticas</div><div class="feat-tab-sub">DSM-5 e CID-11 com probabilidade ponderada</div></div>
+        </div>
+        <div class="feat-tab" onclick="setFeat(1,this)">
+          <div class="feat-tab-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/></svg></div>
+          <div class="feat-tab-text"><div class="feat-tab-title">Alertas de padrao comportamental</div><div class="feat-tab-sub">Evitacao, ruminacao e sinais de risco antes da crise</div></div>
+        </div>
+        <div class="feat-tab" onclick="setFeat(2,this)">
+          <div class="feat-tab-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg></div>
+          <div class="feat-tab-text"><div class="feat-tab-title">Canvas de anotacoes</div><div class="feat-tab-sub">Caneta, marca-texto, zoom — para quem pensa com a mao</div></div>
+        </div>
+      </div>
+      <div class="feat-preview" id="feat-preview"></div>
+    </div>
+  </div>
+</section>
+
+<!-- DEPOIMENTOS -->
+<section id="depoimentos">
+  <div class="section-inner">
+    <div class="reveal">
+      <div class="section-eyebrow">Depoimentos</div>
+      <h2 class="section-title">O que psicologos<br><em>estao dizendo</em></h2>
+    </div>
+    <div class="testimonials">
+      <div class="testimonial reveal reveal-delay-1">
+        <div class="stars">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
+        <p class="test-quote">"Finalmente consigo ver o que eu sentia intuitivamente, mas nao conseguia nomear. O PsicoAI levantou <em>F43.1 na sessao 4</em> de uma paciente que eu suspeitava de ansiedade comum. Mudou completamente o plano terapeutico."</p>
+        <div class="test-author">
+          <div class="test-av">CR</div>
+          <div><div class="test-name">Dra. Camila Rezende</div><div class="test-crp">CRP 06/89234 · Sao Paulo, SP</div></div>
+        </div>
+      </div>
+      <div class="testimonial reveal reveal-delay-2">
+        <div class="stars">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
+        <p class="test-quote">"Uso para supervisao propria. O alerta de <em>padrao de evitacao</em> me fez rever completamente o plano terapeutico de um paciente ha 6 meses estagnado. Nenhuma outra ferramenta tinha me dado isso."</p>
+        <div class="test-author">
+          <div class="test-av">RM</div>
+          <div><div class="test-name">Dr. Rafael Mendes</div><div class="test-crp">CRP 04/32891 · Belo Horizonte, MG</div></div>
+        </div>
+      </div>
+      <div class="testimonial reveal reveal-delay-3">
+        <div class="stars">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
+        <p class="test-quote">"A parte do canvas me prendeu. Finalmente uma ferramenta que respeita como psicologos realmente pensam — com <em>rabiscos, conexoes</em>, nao so formularios engessados. E ainda analisa o que voce escreveu."</p>
+        <div class="test-author">
+          <div class="test-av">PS</div>
+          <div><div class="test-name">Dra. Priya Santos</div><div class="test-crp">CRP 07/14523 · Porto Alegre, RS</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PRECOS -->
+<section id="precos">
+  <div class="section-inner">
+    <div class="reveal" style="text-align:center">
+      <div class="section-eyebrow">Precos</div>
+      <h2 class="section-title">Simples e <em>previsivel</em></h2>
+      <p class="section-sub" style="margin:14px auto 0">Um plano. Tudo incluido. Sem limite de IA. Sem surpresa no bolso.</p>
+      <div style="display:inline-flex;align-items:center;gap:8px;background:var(--warn-l);border:1px solid #F0D08A;border-radius:20px;padding:6px 16px;font-size:12px;font-weight:600;color:var(--warn);margin-top:18px">
+        ⏳ Preco beta — congelado para quem entrar agora
+      </div>
+    </div>
+    <div class="pricing-grid reveal" style="grid-template-columns:1fr;max-width:480px">
+      <div class="plan-card featured" style="padding:40px">
+        <div class="plan-badge">14 dias gratis</div>
+        <div class="plan-name">PsicoAI</div>
+        <p class="plan-desc">Prontuario moderno + canvas de anotacoes + analises IA ilimitadas. Tudo que voce precisa, sem racionamento.</p>
+
+        <!-- Preco com risco no "futuro" -->
+        <div style="margin:24px 0 0">
+          <div style="display:flex;align-items:baseline;gap:8px">
+            <div class="plan-price" style="margin:0"><span class="plan-curr">R$</span><span class="plan-num">79</span><span class="plan-period">/mes</span></div>
+            <div style="font-size:11px;color:var(--gr4);text-decoration:line-through;opacity:0.7">R$97 apos beta</div>
+          </div>
+          <div style="font-size:11px;color:var(--g500);margin-top:4px;font-weight:600">Preco garantido enquanto for beta-user</div>
+        </div>
+
+        <div class="plan-divider"></div>
+        <ul class="plan-features">
+          <li>Prontuario eletronico ilimitado</li>
+          <li>Canvas de anotacoes com desenho e texto</li>
+          <li>Agenda integrada</li>
+          <li>Linha do tempo clinica por paciente</li>
+          <li>Alertas de padrao comportamental</li>
+          <li style="font-weight:600;color:var(--g700)">Analises IA ilimitadas — sem cap</li>
+          <li>5 templates clinicos: reflexao, risco, evolucao, supervisao, psicodinamica</li>
+          <li>Conformidade CFP 09/2024</li>
+          <li>Suporte em portugues</li>
+          <li>Pacientes ilimitados</li>
+        </ul>
+        <a href="#cta-final" class="btn-plan" data-plan="base">Comecar 14 dias gratis</a>
+        <div style="text-align:center;font-size:11px;color:var(--gr4);margin-top:14px">Sem cartao de credito · Cancele quando quiser</div>
+      </div>
+    </div>
+    <p class="pricing-footer reveal">Sem fidelidade · Sem cartao no trial · Dados exportaveis a qualquer momento</p>
+  </div>
+</section>
+
+<!-- CTA FINAL -->
+<section id="cta-final">
+  <div class="cta-final-inner">
+    <div class="cta-final-eyebrow">Comece agora</div>
+    <h2 class="cta-final-title">Entenda seus pacientes<br><em>em outro nivel</em></h2>
+    <p class="cta-final-sub">14 dias gratis. Sem cartao de credito. Cancele quando quiser.</p>
+    <form class="cta-form" onsubmit="submitCta(event)">
+      <input class="cta-input" type="email" placeholder="seu@email.com.br" id="cta-email" required>
+      <button type="submit" class="btn-cta">Comecar agora</button>
+    </form>
+    <p class="cta-note" id="cta-success" style="display:none;color:var(--g300);font-size:14px;font-weight:600;margin-bottom:8px">Otimo! Em breve voce recebera o acesso no seu e-mail.</p>
+    <p class="cta-note">Ao criar sua conta voce concorda com nossos Termos de Uso e Politica de Privacidade.</p>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-inner">
+    <div class="footer-top">
+      <div>
+        <div class="footer-logo">
+          <div class="nav-psi">Psi</div>
+          <div class="nav-brand" style="color:rgba(255,255,255,0.8)">Psico<span>AI</span></div>
+        </div>
+        <p class="footer-tagline">O primeiro assistente de raciocinio clinico para psicologos. Hipoteses DSM-5/CID-11. Alertas de padrao. Canvas de anotacoes.</p>
+      </div>
+      <div>
+        <div class="footer-col-title">Produto</div>
+        <a href="#funcionalidades" class="footer-link">Funcionalidades</a>
+        <a href="#precos" class="footer-link">Precos</a>
+        <a href="#" class="footer-link">Blog clinico</a>
+      </div>
+      <div>
+        <div class="footer-col-title">Empresa</div>
+        <a href="#" class="footer-link">Contato</a>
+        <a href="#" class="footer-link">Politica de Privacidade</a>
+        <a href="#" class="footer-link">Termos de Uso</a>
+        <a href="#" class="footer-link">LGPD</a>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <p class="footer-legal">PsicoAI nao e um servico medico e nao substitui o julgamento clinico profissional. As hipoteses diagnosticas geradas pela IA sao ferramentas de suporte ao raciocinio clinico — o diagnostico e responsabilidade exclusiva do psicologo. CFP 09/2024 compliance. LGPD em conformidade.</p>
+      <p class="footer-crp">© 2026 PsicoAI · CNPJ em registro</p>
+    </div>
+  </div>
+</footer>
+
+<script>
+/* LOGGED-IN DETECTION */
+(function() {
+  try {
+    const token = localStorage.getItem('psicoai_token');
+    const userRaw = localStorage.getItem('psicoai_user');
+    if (token && userRaw) {
+      const user = JSON.parse(userRaw);
+      const guestLinks = document.getElementById('nav-links-guest');
+      const userLinks = document.getElementById('nav-links-user');
+      const userName = document.getElementById('nav-user-name');
+      if (guestLinks) guestLinks.style.display = 'none';
+      if (userLinks) userLinks.style.display = 'flex';
+      if (userName && user.name) userName.textContent = user.name;
+    }
+  } catch(e) {}
+})();
+
+/* NAV SCROLL SHADOW */
+const nav = document.getElementById('main-nav');
+window.addEventListener('scroll', () => {
+  nav.classList.toggle('scrolled', window.scrollY > 20);
+}, {passive:true});
+
+/* SCROLL REVEAL */
+const observer = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      e.target.classList.add('visible');
+      observer.unobserve(e.target);
+    }
+  });
+}, {threshold:0.08, rootMargin:'0px 0px -40px 0px'});
+document.querySelectorAll('.reveal,.reveal-clip').forEach(r => observer.observe(r));
+
+/* HERO SCROLL PARALLAX */
+const heroRight = document.getElementById('hero-right');
+window.addEventListener('scroll', () => {
+  const scrollY = window.scrollY;
+  if (heroRight && scrollY < window.innerHeight) {
+    heroRight.style.transform = 'translateY(' + (scrollY * 0.18) + 'px)';
+  }
+}, {passive:true});
+
+/* MOUSE PARALLAX ON FLOATING BADGES */
+const badge1 = document.getElementById('badge1');
+const badge2 = document.getElementById('badge2');
+document.addEventListener('mousemove', e => {
+  const cx = window.innerWidth / 2;
+  const cy = window.innerHeight / 2;
+  const dx = (e.clientX - cx) / cx;
+  const dy = (e.clientY - cy) / cy;
+  if (badge1) badge1.style.transform = 'translate(' + (dx * 10) + 'px, ' + (dy * 7) + 'px)';
+  if (badge2) badge2.style.transform = 'translate(' + (dx * -8) + 'px, ' + (dy * -5) + 'px)';
+}, {passive:true});
+
+/* MOCK TIMER TICK */
+(function() {
+  const el = document.getElementById('mock-timer');
+  if (!el) return;
+  let secs = 24*60+17;
+  setInterval(() => {
+    secs++;
+    const m = String(Math.floor(secs/60)).padStart(2,'0');
+    const s = String(secs%60).padStart(2,'0');
+    el.textContent = m+':'+s;
+  }, 1000);
+})();
+
+/* FEATURES TABS */
+const featContents = [
+  {
+    title:'Hipoteses diagnosticas com probabilidade',
+    body:'Apos cada sessao analisada, o PsicoAI apresenta hipoteses mapeadas para DSM-5 e CID-11 com probabilidade ponderada. Baseia-se no conteudo da sessao e no historico do paciente. Voce decide. A IA apoia — nunca substitui.',
+    demo:`<div class="fp-demo-label">Resultado da analise — Lucas M. · S14</div>
+      <div style="margin-bottom:12px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+          <div><div style="font-size:12px;font-weight:600;color:var(--d)">TEPT</div><div style="font-size:10px;color:var(--gr4)">F43.1 · CID-11 6B40</div></div>
+          <div style="font-family:'Instrument Serif',serif;font-size:24px;color:var(--g600)">72%</div>
+        </div>
+        <div style="height:5px;background:var(--gr2);border-radius:3px;overflow:hidden"><div style="width:72%;height:100%;background:linear-gradient(90deg,var(--g600),var(--g500));border-radius:3px;animation:barGrow 1s cubic-bezier(0.22,1,0.36,1) both"></div></div>
+      </div>
+      <div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+          <div><div style="font-size:12px;font-weight:600;color:var(--d)">TAG</div><div style="font-size:10px;color:var(--gr4)">F41.1 · CID-11 6B00</div></div>
+          <div style="font-family:'Instrument Serif',serif;font-size:24px;color:var(--gr5)">45%</div>
+        </div>
+        <div style="height:5px;background:var(--gr2);border-radius:3px;overflow:hidden"><div style="width:45%;height:100%;background:var(--gr4);border-radius:3px;animation:barGrow 1s cubic-bezier(0.22,1,0.36,1) 0.1s both"></div></div>
+      </div>`
+  },
+  {
+    title:'Alertas de padrao comportamental',
+    body:'O PsicoAI detecta evitacao recorrente, ruminacao persistente e sinais de risco antes que virem crise. Os alertas aparecem no dashboard apenas para pacientes com analise IA gerada — sem ruido, sem falso positivo.',
+    demo:`<div class="fp-demo-label">Dashboard · Alertas ativos</div>
+      <div style="display:flex;align-items:flex-start;gap:10px;padding:10px;border-radius:8px;background:var(--danger-l);border:1px solid #F5C6C3;margin-bottom:8px">
+        <div><div style="font-size:12px;font-weight:600;color:var(--d)">Lucas M. — Padrao de evitacao</div><div style="font-size:11px;color:var(--gr5);margin-top:3px">4 sessoes com comportamento evasivo ao tema familiar</div><div style="font-size:10px;color:var(--danger);margin-top:5px;font-weight:600">Alta prioridade · Sessao: 17 mai</div></div>
+      </div>
+      <div style="display:flex;align-items:flex-start;gap:10px;padding:10px;border-radius:8px;background:var(--warn-l);border:1px solid #F0D08A">
+        <div><div style="font-size:12px;font-weight:600;color:var(--d)">Rafael F. — Ruminacao detectada</div><div style="font-size:11px;color:var(--gr5);margin-top:3px">Mencoes recorrentes sem progressao. F41.1 TAG · 64%</div><div style="font-size:10px;color:var(--warn);margin-top:5px;font-weight:600">Moderado · Sessao: 17 mai</div></div>
+      </div>`
+  },
+  {
+    title:'Canvas de anotacoes — o jeito que voce pensa',
+    body:'Pagina pautada com caneta digital, marca-texto e anotacoes livres. Escreva, desenhe, conecte ideias — e peca para a IA analisar o que voce escreveu. Unico no segmento.',
+    demo:`<div style="border-radius:10px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,0.13);border:1px solid rgba(0,0,0,0.07)">
+
+      <!-- Topbar da sessao canvas -->
+      <div style="background:#2D4A38;display:flex;align-items:center;padding:0 12px;height:42px;gap:8px;flex-shrink:0">
+        <span style="font-family:'Instrument Serif',serif;color:#fff;font-size:17px;opacity:0.85;letter-spacing:-0.5px;flex-shrink:0">Ψ</span>
+        <span style="font-size:10.5px;color:rgba(255,255,255,0.45);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Lucas M. · Sessão 14</span>
+        <span style="font-size:10px;font-weight:600;color:rgba(255,255,255,0.6);background:rgba(0,0,0,0.22);padding:3px 9px;border-radius:20px;font-family:monospace;flex-shrink:0">24:17</span>
+        <div style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.12);color:rgba(255,255,255,0.4);padding:3px 9px;border-radius:5px;font-size:9px;flex-shrink:0">Encerrar</div>
+      </div>
+
+      <!-- Area principal: strip de ferramentas + pagina -->
+      <div style="background:#E8E3DA;display:flex;gap:0;padding:10px 10px 0">
+
+        <!-- Strip lateral de ferramentas (replica tldraw) -->
+        <div style="display:flex;flex-direction:column;align-items:center;gap:5px;padding:6px 5px 0;margin-right:8px">
+          <div style="width:26px;height:26px;border-radius:5px;background:rgba(255,255,255,0.55);display:flex;align-items:center;justify-content:center" title="Selecionar">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#666" stroke-width="2"><path d="M5 3l14 9-7 1-4 7z"/></svg>
+          </div>
+          <div style="width:26px;height:26px;border-radius:5px;background:#4A7C59;display:flex;align-items:center;justify-content:center" title="Caneta (ativo)">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
+          </div>
+          <div style="width:26px;height:26px;border-radius:5px;background:rgba(255,255,255,0.55);display:flex;align-items:center;justify-content:center" title="Marca-texto">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#666" stroke-width="2"><line x1="12" y1="20" x2="12" y2="4"/><path d="M8 8.5h8"/><path d="M7 20h10"/></svg>
+          </div>
+          <div style="width:26px;height:26px;border-radius:5px;background:rgba(255,255,255,0.55);display:flex;align-items:center;justify-content:center" title="Texto">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#666" stroke-width="2"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></svg>
+          </div>
+          <div style="width:26px;height:26px;border-radius:5px;background:rgba(255,255,255,0.55);display:flex;align-items:center;justify-content:center" title="Nota">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#666" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="8" y1="8" x2="16" y2="8"/><line x1="8" y1="16" x2="12" y2="16"/></svg>
+          </div>
+        </div>
+
+        <!-- Pagina pautada (replica cs-page) -->
+        <div style="flex:1;background:#F7F4EF;border-radius:6px 6px 0 0;padding:10px 12px 16px 18px;border-top:3px solid #4A7C59;position:relative;
+          background-image:repeating-linear-gradient(transparent,transparent 23px,#E2DDD6 23px,#E2DDD6 24px);
+          font-size:9.5px;line-height:24px;color:#1C1C1C;font-family:'DM Sans',sans-serif;min-height:155px;overflow:hidden">
+
+          <!-- Linha de margem vermelha vertical -->
+          <div style="position:absolute;left:36px;top:0;bottom:0;width:1px;background:rgba(210,130,130,0.35)"></div>
+
+          <!-- Meta da sessao -->
+          <div style="font-size:7.5px;color:#B0A898;letter-spacing:0.3px;margin-bottom:1px;line-height:14px">S14 &nbsp;·&nbsp; Lucas M. &nbsp;·&nbsp; 17 mai 2025 &nbsp;·&nbsp; Sessão aberta</div>
+
+          <!-- Conteudo com marcacoes -->
+          <div style="margin-left:14px;margin-top:1px">
+            <span style="background:rgba(255,235,59,0.55);padding:0 2px;border-radius:1px">Paciente chegou visivelmente tenso</span> — postura fechada,<br>
+            evitou contato visual ao mencionar o pai. Mudou de assunto 3x.<br>
+            <span style="background:rgba(74,124,89,0.18);padding:0 3px;border-radius:2px;border-left:2px solid #5C8F6A;font-size:9px;color:#2D4A38">⚑ Padrão de evitação ativa — 3ª sessão consecutiva</span><br>
+            <br>
+            Pesadelos recorrentes mencionados — <span style="text-decoration:underline;text-decoration-color:#4A7C59;text-decoration-thickness:2px;text-underline-offset:2px">3ª vez em 4 sessões</span>.<br>
+            Disse "não é nada" mas hesitou ~4s antes de responder.
+          </div>
+
+          <!-- Sticky note amarela sobreposta (elemento canvas livre) -->
+          <div style="position:absolute;bottom:12px;right:6px;background:#FFF59D;border-radius:3px;padding:5px 7px;font-size:7.5px;color:#555;box-shadow:0 1px 5px rgba(0,0,0,0.14);transform:rotate(2deg);max-width:72px;line-height:1.5;border-top:2px solid #F9A825">
+            Investigar:<br>traumas<br>anteriores?
+          </div>
+
+          <!-- Indicador de salvamento -->
+          <div style="position:absolute;bottom:5px;left:50%;transform:translateX(-50%);font-size:7px;color:#C0B9B0;display:flex;align-items:center;gap:3px;white-space:nowrap">
+            <span style="width:4px;height:4px;border-radius:50%;background:#27AE60;display:inline-block;flex-shrink:0"></span>
+            Salvo automaticamente · 24:17
+          </div>
+        </div>
+      </div>
+
+      <!-- Barra inferior (replica cs-bottom) -->
+      <div style="background:#2D4A38;display:flex;align-items:center;padding:0 12px;height:38px;gap:8px">
+        <span style="width:5px;height:5px;border-radius:50%;background:#27AE60;display:inline-block;flex-shrink:0;box-shadow:0 0 5px rgba(39,174,96,0.6)"></span>
+        <span style="font-size:9.5px;color:rgba(255,255,255,0.35);flex:1">Anotacoes sincronizadas</span>
+        <div style="background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.15);color:rgba(255,255,255,0.5);padding:4px 10px;border-radius:6px;font-size:9px;margin-right:4px">Ver historico</div>
+        <div style="background:#5C8F6A;border:none;color:#fff;padding:5px 12px;border-radius:6px;font-size:9.5px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:5px">
+          <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+          Analisar com IA
+        </div>
+      </div>
+
+    </div>`
+  }
+];
+
+function setFeat(idx, el) {
+  const preview = document.getElementById('feat-preview');
+  preview.classList.add('switching');
+  setTimeout(() => {
+    document.querySelectorAll('.feat-tab').forEach(t => t.classList.remove('active'));
+    el.classList.add('active');
+    const c = featContents[idx];
+    // Canvas demo (idx 2) tem seu próprio chrome — remove padding do fp-demo
+    const demoPadding = idx === 2 ? 'style="padding:0;background:transparent;border:none"' : '';
+    preview.innerHTML = '<div class="fp-title">'+c.title+'</div><p class="fp-body">'+c.body+'</p><div class="fp-demo" '+demoPadding+'>'+c.demo+'</div>';
+    preview.classList.remove('switching');
+  }, 200);
+}
+setFeat(0, document.querySelector('.feat-tab.active'));
+
+/* CTA FORM */
+function submitCta(e) {
+  e.preventDefault();
+  const email = document.getElementById('cta-email').value;
+  if (!email) return;
+
+  if (typeof fbq !== 'undefined') {
+    fbq('track', 'Lead', { content_name: 'cta_email_capture' });
+  }
+
+  try {
+    const t = JSON.parse(localStorage.getItem('psicoai_tracking') || '{}');
+    t.leadEmail = email;
+    localStorage.setItem('psicoai_tracking', JSON.stringify(t));
+  } catch {}
+
+  document.querySelector('.cta-form').style.display = 'none';
+  document.getElementById('cta-success').style.display = 'block';
+
+  // Redireciona para o app após 2s com email pré-preenchido
+  setTimeout(function() {
+    window.location.href = '/?email=' + encodeURIComponent(email);
+  }, 2000);
+}
+
+/* UTM CAPTURE */
+(function captureTrackingParams() {
+  try {
+    const p = new URLSearchParams(window.location.search);
+    const existing = JSON.parse(localStorage.getItem('psicoai_tracking') || '{}');
+    if (p.get('utm_source'))   existing.utmSource   = p.get('utm_source');
+    if (p.get('utm_medium'))   existing.utmMedium   = p.get('utm_medium');
+    if (p.get('utm_campaign')) existing.utmCampaign = p.get('utm_campaign');
+    if (p.get('utm_content'))  existing.utmContent  = p.get('utm_content');
+    if (p.get('utm_term'))     existing.utmTerm     = p.get('utm_term');
+    if (p.get('fbclid'))       existing.fbclid      = p.get('fbclid');
+    const ref = p.get('ref') || p.get('coupon') || p.get('promo');
+    if (ref) existing.referralCode = ref.toUpperCase();
+    localStorage.setItem('psicoai_tracking', JSON.stringify(existing));
+  } catch {}
+})();
+
+/* BOTOES COMECAR GRATIS — Pixel */
+document.querySelectorAll('[data-plan]').forEach(btn => {
+  btn.addEventListener('click', function() {
+    const plan = this.dataset.plan;
+    if (typeof fbq !== 'undefined') {
+      fbq('track', 'InitiateCheckout', { content_name: 'plan_' + plan });
+    }
+  });
+});
+</script>
+</body>
+</html>
