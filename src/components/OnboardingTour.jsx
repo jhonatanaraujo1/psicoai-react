@@ -1,13 +1,18 @@
 /**
  * OnboardingTour — sidebar-focused, card compacto ao lado do item
- * Cada passo aponta para um item da sidebar com spotlight + card pequeno.
- * Desktop: card à direita da sidebar, alinhado verticalmente ao item.
- * Mobile:  card centralizado acima do bottom nav.
+ * Desktop: card à direita da sidebar alinhado ao item destacado.
+ * Mobile:  card centralizado acima do item no bottom nav.
+ *
+ * Fixes:
+ * - Blocker acima do bottom-nav (z-index > 9999) para evitar cliques passantes
+ * - Botões usam onClick (não onTouchEnd) — evita "tap-through" do toque anterior
+ * - Swipe detection apenas no wrapper e só quando não é toque em botão
+ * - Atraso de 350ms antes de tornar o card interativo (evita tap-through na abertura)
  */
 import { useState, useEffect, useRef } from 'react'
 
-const SIDEBAR_W = 252   // var(--sw)
-const PAD       = 6     // padding ao redor do spotlight
+const SIDEBAR_W = 252
+const PAD       = 6
 const RADIUS    = 10
 
 const STEPS = [
@@ -23,7 +28,7 @@ const STEPS = [
     selector: '[data-tour="nav-pacientes"]',
     icon: '👤',
     title: 'Pacientes',
-    desc: 'Cadastre, acompanhe e acesse o histórico completo.',
+    desc: 'Cadastre e acompanhe o histórico completo de cada paciente.',
   },
   {
     id: 'cadernos',
@@ -37,7 +42,7 @@ const STEPS = [
     selector: '[data-tour="nav-insights"]',
     icon: '🧠',
     title: 'Análises IA',
-    desc: 'Hipóteses DSM-5/CID-11 com probabilidade após cada sessão.',
+    desc: 'Hipóteses DSM-5/CID-11 geradas por sessão analisada.',
   },
   {
     id: 'financeiro',
@@ -58,22 +63,32 @@ const STEPS = [
     selector: '[data-tour="nav-configuracoes"]',
     icon: '⚙️',
     title: 'Configurações',
-    desc: 'Perfil, plano, preferências e integrações.',
+    desc: 'Perfil, plano e preferências do consultório.',
     isLast: true,
   },
 ]
 
 export default function OnboardingTour({ isOpen, onClose }) {
-  const [idx,  setIdx]  = useState(0)
-  const [rect, setRect] = useState(null)
-  const [vis,  setVis]  = useState(true)
-  const touchX = useRef(0)
-  const touchY = useRef(0)
+  const [idx,       setIdx]       = useState(0)
+  const [rect,      setRect]      = useState(null)
+  const [vis,       setVis]       = useState(true)
+  const [ready,     setReady]     = useState(false)   // atraso para evitar tap-through
+  const touchStartX = useRef(0)
+  const touchStartY = useRef(0)
+  const isTouchingBtn = useRef(false)
 
+  // Reset ao abrir — delay de 350ms antes de aceitar cliques
   useEffect(() => {
-    if (isOpen) { setIdx(0); setVis(true) }
+    if (isOpen) {
+      setIdx(0)
+      setVis(true)
+      setReady(false)
+      const t = setTimeout(() => setReady(true), 350)
+      return () => clearTimeout(t)
+    }
   }, [isOpen])
 
+  // Mede o elemento-alvo do passo atual
   useEffect(() => {
     if (!isOpen) return
     const step = STEPS[idx]
@@ -87,7 +102,7 @@ export default function OnboardingTour({ isOpen, onClose }) {
     }
 
     measure()
-    const t = setTimeout(measure, 150)
+    const t = setTimeout(measure, 120)
     window.addEventListener('resize', measure)
     return () => { clearTimeout(t); window.removeEventListener('resize', measure) }
   }, [idx, isOpen])
@@ -115,39 +130,42 @@ export default function OnboardingTour({ isOpen, onClose }) {
     setIdx(0); onClose()
   }
 
-  const onTouchStart = (e) => { touchX.current = e.touches[0].clientX; touchY.current = e.touches[0].clientY }
-  const onTouchEnd   = (e) => {
-    const dx = e.changedTouches[0].clientX - touchX.current
-    const dy = e.changedTouches[0].clientY - touchY.current
-    if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 44) {
+  // Swipe no wrapper — só dispara se não tocou em botão
+  const onWrapTouchStart = (e) => {
+    isTouchingBtn.current = false
+    touchStartX.current = e.touches[0].clientX
+    touchStartY.current = e.touches[0].clientY
+  }
+  const onWrapTouchEnd = (e) => {
+    if (isTouchingBtn.current) return
+    const dx = e.changedTouches[0].clientX - touchStartX.current
+    const dy = e.changedTouches[0].clientY - touchStartY.current
+    if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 50) {
       if (dx < 0 && !isLast) go(idx + 1)
       else if (dx > 0 && idx > 0) go(idx - 1)
     }
   }
 
   // ── Posição do card ──────────────────────────────────────────────────────
-  const CARD_W   = isMobile ? Math.min(320, vw - 24) : 280
-  const CARD_GAP = 16
+  const CARD_W   = isMobile ? Math.min(300, vw - 24) : 268
+  const CARD_GAP = 14
 
   let cardStyle = {}
 
   if (rect) {
     if (isMobile) {
-      // Mobile: centralizado horizontalmente, acima do item (que está no bottom nav)
       const cx = rect.x + rect.w / 2
+      const left = Math.max(12, Math.min(cx - CARD_W / 2, vw - CARD_W - 12))
       cardStyle = {
         position: 'fixed',
-        bottom: vh - rect.y + CARD_GAP,
-        left: Math.max(12, Math.min(cx - CARD_W / 2, vw - CARD_W - 12)),
+        bottom: vh - rect.y + CARD_GAP + 8,
+        left,
         width: CARD_W,
       }
     } else {
-      // Desktop: à direita da sidebar, alinhado verticalmente ao item
       const itemMidY = rect.y + rect.h / 2
-      // Card aprox. 100px de altura — centraliza verticalmente no item
-      const cardH = 110
+      const cardH = 120
       let top = itemMidY - cardH / 2
-      // Mantém dentro da viewport
       top = Math.max(16, Math.min(top, vh - cardH - 16))
       cardStyle = {
         position: 'fixed',
@@ -157,7 +175,6 @@ export default function OnboardingTour({ isOpen, onClose }) {
       }
     }
   } else {
-    // Sem rect: centro da tela
     cardStyle = {
       position: 'fixed',
       left: '50%',
@@ -168,20 +185,32 @@ export default function OnboardingTour({ isOpen, onClose }) {
   }
 
   const spreadPx = Math.round(Math.max(vw, vh) * 2.8)
+  // Blocker acima do bottom-nav (9999) e da sidebar (100) para bloquear cliques passantes
+  const BLOCKER_Z = 10000
 
   return (
     <>
       <style>{`
-        @keyframes ob-in { from{opacity:0;transform:translateY(4px)} to{opacity:1;transform:translateY(0)} }
-        @keyframes ob-spot { from{opacity:0} to{opacity:1} }
-        .ob-card-new { animation: ob-in 0.18s cubic-bezier(0.4,0,0.2,1) }
-        .ob-spot-new { animation: ob-spot 0.15s ease }
+        @keyframes ob-in  { from{opacity:0;transform:translateY(5px)} to{opacity:1;transform:translateY(0)} }
+        @keyframes ob-spt { from{opacity:0} to{opacity:1} }
+        .ob-card { animation: ob-in 0.2s cubic-bezier(0.4,0,0.2,1) both }
+        .ob-spt  { animation: ob-spt 0.15s ease both }
       `}</style>
 
-      {/* Overlay / spotlight */}
+      {/* ── Blocker cobre toda a tela ACIMA de bottom-nav e sidebar ── */}
+      <div
+        style={{
+          position: 'fixed', inset: 0,
+          zIndex: BLOCKER_Z,
+          // Sem background — só bloqueia cliques; o escurecimento vem do spotlight shadow
+        }}
+        onClick={e => e.stopPropagation()}
+      />
+
+      {/* ── Spotlight ── */}
       {rect ? (
         <div
-          className="ob-spot-new"
+          className="ob-spt"
           style={{
             position: 'fixed',
             left:   rect.x - PAD,
@@ -189,45 +218,50 @@ export default function OnboardingTour({ isOpen, onClose }) {
             width:  rect.w + PAD * 2,
             height: rect.h + PAD * 2,
             borderRadius: RADIUS,
-            zIndex: 798,
-            boxShadow: `0 0 0 ${spreadPx}px rgba(0,0,0,0.65)`,
-            border: '1.5px solid rgba(92,143,106,0.6)',
+            zIndex: BLOCKER_Z + 1,
+            boxShadow: `0 0 0 ${spreadPx}px rgba(0,0,0,0.68)`,
+            border: '2px solid rgba(92,143,106,0.65)',
             pointerEvents: 'none',
-            transition: 'left 0.22s ease, top 0.22s ease, width 0.22s ease, height 0.22s ease',
+            transition: 'left 0.24s ease, top 0.24s ease, width 0.24s ease, height 0.24s ease',
           }}
         />
       ) : (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 798, background: 'rgba(0,0,0,0.65)' }}
-             onClick={e => e.stopPropagation()} />
+        // Sem elemento → overlay sólido atrás do card
+        <div style={{
+          position: 'fixed', inset: 0,
+          zIndex: BLOCKER_Z,
+          background: 'rgba(0,0,0,0.68)',
+          pointerEvents: 'none',
+        }} />
       )}
-      {rect && <div style={{ position: 'fixed', inset: 0, zIndex: 797 }} onClick={e => e.stopPropagation()} />}
 
-      {/* Tour card compacto */}
+      {/* ── Tour card ── */}
       <div
         key={`ob-${idx}`}
-        className="ob-card-new"
+        className="ob-card"
         style={{
           ...cardStyle,
-          zIndex: 800,
+          zIndex: BLOCKER_Z + 2,
           opacity: vis ? 1 : 0,
+          pointerEvents: ready ? 'all' : 'none',  // bloqueia cliques nos 350ms iniciais
           transition: 'opacity 0.08s',
           fontFamily: "'DM Sans', sans-serif",
         }}
-        onTouchStart={onTouchStart}
-        onTouchEnd={onTouchEnd}
+        onTouchStart={onWrapTouchStart}
+        onTouchEnd={onWrapTouchEnd}
       >
         <div style={{
           background: '#1A2E20',
-          border: '1px solid rgba(92,143,106,0.25)',
+          border: '1px solid rgba(92,143,106,0.22)',
           borderLeft: '3px solid #5C8F6A',
           borderRadius: 14,
           padding: '14px 16px 12px',
-          boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
+          boxShadow: '0 8px 32px rgba(0,0,0,0.55)',
         }}>
 
-          {/* Header: ícone + título + contador */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-            <span style={{ fontSize: 16, lineHeight: 1, flexShrink: 0 }}>{step.icon}</span>
+          {/* Header */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 5 }}>
+            <span style={{ fontSize: 15, lineHeight: 1, flexShrink: 0 }}>{step.icon}</span>
             <span style={{
               fontFamily: "'Fraunces', serif",
               fontSize: 15, fontWeight: 400, color: '#fff',
@@ -235,21 +269,21 @@ export default function OnboardingTour({ isOpen, onClose }) {
             }}>
               {step.title}
             </span>
-            <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', fontWeight: 600, flexShrink: 0 }}>
-              {idx + 1}/{STEPS.length}
+            <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.28)', fontWeight: 600, flexShrink: 0 }}>
+              {idx + 1}&thinsp;/&thinsp;{STEPS.length}
             </span>
           </div>
 
-          {/* Descrição curta */}
+          {/* Descrição */}
           <p style={{
-            fontSize: 12, color: 'rgba(255,255,255,0.5)',
-            lineHeight: 1.5, margin: '0 0 12px',
+            fontSize: 12, color: 'rgba(255,255,255,0.48)',
+            lineHeight: 1.55, margin: '0 0 11px',
           }}>
             {step.desc}
           </p>
 
-          {/* Progress bar fina */}
-          <div style={{ height: 2, background: 'rgba(255,255,255,0.08)', borderRadius: 1, marginBottom: 12 }}>
+          {/* Barra de progresso */}
+          <div style={{ height: 2, background: 'rgba(255,255,255,0.07)', borderRadius: 1, marginBottom: 11 }}>
             <div style={{
               height: '100%', borderRadius: 1,
               width: `${((idx + 1) / STEPS.length) * 100}%`,
@@ -258,15 +292,16 @@ export default function OnboardingTour({ isOpen, onClose }) {
             }} />
           </div>
 
-          {/* Botões */}
+          {/* Botões — usam onClick para evitar tap-through */}
           <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
             <button
               onClick={skip}
+              onTouchStart={() => { isTouchingBtn.current = true }}
               style={{
                 fontSize: 11, color: 'rgba(255,255,255,0.22)',
                 background: 'none', border: 'none', cursor: 'pointer',
                 padding: '0 2px', fontFamily: "'DM Sans', sans-serif",
-                flexShrink: 0,
+                flexShrink: 0, minHeight: 32,
               }}
             >
               Pular
@@ -277,6 +312,7 @@ export default function OnboardingTour({ isOpen, onClose }) {
             {idx > 0 && (
               <button
                 onClick={() => go(idx - 1)}
+                onTouchStart={() => { isTouchingBtn.current = true }}
                 style={{
                   width: 32, height: 32, borderRadius: 8,
                   border: '1px solid rgba(255,255,255,0.10)',
@@ -294,6 +330,7 @@ export default function OnboardingTour({ isOpen, onClose }) {
 
             <button
               onClick={isLast ? finish : () => go(idx + 1)}
+              onTouchStart={() => { isTouchingBtn.current = true }}
               style={{
                 height: 32, padding: '0 14px',
                 background: 'linear-gradient(135deg, #5C8F6A, #4A7C59)',
@@ -301,10 +338,8 @@ export default function OnboardingTour({ isOpen, onClose }) {
                 fontSize: 12, fontWeight: 700,
                 cursor: 'pointer', fontFamily: "'DM Sans', sans-serif",
                 display: 'flex', alignItems: 'center', gap: 4,
-                flexShrink: 0,
+                flexShrink: 0, minHeight: 32,
               }}
-              onTouchStart={e => { e.stopPropagation(); e.currentTarget.style.opacity = '0.85' }}
-              onTouchEnd={e => { e.stopPropagation(); e.currentTarget.style.opacity = '1'; isLast ? finish() : go(idx + 1) }}
             >
               {isLast ? 'Começar' : 'Próximo'}
               {!isLast && (
