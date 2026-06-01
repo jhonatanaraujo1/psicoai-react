@@ -357,108 +357,253 @@ function CanvasPage({ page, isActive, toolRef, colorRef, sizeRef, onStrokeEnd, o
   )
 }
 
-// ── DatePill — data editável da sessão ────────────────────────────────────────
-function DatePill({ value, onChange }) {
-  const [editing, setEditing] = useState(false)
-  const [hovered, setHovered] = useState(false)
-  const inputRef = useRef(null)
+// ── DatePicker custom — calendário 100% CSS/JS, sem input nativo ──────────────
+const MONTHS_FULL  = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro']
+const MONTHS_SHORT = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez']
+const WEEK_LABELS  = ['Do','Se','Te','Qu','Qu','Se','Sá']
 
-  // Formata "2025-05-17" → "17 mai. 2025"
-  const fmt = (iso) => {
-    if (!iso) return 'Definir data'
-    const [y, m, d] = iso.split('-')
-    const M = ['jan.','fev.','mar.','abr.','mai.','jun.','jul.','ago.','set.','out.','nov.','dez.']
-    return `${d} ${M[parseInt(m,10)-1]} ${y}`
+function isoToDate(iso) {
+  if (!iso) return null
+  const [y, m, d] = iso.split('-').map(Number)
+  return new Date(y, m - 1, d)
+}
+function dateToIso(d) {
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
+}
+function fmtPill(iso) {
+  if (!iso) return 'Definir data'
+  const d = isoToDate(iso)
+  return `${String(d.getDate()).padStart(2,'0')} ${MONTHS_SHORT[d.getMonth()]}. ${d.getFullYear()}`
+}
+function sameDay(a, b) {
+  return a && b && a.getFullYear()===b.getFullYear() && a.getMonth()===b.getMonth() && a.getDate()===b.getDate()
+}
+function buildCalDays(year, month) {
+  const first = new Date(year, month, 1)
+  const last  = new Date(year, month + 1, 0)
+  const rows  = []
+  let startDow = first.getDay() // 0=Dom
+  const cells = []
+  for (let i = startDow - 1; i >= 0; i--)
+    cells.push({ d: new Date(year, month, -i), cur: false })
+  for (let d = 1; d <= last.getDate(); d++)
+    cells.push({ d: new Date(year, month, d), cur: true })
+  while (cells.length % 7 !== 0)
+    cells.push({ d: new Date(year, month + 1, cells.length - startDow - last.getDate() + 1), cur: false })
+  for (let i = 0; i < cells.length; i += 7)
+    rows.push(cells.slice(i, i + 7))
+  return rows
+}
+
+function DatePill({ value, onChange }) {
+  const [open,    setOpen]    = useState(false)
+  const [hovered, setHovered] = useState(false)
+  const [pos,     setPos]     = useState({ top: 0, left: 0, above: false })
+
+  const today    = new Date(); today.setHours(0,0,0,0)
+  const selDate  = isoToDate(value)
+  const initDate = selDate || today
+
+  const [viewY, setViewY] = useState(initDate.getFullYear())
+  const [viewM, setViewM] = useState(initDate.getMonth())
+
+  const triggerRef  = useRef(null)
+  const calendarRef = useRef(null)
+
+  // Fecha ao clicar fora
+  useEffect(() => {
+    if (!open) return
+    const handler = (e) => {
+      if (!calendarRef.current?.contains(e.target) && !triggerRef.current?.contains(e.target))
+        setOpen(false)
+    }
+    const esc = (e) => { if (e.key === 'Escape') setOpen(false) }
+    document.addEventListener('mousedown', handler, true)
+    document.addEventListener('touchstart', handler, true)
+    document.addEventListener('keydown', esc)
+    return () => {
+      document.removeEventListener('mousedown', handler, true)
+      document.removeEventListener('touchstart', handler, true)
+      document.removeEventListener('keydown', esc)
+    }
+  }, [open])
+
+  // Sincroniza viewY/viewM quando value muda externamente
+  useEffect(() => {
+    if (selDate) { setViewY(selDate.getFullYear()); setViewM(selDate.getMonth()) }
+  }, [value]) // eslint-disable-line
+
+  const handleToggle = () => {
+    if (!triggerRef.current) return
+    const r   = triggerRef.current.getBoundingClientRect()
+    const vw  = window.innerWidth
+    const vh  = window.innerHeight
+    const CAL_W = Math.min(288, vw - 24)
+    const CAL_H = 320
+
+    let left = r.left + r.width / 2 - CAL_W / 2
+    left = Math.max(12, Math.min(left, vw - CAL_W - 12))
+
+    const spaceBelow = vh - r.bottom - 10
+    const spaceAbove = r.top - 10
+    const above = spaceBelow < CAL_H && spaceAbove > spaceBelow
+
+    setPos({ top: above ? r.top - CAL_H - 8 : r.bottom + 8, left, above })
+    setOpen(o => !o)
   }
 
-  useEffect(() => {
-    if (editing) {
-      inputRef.current?.focus()
-      // Pequeno delay para showPicker() funcionar após foco
-      setTimeout(() => inputRef.current?.showPicker?.(), 80)
-    }
-  }, [editing])
+  const prevMonth = () => {
+    setViewM(m => { if (m === 0) { setViewY(y => y - 1); return 11 } return m - 1 })
+  }
+  const nextMonth = () => {
+    setViewM(m => { if (m === 11) { setViewY(y => y + 1); return 0 } return m + 1 })
+  }
+  const selectDay = (d) => { onChange(dateToIso(d)); setOpen(false) }
+  const goToday   = () => { selectDay(today) }
 
-  const confirm = () => setEditing(false)
+  const rows = buildCalDays(viewY, viewM)
 
-  if (editing) return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-      <input
-        ref={inputRef}
-        type="date"
-        value={value || ''}
-        onChange={e => onChange(e.target.value)}
-        onBlur={confirm}
-        onKeyDown={e => { if (e.key === 'Enter' || e.key === 'Escape') confirm() }}
-        style={{
-          border: '2px solid #4A7C59',
-          borderRadius: 10,
-          padding: '5px 12px',
-          fontSize: 13,
-          fontWeight: 600,
-          color: '#2D4A38',
-          background: '#EBF4EE',
-          fontFamily: "'DM Sans', sans-serif",
-          outline: 'none',
-          cursor: 'pointer',
-          height: 34,
-          letterSpacing: '0.1px',
-        }}
-      />
-      <button
-        onMouseDown={e => { e.preventDefault(); confirm() }}
-        style={{
-          width: 30, height: 30, borderRadius: 8,
-          background: '#4A7C59', border: 'none',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          cursor: 'pointer', flexShrink: 0,
-          boxShadow: '0 2px 6px rgba(74,124,89,0.3)',
-        }}
-      >
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round">
-          <polyline points="20 6 9 17 4 12"/>
-        </svg>
-      </button>
-    </div>
-  )
+  const CAL_W = typeof window !== 'undefined' ? Math.min(288, window.innerWidth - 24) : 288
 
   return (
-    <button
-      onClick={() => setEditing(true)}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      title="Clique para alterar a data da sessão"
-      style={{
-        display: 'inline-flex', alignItems: 'center', gap: 7,
-        padding: '6px 14px',
-        borderRadius: 20,
-        background: hovered ? '#D4E8DA' : '#EBF4EE',
-        border: `1.5px solid ${hovered ? '#8BB89A' : '#D4E8DA'}`,
-        cursor: 'pointer',
-        transition: 'all 0.18s ease',
-        fontFamily: "'DM Sans', sans-serif",
-        boxShadow: hovered ? '0 2px 8px rgba(74,124,89,0.15)' : 'none',
-      }}
-    >
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={hovered ? '#2D4A38' : '#5C8F6A'} strokeWidth="2">
-        <rect x="3" y="4" width="18" height="18" rx="2"/>
-        <line x1="16" y1="2" x2="16" y2="6"/>
-        <line x1="8" y1="2" x2="8" y2="6"/>
-        <line x1="3" y1="10" x2="21" y2="10"/>
-      </svg>
-      <span style={{
-        fontSize: 13, fontWeight: 700,
-        color: hovered ? '#1A2E20' : '#3D6B4A',
-        letterSpacing: '0.1px', whiteSpace: 'nowrap',
-      }}>
-        {fmt(value)}
-      </span>
-      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke={hovered ? '#3D6B4A' : '#8BB89A'} strokeWidth="2"
-        style={{ transition: 'opacity 0.18s, transform 0.18s', opacity: hovered ? 1 : 0.5, transform: hovered ? 'scale(1.1)' : 'scale(1)' }}>
-        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-      </svg>
-    </button>
+    <>
+      {/* ── Trigger pill ── */}
+      <button
+        ref={triggerRef}
+        onClick={handleToggle}
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
+        style={{
+          display: 'inline-flex', alignItems: 'center', gap: 7,
+          padding: '6px 14px', borderRadius: 20,
+          background: open ? '#D4E8DA' : hovered ? '#D4E8DA' : '#EBF4EE',
+          border: `1.5px solid ${open || hovered ? '#8BB89A' : '#D4E8DA'}`,
+          cursor: 'pointer', transition: 'all 0.18s ease',
+          fontFamily: "'DM Sans', sans-serif",
+          boxShadow: open ? '0 2px 10px rgba(74,124,89,0.2)' : hovered ? '0 2px 8px rgba(74,124,89,0.12)' : 'none',
+          touchAction: 'manipulation',
+        }}
+      >
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={open || hovered ? '#2D4A38' : '#5C8F6A'} strokeWidth="2">
+          <rect x="3" y="4" width="18" height="18" rx="2"/>
+          <line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/>
+          <line x1="3" y1="10" x2="21" y2="10"/>
+        </svg>
+        <span style={{ fontSize: 13, fontWeight: 700, color: open || hovered ? '#1A2E20' : '#3D6B4A', whiteSpace: 'nowrap' }}>
+          {fmtPill(value)}
+        </span>
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke={open || hovered ? '#3D6B4A' : '#8BB89A'} strokeWidth="2.5"
+          style={{ transition: 'transform 0.2s', transform: open ? 'rotate(180deg)' : 'rotate(0deg)' }}>
+          <polyline points="6 9 12 15 18 9"/>
+        </svg>
+      </button>
+
+      {/* ── Calendário custom (portal via position:fixed) ── */}
+      {open && (
+        <>
+          {/* Backdrop móvel — toque fora fecha */}
+          <div
+            style={{ position: 'fixed', inset: 0, zIndex: 11998, background: 'transparent' }}
+            onClick={() => setOpen(false)}
+          />
+          <div
+            ref={calendarRef}
+            style={{
+              position: 'fixed',
+              top: pos.top,
+              left: pos.left,
+              width: CAL_W,
+              zIndex: 11999,
+              background: '#fff',
+              borderRadius: 18,
+              boxShadow: '0 12px 48px rgba(0,0,0,0.18), 0 2px 8px rgba(0,0,0,0.08)',
+              border: '1px solid #E8E5E0',
+              overflow: 'hidden',
+              fontFamily: "'DM Sans', sans-serif",
+              animation: 'dpIn 0.18s cubic-bezier(0.34,1.56,0.64,1)',
+              transformOrigin: pos.above ? 'bottom center' : 'top center',
+            }}
+            onClick={e => e.stopPropagation()}
+          >
+            <style>{`
+              @keyframes dpIn { from{opacity:0;transform:scale(0.92)} to{opacity:1;transform:scale(1)} }
+            `}</style>
+
+            {/* Header: mês/ano + navegação */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px 10px', background: '#2D4A38' }}>
+              <button onClick={prevMonth} style={{ width: 32, height: 32, borderRadius: 8, background: 'rgba(255,255,255,0.1)', border: 'none', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', touchAction: 'manipulation' }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="15 18 9 12 15 6"/></svg>
+              </button>
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: 15, fontWeight: 700, color: '#fff', letterSpacing: '0.2px' }}>{MONTHS_FULL[viewM]}</div>
+                <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.55)', marginTop: 1 }}>{viewY}</div>
+              </div>
+              <button onClick={nextMonth} style={{ width: 32, height: 32, borderRadius: 8, background: 'rgba(255,255,255,0.1)', border: 'none', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', touchAction: 'manipulation' }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="9 18 15 12 9 6"/></svg>
+              </button>
+            </div>
+
+            {/* Labels dias da semana */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', padding: '8px 12px 4px', background: '#F5F2EC' }}>
+              {WEEK_LABELS.map((l, i) => (
+                <div key={i} style={{ textAlign: 'center', fontSize: 10, fontWeight: 700, color: '#8B8B8B', letterSpacing: '0.5px', padding: '2px 0' }}>{l}</div>
+              ))}
+            </div>
+
+            {/* Grid de dias */}
+            <div style={{ padding: '4px 12px 8px', background: '#fff' }}>
+              {rows.map((row, ri) => (
+                <div key={ri} style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', gap: 2 }}>
+                  {row.map(({ d, cur }, ci) => {
+                    const isSel   = sameDay(d, selDate)
+                    const isTod   = sameDay(d, today)
+                    const isOther = !cur
+                    return (
+                      <button
+                        key={ci}
+                        onClick={() => selectDay(d)}
+                        style={{
+                          width: '100%', aspectRatio: '1', borderRadius: 8,
+                          border: isTod && !isSel ? '2px solid #4A7C59' : '2px solid transparent',
+                          background: isSel ? '#4A7C59' : 'transparent',
+                          color: isSel ? '#fff' : isOther ? '#C8C4BD' : isTod ? '#2D4A38' : '#1C1C1C',
+                          fontSize: 13, fontWeight: isSel || isTod ? 700 : 400,
+                          cursor: 'pointer', transition: 'all 0.12s',
+                          fontFamily: "'DM Sans', sans-serif",
+                          touchAction: 'manipulation',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          minHeight: 36,
+                        }}
+                        onMouseEnter={e => { if (!isSel) e.currentTarget.style.background = '#EBF4EE' }}
+                        onMouseLeave={e => { if (!isSel) e.currentTarget.style.background = 'transparent' }}
+                      >
+                        {d.getDate()}
+                      </button>
+                    )
+                  })}
+                </div>
+              ))}
+            </div>
+
+            {/* Footer: Hoje + limpar */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 16px 12px', borderTop: '1px solid #F0EDE8' }}>
+              <button
+                onClick={() => { onChange(''); setOpen(false) }}
+                style={{ fontSize: 12, color: '#B0ADA8', background: 'none', border: 'none', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", padding: '4px 8px', borderRadius: 6, touchAction: 'manipulation' }}
+              >
+                Limpar
+              </button>
+              <button
+                onClick={goToday}
+                style={{ fontSize: 12, fontWeight: 700, color: '#4A7C59', background: '#EBF4EE', border: '1.5px solid #D4E8DA', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", padding: '5px 14px', borderRadius: 20, touchAction: 'manipulation' }}
+              >
+                Hoje
+              </button>
+            </div>
+          </div>
+        </>
+      )}
+    </>
   )
 }
 
