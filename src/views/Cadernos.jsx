@@ -85,7 +85,7 @@ function CadernoCard({ patient, canvas, onOpen, onOpenPatient }) {
   const subLabel = !isEmpty
     ? fmtRelative(canvas.lastModified) || 'Editado recentemente'
     : sessionCount > 0
-      ? `${sessionCount} sessão${sessionCount !== 1 ? 'ões' : ''} · toque para anotar`
+      ? `${sessionCount} sess${sessionCount !== 1 ? 'ões' : 'ão'} · toque para anotar`
       : 'Toque para iniciar a primeira anotação'
 
   // Sempre abre a anotação/canvas — nunca vai para o perfil a partir daqui
