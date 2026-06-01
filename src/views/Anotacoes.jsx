@@ -374,7 +374,7 @@ export default function Anotacoes({ setCurrentView, onOpenCanvas }) {
         )}
       </div>
 
-      {/* List */}
+      {/* List — agrupado por data */}
       {loading ? (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {[1,2,3,4].map(i => (
@@ -401,26 +401,80 @@ export default function Anotacoes({ setCurrentView, onOpenCanvas }) {
             {search || filterPatient || filterEv ? 'Tente outros filtros.' : 'Suas anotações aparecem aqui após salvar uma sessão.'}
           </div>
         </div>
-      ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          {displayed.map(s => (
-            <AnotacaoCard
-              key={s.id}
-              s={s}
-              query={debouncedSearch}
-              onPatientClick={handlePatientClick}
-              onOpenCanvas={onOpenCanvas}
-              expanded={expandedId === s.id}
-              onToggle={() => setExpandedId(expandedId === s.id ? null : s.id)}
-            />
-          ))}
-          {displayed.length >= 5 && (
-            <div style={{ textAlign: 'center', padding: '12px 0', fontSize: 11, color: 'var(--gr4)' }}>
-              {displayed.length} anotações · {displayed.filter(s => s.hasAnalysis).length} analisadas com IA
+      ) : (() => {
+          // Agrupa por data (YYYY-MM-DD) usando finishedAt → updatedAt → createdAt
+          const today     = new Date(); today.setHours(0,0,0,0)
+          const yesterday = new Date(today); yesterday.setDate(today.getDate() - 1)
+
+          const dayKey = (iso) => {
+            if (!iso) return 'sem-data'
+            return new Date(iso).toISOString().slice(0, 10)
+          }
+          const dayLabel = (key) => {
+            if (key === 'sem-data') return 'Sem data'
+            const d = new Date(key + 'T12:00:00')
+            d.setHours(0,0,0,0)
+            if (d.getTime() === today.getTime())     return 'Hoje'
+            if (d.getTime() === yesterday.getTime()) return 'Ontem'
+            const diff = Math.floor((today - d) / 86400000)
+            if (diff < 7) return d.toLocaleDateString('pt-BR', { weekday: 'long' })
+            return d.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })
+          }
+
+          // Monta mapa ordenado de grupos
+          const grouped = new Map()
+          displayed.forEach(s => {
+            const k = dayKey(s.finishedAt || s.updatedAt || s.createdAt)
+            if (!grouped.has(k)) grouped.set(k, [])
+            grouped.get(k).push(s)
+          })
+          // Ordena datas mais recentes primeiro
+          const sortedKeys = [...grouped.keys()].sort((a, b) => b.localeCompare(a))
+
+          return (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+              {sortedKeys.map(key => {
+                const group = grouped.get(key)
+                const label = dayLabel(key)
+                return (
+                  <div key={key}>
+                    {/* Separador de data */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+                      <span style={{
+                        fontSize: 11, fontWeight: 700, color: 'var(--g700)',
+                        background: 'var(--g50)', border: '1px solid var(--g100)',
+                        padding: '3px 10px', borderRadius: 20, whiteSpace: 'nowrap',
+                        letterSpacing: '0.2px',
+                      }}>
+                        {label}
+                      </span>
+                      <span style={{ fontSize: 10, color: 'var(--gr4)' }}>
+                        {group.length} anotaç{group.length !== 1 ? 'ões' : 'ão'}
+                      </span>
+                      <div style={{ flex: 1, height: 1, background: 'var(--gr2)' }} />
+                    </div>
+
+                    {/* Cards do dia */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                      {group.map(s => (
+                        <AnotacaoCard
+                          key={s.id}
+                          s={s}
+                          query={debouncedSearch}
+                          onPatientClick={handlePatientClick}
+                          onOpenCanvas={onOpenCanvas}
+                          expanded={expandedId === s.id}
+                          onToggle={() => setExpandedId(expandedId === s.id ? null : s.id)}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )
+              })}
             </div>
-          )}
-        </div>
-      )}
+          )
+        })()
+      }
     </div>
   )
 }
