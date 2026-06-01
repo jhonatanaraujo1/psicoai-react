@@ -123,7 +123,7 @@ function CadernoCard({ patient, canvas, onOpen, onOpenPatient }) {
           <div style={{ fontSize: '13.5px', fontWeight: 600, color: 'var(--d)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {patient.name}
           </div>
-          <div style={{ fontSize: '11px', color: isEmpty && sessionCount > 0 ? 'var(--gr5)' : 'var(--gr4)', marginTop: '2px' }}>
+          <div style={{ fontSize: '11px', color: 'var(--gr4)', marginTop: '2px' }}>
             {subLabel}
           </div>
         </div>
