@@ -101,12 +101,12 @@ function CadernoCard({ patient, canvas, onOpen, onOpenPatient }) {
       style={{
         display: 'flex', flexDirection: 'column', gap: '12px',
         padding: '16px', borderRadius: '12px', textAlign: 'left',
-        border: `1px solid ${hovered ? 'var(--g300)' : (isEmpty && !sessionCount ? 'var(--gr1)' : 'var(--gr2)')}`,
+        border: `1px solid ${hovered ? 'var(--g300)' : (isEmpty ? 'var(--gr1)' : 'var(--gr2)')}`,
         background: hovered ? 'var(--g50)' : 'var(--w)',
         boxShadow: hovered ? 'var(--sh1)' : 'none',
         cursor: 'pointer', transition: 'all 0.15s',
         fontFamily: "'DM Sans', sans-serif",
-        opacity: isEmpty && !sessionCount ? 0.65 : 1,
+        opacity: isEmpty ? 0.65 : 1,
       }}
     >
       {/* Patient row */}
