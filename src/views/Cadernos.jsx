@@ -77,16 +77,18 @@ function CadernoCard({ patient, canvas, onOpen, onOpenPatient }) {
   const _col = avatarColor(patient.id)
   const col = { bg: patient.avatarBg || _col.bg, fg: patient.avatarColor || _col.fg }
   const isEmpty = !canvas
-  const sessionCount = patient.sessions ?? 0
-  // Paciente que só tem anotações no prontuário (sem canvas local) → ir ao prontuário
-  const prontuarioOnly = isEmpty && sessionCount > 0
 
-  // Sub-label: última edição canvas, ou contagem de sessões backend, ou vazio
+  // Sub-label usa APENAS dados locais (canvas pages) — o session count do backend
+  // inclui sessões abertas/vazias e não representa anotações reais do usuário.
   const subLabel = !isEmpty
-    ? fmtRelative(canvas.lastModified) || 'Editado recentemente'
-    : sessionCount > 0
-      ? `${sessionCount} sess${sessionCount !== 1 ? 'ões' : 'ão'} · toque para anotar`
-      : 'Toque para iniciar a primeira anotação'
+    ? (() => {
+        const parts = []
+        if (canvas.pageCount > 0) parts.push(`${canvas.pageCount} página${canvas.pageCount !== 1 ? 's' : ''}`)
+        const rel = fmtRelative(canvas.lastModified)
+        if (rel) parts.push(rel)
+        return parts.join(' · ') || 'Editado recentemente'
+      })()
+    : 'Toque para iniciar anotação'
 
   // Sempre abre a anotação/canvas — nunca vai para o perfil a partir daqui
   const handleClick = () => onOpen(patient)
