@@ -363,23 +363,26 @@ function DatePill({ value, onChange }) {
   const [hovered, setHovered] = useState(false)
   const inputRef = useRef(null)
 
-  // Formata "2025-05-17" → "17 mai 2025"
+  // Formata "2025-05-17" → "17 mai. 2025"
   const fmt = (iso) => {
-    if (!iso) return 'Sem data'
+    if (!iso) return 'Definir data'
     const [y, m, d] = iso.split('-')
-    const M = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez']
+    const M = ['jan.','fev.','mar.','abr.','mai.','jun.','jul.','ago.','set.','out.','nov.','dez.']
     return `${d} ${M[parseInt(m,10)-1]} ${y}`
   }
 
   useEffect(() => {
-    if (editing) { inputRef.current?.focus(); inputRef.current?.showPicker?.() }
+    if (editing) {
+      inputRef.current?.focus()
+      // Pequeno delay para showPicker() funcionar após foco
+      setTimeout(() => inputRef.current?.showPicker?.(), 80)
+    }
   }, [editing])
 
   const confirm = () => setEditing(false)
 
-  return editing ? (
-    /* Modo edição */
-    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginLeft: 'auto' }}>
+  if (editing) return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
       <input
         ref={inputRef}
         type="date"
@@ -388,51 +391,74 @@ function DatePill({ value, onChange }) {
         onBlur={confirm}
         onKeyDown={e => { if (e.key === 'Enter' || e.key === 'Escape') confirm() }}
         style={{
-          border: '1.5px solid #4A7C59',
-          borderRadius: 8,
-          padding: '3px 8px',
-          fontSize: 11,
+          border: '2px solid #4A7C59',
+          borderRadius: 10,
+          padding: '5px 12px',
+          fontSize: 13,
+          fontWeight: 600,
           color: '#2D4A38',
           background: '#EBF4EE',
           fontFamily: "'DM Sans', sans-serif",
           outline: 'none',
           cursor: 'pointer',
-          height: 26,
+          height: 34,
+          letterSpacing: '0.1px',
         }}
       />
       <button
         onMouseDown={e => { e.preventDefault(); confirm() }}
         style={{
-          width: 22, height: 22, borderRadius: 6,
+          width: 30, height: 30, borderRadius: 8,
           background: '#4A7C59', border: 'none',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           cursor: 'pointer', flexShrink: 0,
+          boxShadow: '0 2px 6px rgba(74,124,89,0.3)',
         }}
       >
-        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round">
           <polyline points="20 6 9 17 4 12"/>
         </svg>
       </button>
     </div>
-  ) : (
-    /* Modo exibição */
-    <div
-      style={{ display: 'flex', alignItems: 'center', gap: 5, marginLeft: 'auto', cursor: 'pointer', padding: '2px 6px', borderRadius: 6, transition: 'background 0.15s', background: hovered ? '#EBF4EE' : 'transparent' }}
+  )
+
+  return (
+    <button
+      onClick={() => setEditing(true)}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
-      onClick={() => setEditing(true)}
-      title="Clique para alterar a data"
+      title="Clique para alterar a data da sessão"
+      style={{
+        display: 'inline-flex', alignItems: 'center', gap: 7,
+        padding: '6px 14px',
+        borderRadius: 20,
+        background: hovered ? '#D4E8DA' : '#EBF4EE',
+        border: `1.5px solid ${hovered ? '#8BB89A' : '#D4E8DA'}`,
+        cursor: 'pointer',
+        transition: 'all 0.18s ease',
+        fontFamily: "'DM Sans', sans-serif",
+        boxShadow: hovered ? '0 2px 8px rgba(74,124,89,0.15)' : 'none',
+      }}
     >
-      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke={hovered ? '#4A7C59' : '#C0B9B0'} strokeWidth="2">
-        <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={hovered ? '#2D4A38' : '#5C8F6A'} strokeWidth="2">
+        <rect x="3" y="4" width="18" height="18" rx="2"/>
+        <line x1="16" y1="2" x2="16" y2="6"/>
+        <line x1="8" y1="2" x2="8" y2="6"/>
+        <line x1="3" y1="10" x2="21" y2="10"/>
       </svg>
-      <span style={{ fontSize: 11, color: hovered ? '#4A7C59' : '#B0ADA8', fontFamily: "'DM Sans', sans-serif", fontWeight: hovered ? 600 : 400, whiteSpace: 'nowrap' }}>
+      <span style={{
+        fontSize: 13, fontWeight: 700,
+        color: hovered ? '#1A2E20' : '#3D6B4A',
+        letterSpacing: '0.1px', whiteSpace: 'nowrap',
+      }}>
         {fmt(value)}
       </span>
-      <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke={hovered ? '#4A7C59' : '#C0B9B0'} strokeWidth="2" style={{ opacity: hovered ? 1 : 0, transition: 'opacity 0.15s' }}>
-        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke={hovered ? '#3D6B4A' : '#8BB89A'} strokeWidth="2"
+        style={{ transition: 'opacity 0.18s, transform 0.18s', opacity: hovered ? 1 : 0.5, transform: hovered ? 'scale(1.1)' : 'scale(1)' }}>
+        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
       </svg>
-    </div>
+    </button>
   )
 }
 
@@ -460,22 +486,37 @@ function TextPage({ page, isActive, onTextChange, onClick, sessionDate, onDateCh
         display: 'flex', flexDirection: 'column',
       }}
     >
+      {/* Header 3-colunas: label esq | data central | espaçador dir */}
       <div style={{
-        padding: '10px 24px 10px 32px',
+        padding: '10px 24px',
         borderBottom: '1px solid #F0EDE8',
-        display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0,
+        display: 'grid',
+        gridTemplateColumns: '1fr auto 1fr',
+        alignItems: 'center',
+        flexShrink: 0,
+        gap: 8,
       }}>
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#B0ADA8" strokeWidth="2" style={{ flexShrink: 0 }}>
-          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-          <polyline points="14 2 14 8 20 8"/>
-          <line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="13" y2="17"/>
-        </svg>
-        <span style={{ fontSize: 11, color: '#B0ADA8', fontFamily: "'DM Sans', sans-serif", flexShrink: 0 }}>
-          Anotação clínica
-        </span>
+        {/* Esquerda: ícone + label */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#C0B9B0" strokeWidth="2" style={{ flexShrink: 0 }}>
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+            <polyline points="14 2 14 8 20 8"/>
+            <line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="13" y2="17"/>
+          </svg>
+          <span style={{ fontSize: 10, color: '#C0B9B0', fontFamily: "'DM Sans', sans-serif", letterSpacing: '0.4px', textTransform: 'uppercase', fontWeight: 500 }}>
+            Anotação
+          </span>
+        </div>
+
+        {/* Centro: data destacada */}
         {onDateChange && (
-          <DatePill value={sessionDate} onChange={onDateChange} />
+          <div style={{ display: 'flex', justifyContent: 'center' }}>
+            <DatePill value={sessionDate} onChange={onDateChange} />
+          </div>
         )}
+
+        {/* Direita: espaçador vazio para equilibrar */}
+        <div />
       </div>
       <div
         ref={editorRef}
