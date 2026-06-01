@@ -357,8 +357,87 @@ function CanvasPage({ page, isActive, toolRef, colorRef, sizeRef, onStrokeEnd, o
   )
 }
 
+// ── DatePill — data editável da sessão ────────────────────────────────────────
+function DatePill({ value, onChange }) {
+  const [editing, setEditing] = useState(false)
+  const [hovered, setHovered] = useState(false)
+  const inputRef = useRef(null)
+
+  // Formata "2025-05-17" → "17 mai 2025"
+  const fmt = (iso) => {
+    if (!iso) return 'Sem data'
+    const [y, m, d] = iso.split('-')
+    const M = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez']
+    return `${d} ${M[parseInt(m,10)-1]} ${y}`
+  }
+
+  useEffect(() => {
+    if (editing) { inputRef.current?.focus(); inputRef.current?.showPicker?.() }
+  }, [editing])
+
+  const confirm = () => setEditing(false)
+
+  return editing ? (
+    /* Modo edição */
+    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginLeft: 'auto' }}>
+      <input
+        ref={inputRef}
+        type="date"
+        value={value || ''}
+        onChange={e => onChange(e.target.value)}
+        onBlur={confirm}
+        onKeyDown={e => { if (e.key === 'Enter' || e.key === 'Escape') confirm() }}
+        style={{
+          border: '1.5px solid #4A7C59',
+          borderRadius: 8,
+          padding: '3px 8px',
+          fontSize: 11,
+          color: '#2D4A38',
+          background: '#EBF4EE',
+          fontFamily: "'DM Sans', sans-serif",
+          outline: 'none',
+          cursor: 'pointer',
+          height: 26,
+        }}
+      />
+      <button
+        onMouseDown={e => { e.preventDefault(); confirm() }}
+        style={{
+          width: 22, height: 22, borderRadius: 6,
+          background: '#4A7C59', border: 'none',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          cursor: 'pointer', flexShrink: 0,
+        }}
+      >
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round">
+          <polyline points="20 6 9 17 4 12"/>
+        </svg>
+      </button>
+    </div>
+  ) : (
+    /* Modo exibição */
+    <div
+      style={{ display: 'flex', alignItems: 'center', gap: 5, marginLeft: 'auto', cursor: 'pointer', padding: '2px 6px', borderRadius: 6, transition: 'background 0.15s', background: hovered ? '#EBF4EE' : 'transparent' }}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      onClick={() => setEditing(true)}
+      title="Clique para alterar a data"
+    >
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke={hovered ? '#4A7C59' : '#C0B9B0'} strokeWidth="2">
+        <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+      </svg>
+      <span style={{ fontSize: 11, color: hovered ? '#4A7C59' : '#B0ADA8', fontFamily: "'DM Sans', sans-serif", fontWeight: hovered ? 600 : 400, whiteSpace: 'nowrap' }}>
+        {fmt(value)}
+      </span>
+      <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke={hovered ? '#4A7C59' : '#C0B9B0'} strokeWidth="2" style={{ opacity: hovered ? 1 : 0, transition: 'opacity 0.15s' }}>
+        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+      </svg>
+    </div>
+  )
+}
+
 // ── A4 text page (modo canvas, página de texto) ───────────────────────────────
-function TextPage({ page, isActive, onTextChange, onClick }) {
+function TextPage({ page, isActive, onTextChange, onClick, sessionDate, onDateChange }) {
   const editorRef = useRef(null)
 
   useEffect(() => {
@@ -382,18 +461,21 @@ function TextPage({ page, isActive, onTextChange, onClick }) {
       }}
     >
       <div style={{
-        padding: '16px 32px 8px',
+        padding: '10px 24px 10px 32px',
         borderBottom: '1px solid #F0EDE8',
         display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0,
       }}>
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#B0ADA8" strokeWidth="2">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#B0ADA8" strokeWidth="2" style={{ flexShrink: 0 }}>
           <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
           <polyline points="14 2 14 8 20 8"/>
           <line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="13" y2="17"/>
         </svg>
-        <span style={{ fontSize: 11, color: '#B0ADA8', fontFamily: "'DM Sans', sans-serif" }}>
-          Página de texto
+        <span style={{ fontSize: 11, color: '#B0ADA8', fontFamily: "'DM Sans', sans-serif", flexShrink: 0 }}>
+          Anotação clínica
         </span>
+        {onDateChange && (
+          <DatePill value={sessionDate} onChange={onDateChange} />
+        )}
       </div>
       <div
         ref={editorRef}
@@ -435,6 +517,23 @@ export default function AnnotationSession({
   // Sempre canvas — texto é apenas um tipo de página dentro do canvas
   const isCanvas = true
   const isText   = false
+
+  // ── Data da sessão clínica (editável pelo psicólogo) ─────────────────────
+  const todayIso = () => new Date().toISOString().slice(0, 10)
+  const metaKey  = sessionId ? `psicoai_meta_s${sessionId}` : null
+
+  const [sessionDate, setSessionDate] = useState(() => {
+    if (!metaKey) return todayIso()
+    try { const m = JSON.parse(localStorage.getItem(metaKey) || '{}'); return m.sessionDate || todayIso() }
+    catch { return todayIso() }
+  })
+
+  const handleDateChange = (iso) => {
+    setSessionDate(iso)
+    if (metaKey) {
+      try { localStorage.setItem(metaKey, JSON.stringify({ sessionDate: iso })) } catch {}
+    }
+  }
 
   // ── Estado compartilhado ───────────────────────────────────────────────────
   const [showEndModal, setShowEndModal] = useState(false)
@@ -867,6 +966,7 @@ export default function AnnotationSession({
       canvasDataJson: JSON.stringify({ pages: snaps }),
       textContent: allTextHtml ? allTextHtml.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim() : null,
       htmlContent: allTextHtml || null,
+      sessionDate,  // data clínica definida pelo psicólogo — usada pela IA para contexto longitudinal
     }
   }
 
@@ -1655,6 +1755,8 @@ export default function AnnotationSession({
                     isActive={activePage === i}
                     onTextChange={handlePageTextChange}
                     onClick={() => setActivePage(i)}
+                    sessionDate={sessionDate}
+                    onDateChange={handleDateChange}
                   />
                 : <CanvasPage
                     key={p.id} page={p}

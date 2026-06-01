@@ -644,12 +644,12 @@ export default function App() {
   }
 
   // Background analysis — runs without opening AiDrawer, shows a toast with action when done
-  const _runAnalysisInBackground = async ({ imageBase64, textContent, htmlContent, duration, sessionId, canvasDataJson, canvasTextContent }) => {
+  const _runAnalysisInBackground = async ({ imageBase64, textContent, htmlContent, duration, sessionId, canvasDataJson, canvasTextContent, sessionDate }) => {
     showToast('Análise iniciada em segundo plano…', 'info', { duration: 4000 })
     startProgress()
     try {
       if (sessionId) {
-        await api.finishSession(sessionId, { textContent, htmlContent, imageBase64, canvasDataJson, canvasTextContent, durationSeconds: duration })
+        await api.finishSession(sessionId, { textContent, htmlContent, imageBase64, canvasDataJson, canvasTextContent, durationSeconds: duration, sessionDate })
       }
       const effectiveId = sessionId || ('s-mock-' + Date.now())
       const data = await api.createAnalysis({ sessionId: effectiveId, additionalSessionIds: [], template: null, patientId: currentPatient?.id })
