@@ -674,7 +674,7 @@ export default function App() {
   // destination === 'here'     → run analysis immediately, AiDrawer opens over current view
   // destination === 'analyses' → navigate to 'anotacoes', run analysis, AiDrawer opens there
   // destination === 'later'    → run in background, toast when done
-  const handleAnalyze = ({ imageBase64, textContent, htmlContent, duration, canvasDataJson, canvasTextContent, destination }) => {
+  const handleAnalyze = ({ imageBase64, textContent, htmlContent, duration, canvasDataJson, canvasTextContent, destination, sessionDate }) => {
     const sid = canvasViewOnly ? viewOnlySessionId : activeSessionRef.current
     setSession(null)
     setActiveSessionType(null)
@@ -684,20 +684,19 @@ export default function App() {
     setViewOnlySessionId(null)
 
     if (destination === 'here') {
-      handleAnalysisConfirm({ imageBase64, textContent, htmlContent, duration, sessionId: sid, canvasDataJson, canvasTextContent })
+      handleAnalysisConfirm({ imageBase64, textContent, htmlContent, duration, sessionId: sid, canvasDataJson, canvasTextContent, sessionDate })
     } else if (destination === 'analyses') {
       setCurrentView('cadernos')
-      handleAnalysisConfirm({ imageBase64, textContent, htmlContent, duration, sessionId: sid, canvasDataJson, canvasTextContent })
+      handleAnalysisConfirm({ imageBase64, textContent, htmlContent, duration, sessionId: sid, canvasDataJson, canvasTextContent, sessionDate })
     } else if (destination === 'later') {
-      _runAnalysisInBackground({ imageBase64, textContent, htmlContent, duration, sessionId: sid, canvasDataJson, canvasTextContent })
+      _runAnalysisInBackground({ imageBase64, textContent, htmlContent, duration, sessionId: sid, canvasDataJson, canvasTextContent, sessionDate })
     } else {
-      // Legacy flow: AnalyzeSessionsModal lets the user pick additional sessions before confirming
-      setPendingAnalysis({ imageBase64, textContent, htmlContent, duration, sessionId: sid, canvasDataJson, canvasTextContent })
+      setPendingAnalysis({ imageBase64, textContent, htmlContent, duration, sessionId: sid, canvasDataJson, canvasTextContent, sessionDate })
     }
   }
 
   // Step 2: called by AnalyzeSessionsModal after the psychologist selects sessions and clicks confirm.
-  const handleAnalysisConfirm = async ({ imageBase64, textContent, htmlContent, duration, sessionId, additionalSessionIds = [], template = null, canvasDataJson, canvasTextContent }) => {
+  const handleAnalysisConfirm = async ({ imageBase64, textContent, htmlContent, duration, sessionId, additionalSessionIds = [], template = null, canvasDataJson, canvasTextContent, sessionDate }) => {
     setPendingAnalysis(null)
     setAiDrawerOpen(true)
     setAnalysisResult(null)
@@ -708,7 +707,7 @@ export default function App() {
 
     try {
       if (sessionId) {
-        await api.finishSession(sessionId, { textContent, htmlContent, imageBase64, canvasDataJson, canvasTextContent, durationSeconds: duration })
+        await api.finishSession(sessionId, { textContent, htmlContent, imageBase64, canvasDataJson, canvasTextContent, durationSeconds: duration, sessionDate })
       }
       const effectiveSessionId = sessionId || ('s-mock-' + Date.now())
       const data = await api.createAnalysis({ sessionId: effectiveSessionId, additionalSessionIds, template, patientId: currentPatient?.id })
@@ -771,7 +770,7 @@ export default function App() {
   }
 
   // Called when the user closes the session without requesting AI analysis
-  const handleSessionClose = async ({ textContent, htmlContent, duration, canvasDataJson, canvasTextContent } = {}) => {
+  const handleSessionClose = async ({ textContent, htmlContent, duration, canvasDataJson, canvasTextContent, sessionDate } = {}) => {
     const sid = activeSessionRef.current
     const wasViewOnly = canvasViewOnly
     setSession(null)
@@ -784,7 +783,7 @@ export default function App() {
 
     // Finish session in background — skip for view-only (sessão histórica já encerrada)
     if (sid && !wasViewOnly) {
-      api.finishSession(sid, { textContent, htmlContent, canvasDataJson, canvasTextContent, durationSeconds: duration }).catch(() => {})
+      api.finishSession(sid, { textContent, htmlContent, canvasDataJson, canvasTextContent, durationSeconds: duration, sessionDate }).catch(() => {})
     }
   }
 

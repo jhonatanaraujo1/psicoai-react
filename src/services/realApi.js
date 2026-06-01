@@ -573,15 +573,17 @@ export const api = {
 
   // Anotações — listagem global (backend endpoint a ser implementado)
   async getRecentAnnotations({ search = '', patientId = '' } = {}) {
+    const normalize = (s) => ({
+      ...s,
+      canvasDataJson: s.type === 'canvas' ? (s.canvasData ?? true) : null,
+    })
     if (patientId) {
       const res = await get(`/api/v1/patients/${patientId}/sessions`, { page: 0, size: 50 })
-      return (res.content || []).map(s => ({
-        ...s,
-        patientId,
-        canvasDataJson: s.type === 'canvas' ? (s.canvasData ?? true) : null,
-      }))
+      return (res.content || []).map(normalize)
     }
-    return [] // listagem global requer endpoint futuro
+    // Global: usa o novo endpoint /api/v1/sessions/finished
+    const res = await get('/api/v1/sessions/finished', { page: 0, size: 100 })
+    return (res?.content || []).map(normalize)
   },
 
   // Documents
