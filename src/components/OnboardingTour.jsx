@@ -1,45 +1,64 @@
 /**
- * OnboardingTour — Spotlight tour nativo iOS
- * Foca nos elementos reais da UI com efeito de spotlight via box-shadow.
- * 4 passos: welcome → pacientes → cadernos → pronto.
+ * OnboardingTour — sidebar-focused, card compacto ao lado do item
+ * Cada passo aponta para um item da sidebar com spotlight + card pequeno.
+ * Desktop: card à direita da sidebar, alinhado verticalmente ao item.
+ * Mobile:  card centralizado acima do bottom nav.
  */
 import { useState, useEffect, useRef } from 'react'
 
-const PAD    = 10   // padding ao redor do elemento destacado
-const RADIUS = 14   // border-radius do spotlight
+const SIDEBAR_W = 252   // var(--sw)
+const PAD       = 6     // padding ao redor do spotlight
+const RADIUS    = 10
 
 const STEPS = [
   {
-    id: 'welcome',
-    selector: null,
-    badge: 'PsicoAI',
-    title: 'Seu segundo olhar clínico',
-    desc: 'O assistente feito para psicólogos. Prontuários, anotações e análise de IA — num lugar só, criptografado.',
-    cta: 'Mostrar como funciona',
+    id: 'agenda',
+    selector: '[data-tour="nav-agenda"]',
+    icon: '📅',
+    title: 'Agenda',
+    desc: 'Suas sessões do dia. Crie eventos e gerencie a semana.',
   },
   {
-    id: 'patients',
+    id: 'pacientes',
     selector: '[data-tour="nav-pacientes"]',
-    badge: 'Pacientes',
-    title: 'Cada paciente, uma história viva',
-    desc: 'Cadastre, acompanhe e visualize diagnósticos, documentos e histórico completo de cada paciente.',
-    cta: 'Próximo',
+    icon: '👤',
+    title: 'Pacientes',
+    desc: 'Cadastre, acompanhe e acesse o histórico completo.',
   },
   {
-    id: 'notes',
+    id: 'cadernos',
     selector: '[data-tour="nav-cadernos"]',
-    badge: 'Cadernos',
-    title: 'Anote do jeito que você pensa',
-    desc: 'Canvas livre ou texto estruturado. Encerre o atendimento e acione a IA — hipóteses DSM-5 em segundos.',
-    cta: 'Próximo',
+    icon: '✏️',
+    title: 'Anotações',
+    desc: 'Canvas livre ou texto. Encerre a sessão e acione a IA.',
   },
   {
-    id: 'ready',
-    selector: null,
-    badge: 'Pronto',
-    title: 'A 3 cliques do primeiro insight',
-    desc: 'Cadastre um paciente → inicie um atendimento → acione a IA. Começa aqui.',
-    cta: 'Começar a usar',
+    id: 'insights',
+    selector: '[data-tour="nav-insights"]',
+    icon: '🧠',
+    title: 'Análises IA',
+    desc: 'Hipóteses DSM-5/CID-11 com probabilidade após cada sessão.',
+  },
+  {
+    id: 'financeiro',
+    selector: '[data-tour="nav-financeiro"]',
+    icon: '💰',
+    title: 'Financeiro',
+    desc: 'Cobranças, recibos e controle de inadimplência.',
+  },
+  {
+    id: 'formularios',
+    selector: '[data-tour="nav-formularios"]',
+    icon: '📋',
+    title: 'Formulários',
+    desc: 'PHQ-9, Beck, TCLE — envie direto ao paciente.',
+  },
+  {
+    id: 'config',
+    selector: '[data-tour="nav-configuracoes"]',
+    icon: '⚙️',
+    title: 'Configurações',
+    desc: 'Perfil, plano, preferências e integrações.',
     isLast: true,
   },
 ]
@@ -47,16 +66,14 @@ const STEPS = [
 export default function OnboardingTour({ isOpen, onClose }) {
   const [idx,  setIdx]  = useState(0)
   const [rect, setRect] = useState(null)
-  const [fade, setFade] = useState(true)
+  const [vis,  setVis]  = useState(true)
   const touchX = useRef(0)
   const touchY = useRef(0)
 
-  // Reset ao abrir
   useEffect(() => {
-    if (isOpen) { setIdx(0); setFade(true) }
+    if (isOpen) { setIdx(0); setVis(true) }
   }, [isOpen])
 
-  // Mede o elemento-alvo do passo atual
   useEffect(() => {
     if (!isOpen) return
     const step = STEPS[idx]
@@ -70,7 +87,7 @@ export default function OnboardingTour({ isOpen, onClose }) {
     }
 
     measure()
-    const t = setTimeout(measure, 120) // retry após render
+    const t = setTimeout(measure, 150)
     window.addEventListener('resize', measure)
     return () => { clearTimeout(t); window.removeEventListener('resize', measure) }
   }, [idx, isOpen])
@@ -79,33 +96,27 @@ export default function OnboardingTour({ isOpen, onClose }) {
 
   const step   = STEPS[idx]
   const isLast = !!step.isLast
-  const vw     = window.innerWidth
-  const vh     = window.innerHeight
+  const isMobile = window.innerWidth < 641
+  const vw = window.innerWidth
+  const vh = window.innerHeight
 
   const go = (next) => {
     if (next < 0 || next >= STEPS.length) return
-    setFade(false)
-    setTimeout(() => { setIdx(next); setFade(true) }, 90)
-  }
-
-  const dismiss = (permanent = false) => {
-    if (permanent) {
-      try { localStorage.setItem('psicoai_onboarding_seen', 'true') } catch {}
-    }
-    setIdx(0); onClose()
+    setVis(false)
+    setTimeout(() => { setIdx(next); setVis(true) }, 80)
   }
 
   const finish = () => {
     try { localStorage.setItem('psicoai_onboarding_seen', 'true') } catch {}
     setIdx(0); onClose()
   }
-
-  // Swipe horizontal
-  const onTouchStart = (e) => {
-    touchX.current = e.touches[0].clientX
-    touchY.current = e.touches[0].clientY
+  const skip = () => {
+    try { localStorage.setItem('psicoai_onboarding_seen', 'true') } catch {}
+    setIdx(0); onClose()
   }
-  const onTouchEnd = (e) => {
+
+  const onTouchStart = (e) => { touchX.current = e.touches[0].clientX; touchY.current = e.touches[0].clientY }
+  const onTouchEnd   = (e) => {
     const dx = e.changedTouches[0].clientX - touchX.current
     const dy = e.changedTouches[0].clientY - touchY.current
     if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 44) {
@@ -114,216 +125,190 @@ export default function OnboardingTour({ isOpen, onClose }) {
     }
   }
 
-  // Posição do card: acima ou abaixo do spotlight
-  const GUTTER = 14
-  // Max-width fixo + centrado horizontalmente (não invade sidebar nem borda)
-  const cardBase = {
-    position: 'fixed',
-    left: '50%',
-    transform: 'translateX(-50%)',
-    width: `min(460px, calc(100vw - 28px))`,
-    zIndex: 800,
-  }
-  let cardPos = {}
+  // ── Posição do card ──────────────────────────────────────────────────────
+  const CARD_W   = isMobile ? Math.min(320, vw - 24) : 280
+  const CARD_GAP = 16
+
+  let cardStyle = {}
+
   if (rect) {
-    const midY = rect.y + rect.h / 2
-    if (midY > vh * 0.55) {
-      // Spotlight na metade inferior → card acima
-      cardPos = { bottom: vh - (rect.y - PAD) + GUTTER }
+    if (isMobile) {
+      // Mobile: centralizado horizontalmente, acima do item (que está no bottom nav)
+      const cx = rect.x + rect.w / 2
+      cardStyle = {
+        position: 'fixed',
+        bottom: vh - rect.y + CARD_GAP,
+        left: Math.max(12, Math.min(cx - CARD_W / 2, vw - CARD_W - 12)),
+        width: CARD_W,
+      }
     } else {
-      // Spotlight na metade superior → card abaixo
-      cardPos = { top: rect.y + rect.h + PAD + GUTTER }
+      // Desktop: à direita da sidebar, alinhado verticalmente ao item
+      const itemMidY = rect.y + rect.h / 2
+      // Card aprox. 100px de altura — centraliza verticalmente no item
+      const cardH = 110
+      let top = itemMidY - cardH / 2
+      // Mantém dentro da viewport
+      top = Math.max(16, Math.min(top, vh - cardH - 16))
+      cardStyle = {
+        position: 'fixed',
+        left: SIDEBAR_W + CARD_GAP,
+        top,
+        width: CARD_W,
+      }
     }
   } else {
-    // Sem spotlight → terço superior, longe do banner LGPD na base
-    cardPos = { top: Math.round(vh * 0.18) }
+    // Sem rect: centro da tela
+    cardStyle = {
+      position: 'fixed',
+      left: '50%',
+      top: '50%',
+      transform: 'translate(-50%, -50%)',
+      width: CARD_W,
+    }
   }
 
-  const spreadPx = Math.round(Math.max(vw, vh) * 2.5)
+  const spreadPx = Math.round(Math.max(vw, vh) * 2.8)
 
   return (
     <>
       <style>{`
-        @keyframes ob-spot-in { from{opacity:0} to{opacity:1} }
-        @keyframes ob-card-in { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
-        .ob-card { animation: ob-card-in 0.22s cubic-bezier(0.4,0,0.2,1) }
-        .ob-spot { animation: ob-spot-in 0.18s ease }
+        @keyframes ob-in { from{opacity:0;transform:translateY(4px)} to{opacity:1;transform:translateY(0)} }
+        @keyframes ob-spot { from{opacity:0} to{opacity:1} }
+        .ob-card-new { animation: ob-in 0.18s cubic-bezier(0.4,0,0.2,1) }
+        .ob-spot-new { animation: ob-spot 0.15s ease }
       `}</style>
 
-      {/* ── Overlay / Spotlight ────────────────────────────────────── */}
+      {/* Overlay / spotlight */}
       {rect ? (
-        /* Box-shadow cria o escurecimento ao redor do spotlight */
         <div
-          className="ob-spot"
+          className="ob-spot-new"
           style={{
             position: 'fixed',
-            left:  rect.x - PAD,
-            top:   rect.y - PAD,
-            width: rect.w + PAD * 2,
+            left:   rect.x - PAD,
+            top:    rect.y - PAD,
+            width:  rect.w + PAD * 2,
             height: rect.h + PAD * 2,
             borderRadius: RADIUS,
             zIndex: 798,
-            boxShadow: `0 0 0 ${spreadPx}px rgba(0,0,0,0.60)`,
-            border: '2px solid rgba(92,143,106,0.55)',
+            boxShadow: `0 0 0 ${spreadPx}px rgba(0,0,0,0.65)`,
+            border: '1.5px solid rgba(92,143,106,0.6)',
             pointerEvents: 'none',
-            transition: 'left 0.28s ease, top 0.28s ease, width 0.28s ease, height 0.28s ease',
+            transition: 'left 0.22s ease, top 0.22s ease, width 0.22s ease, height 0.22s ease',
           }}
         />
       ) : (
-        /* Sem spotlight: overlay sólido */
-        <div
-          style={{
-            position: 'fixed', inset: 0, zIndex: 798,
-            background: 'rgba(0,0,0,0.60)',
-          }}
-          onClick={(e) => e.stopPropagation()}
-        />
+        <div style={{ position: 'fixed', inset: 0, zIndex: 798, background: 'rgba(0,0,0,0.65)' }}
+             onClick={e => e.stopPropagation()} />
       )}
+      {rect && <div style={{ position: 'fixed', inset: 0, zIndex: 797 }} onClick={e => e.stopPropagation()} />}
 
-      {/* ── Bloqueador de cliques fora da área (quando há spotlight) ── */}
-      {rect && (
-        <div
-          style={{ position: 'fixed', inset: 0, zIndex: 797, cursor: 'default' }}
-          onClick={(e) => e.stopPropagation()}
-        />
-      )}
-
-      {/* ── Tour card ──────────────────────────────────────────────── */}
+      {/* Tour card compacto */}
       <div
-        key={`card-${idx}`}
-        className="ob-card"
-        style={{ ...cardBase, ...cardPos, opacity: fade ? 1 : 0, transition: 'opacity 0.09s' }}
+        key={`ob-${idx}`}
+        className="ob-card-new"
+        style={{
+          ...cardStyle,
+          zIndex: 800,
+          opacity: vis ? 1 : 0,
+          transition: 'opacity 0.08s',
+          fontFamily: "'DM Sans', sans-serif",
+        }}
         onTouchStart={onTouchStart}
         onTouchEnd={onTouchEnd}
       >
-        {/* Pular — sempre visível */}
-        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 8 }}>
-          <button
-            onClick={() => dismiss(true)}
-            style={{
-              background: 'rgba(255,255,255,0.10)',
-              border: '1px solid rgba(255,255,255,0.12)',
-              color: 'rgba(255,255,255,0.45)',
-              fontSize: 11, fontWeight: 600, letterSpacing: '0.2px',
-              padding: '4px 14px', borderRadius: 20,
-              cursor: 'pointer', fontFamily: "'DM Sans', sans-serif",
-            }}
-          >
-            Pular
-          </button>
-        </div>
-
-        {/* Card body */}
         <div style={{
           background: '#1A2E20',
-          border: '1px solid rgba(255,255,255,0.08)',
-          borderRadius: 20,
-          padding: '20px 20px 16px',
-          boxShadow: '0 12px 48px rgba(0,0,0,0.5)',
-          fontFamily: "'DM Sans', sans-serif",
+          border: '1px solid rgba(92,143,106,0.25)',
+          borderLeft: '3px solid #5C8F6A',
+          borderRadius: 14,
+          padding: '14px 16px 12px',
+          boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
         }}>
-          {/* Badge + counter */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+
+          {/* Header: ícone + título + contador */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+            <span style={{ fontSize: 16, lineHeight: 1, flexShrink: 0 }}>{step.icon}</span>
             <span style={{
-              fontSize: 10, fontWeight: 700, letterSpacing: '0.8px', textTransform: 'uppercase',
-              background: 'rgba(92,143,106,0.22)', border: '1px solid rgba(92,143,106,0.3)',
-              color: '#9DC4A8', borderRadius: 20, padding: '3px 10px',
+              fontFamily: "'Fraunces', serif",
+              fontSize: 15, fontWeight: 400, color: '#fff',
+              flex: 1, lineHeight: 1.2,
             }}>
-              {step.badge}
+              {step.title}
             </span>
-            <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.28)', fontWeight: 600, letterSpacing: '0.3px' }}>
-              {idx + 1} / {STEPS.length}
+            <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', fontWeight: 600, flexShrink: 0 }}>
+              {idx + 1}/{STEPS.length}
             </span>
           </div>
 
-          {/* Título */}
-          <div style={{
-            fontFamily: "'Fraunces', serif",
-            fontSize: 22, fontWeight: 400, color: '#fff',
-            lineHeight: 1.2, marginBottom: 8, letterSpacing: '-0.2px',
-          }}>
-            {step.title}
-          </div>
-
-          {/* Descrição */}
+          {/* Descrição curta */}
           <p style={{
-            fontSize: 13.5, color: 'rgba(255,255,255,0.55)',
-            lineHeight: 1.65, margin: '0 0 16px',
+            fontSize: 12, color: 'rgba(255,255,255,0.5)',
+            lineHeight: 1.5, margin: '0 0 12px',
           }}>
             {step.desc}
           </p>
 
-          {/* Dots */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 14 }}>
-            {STEPS.map((_, i) => (
-              <button
-                key={i}
-                onClick={() => go(i)}
-                style={{
-                  height: 4, borderRadius: 2,
-                  width: i === idx ? 20 : 6,
-                  background: i === idx ? '#5C8F6A' : 'rgba(255,255,255,0.18)',
-                  transition: 'all 0.25s cubic-bezier(0.4,0,0.2,1)',
-                  border: 'none', cursor: 'pointer', padding: 0,
-                }}
-                aria-label={`Passo ${i + 1}`}
-              />
-            ))}
+          {/* Progress bar fina */}
+          <div style={{ height: 2, background: 'rgba(255,255,255,0.08)', borderRadius: 1, marginBottom: 12 }}>
+            <div style={{
+              height: '100%', borderRadius: 1,
+              width: `${((idx + 1) / STEPS.length) * 100}%`,
+              background: '#5C8F6A',
+              transition: 'width 0.3s ease',
+            }} />
           </div>
 
           {/* Botões */}
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-            {idx > 0 ? (
+          <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+            <button
+              onClick={skip}
+              style={{
+                fontSize: 11, color: 'rgba(255,255,255,0.22)',
+                background: 'none', border: 'none', cursor: 'pointer',
+                padding: '0 2px', fontFamily: "'DM Sans', sans-serif",
+                flexShrink: 0,
+              }}
+            >
+              Pular
+            </button>
+
+            <div style={{ flex: 1 }} />
+
+            {idx > 0 && (
               <button
                 onClick={() => go(idx - 1)}
                 style={{
-                  width: 42, height: 42, borderRadius: 10,
-                  border: '1.5px solid rgba(255,255,255,0.12)',
+                  width: 32, height: 32, borderRadius: 8,
+                  border: '1px solid rgba(255,255,255,0.10)',
                   background: 'rgba(255,255,255,0.04)',
-                  color: 'rgba(255,255,255,0.45)',
+                  color: 'rgba(255,255,255,0.4)',
                   cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  flexShrink: 0, fontFamily: "'DM Sans', sans-serif",
+                  flexShrink: 0,
                 }}
               >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
                   <polyline points="15 18 9 12 15 6"/>
                 </svg>
-              </button>
-            ) : (
-              <button
-                onClick={() => dismiss(true)}
-                style={{
-                  fontSize: 11.5, color: 'rgba(255,255,255,0.25)',
-                  background: 'none', border: 'none', cursor: 'pointer',
-                  padding: 0, textDecoration: 'underline',
-                  textDecorationColor: 'rgba(255,255,255,0.12)',
-                  fontFamily: "'DM Sans', sans-serif",
-                  flex: 1, textAlign: 'left',
-                }}
-              >
-                Não exibir novamente
               </button>
             )}
 
             <button
               onClick={isLast ? finish : () => go(idx + 1)}
               style={{
-                flex: 1, height: 44,
-                background: 'linear-gradient(135deg, #5C8F6A 0%, #4A7C59 100%)',
-                color: '#fff', border: 'none',
-                borderRadius: 12, fontSize: 13.5, fontWeight: 700,
+                height: 32, padding: '0 14px',
+                background: 'linear-gradient(135deg, #5C8F6A, #4A7C59)',
+                color: '#fff', border: 'none', borderRadius: 8,
+                fontSize: 12, fontWeight: 700,
                 cursor: 'pointer', fontFamily: "'DM Sans', sans-serif",
-                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-                letterSpacing: '0.1px',
+                display: 'flex', alignItems: 'center', gap: 4,
+                flexShrink: 0,
               }}
-              onMouseDown={e => e.currentTarget.style.transform = 'scale(0.97)'}
-              onMouseUp={e => e.currentTarget.style.transform = 'scale(1)'}
-              onTouchStart={e => { e.stopPropagation(); e.currentTarget.style.transform = 'scale(0.97)' }}
-              onTouchEnd={e => { e.stopPropagation(); e.currentTarget.style.transform = 'scale(1)'; isLast ? finish() : go(idx + 1) }}
+              onTouchStart={e => { e.stopPropagation(); e.currentTarget.style.opacity = '0.85' }}
+              onTouchEnd={e => { e.stopPropagation(); e.currentTarget.style.opacity = '1'; isLast ? finish() : go(idx + 1) }}
             >
-              {step.cta}
+              {isLast ? 'Começar' : 'Próximo'}
               {!isLast && (
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
                   <line x1="5" y1="12" x2="19" y2="12"/>
                   <polyline points="12 5 19 12 12 19"/>
                 </svg>

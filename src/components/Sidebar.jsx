@@ -84,6 +84,7 @@ export default function Sidebar({ currentView, setCurrentView, isOpen, onClose, 
   const navItem = (id, label) => (
     <button
       key={id}
+      data-tour={`nav-${id}`}
       className={`nav-item${currentView === id ? ' active' : ''}`}
       onClick={() => nav(id)}
       title={label}
@@ -149,12 +150,15 @@ export default function Sidebar({ currentView, setCurrentView, isOpen, onClose, 
         {currentUser?.plan && (
           <div className="sb-plan-info" style={{ marginTop: '8px', padding: '6px 8px', background: 'rgba(255,255,255,0.06)', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.45)' }}>
-              {currentUser.plan === 'clinico' ? 'Plano Clínico' : 'Plano Base'}
+              {{ especialista: 'Especialista', clinico: 'Especialista', consultorio: 'Consultório', base: 'Consultório' }[currentUser.plan] || 'Plano'}
             </span>
-            {currentUser.analysesRemaining > 0 && (
+            {currentUser.plan !== 'especialista' && currentUser.plan !== 'clinico' && currentUser.analysesRemaining > 0 && currentUser.analysesRemaining < 2147483647 && (
               <span style={{ fontSize: '11px', color: 'var(--g300)', fontWeight: '600' }}>
                 {currentUser.analysesRemaining} análises
               </span>
+            )}
+            {(currentUser.plan === 'especialista' || currentUser.plan === 'clinico') && (
+              <span style={{ fontSize: '11px', color: 'var(--g300)', fontWeight: '600' }}>∞</span>
             )}
           </div>
         )}
