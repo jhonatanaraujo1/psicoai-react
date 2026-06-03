@@ -849,6 +849,7 @@ export default function App() {
             onMinimize={handleMinimizeCanvas}
             onAnalyze={handleAnalyze}
             onAutosave={(id, data) => api.autosaveSession?.(id, data)}
+            onFetchSession={async (id) => { try { const s = await api.getSession(id); return s?.canvasData ?? null } catch { return null } }}
           />
         </Suspense>
         {/* AnalyzeSessionsModal e AiDrawer aparecem após "Analisar com IA" no canvas */}

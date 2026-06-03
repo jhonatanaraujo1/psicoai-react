@@ -700,6 +700,7 @@ export default function AnnotationSession({
   onMinimize,
   onAnalyze,
   onAutosave,
+  onFetchSession,           // async (sessionId) => canvasData string | null — fallback quando localStorage vazio
   sessionId,
   viewOnly = false,         // true → visualização histórica: sem autosave, sem badge
 }) {
@@ -797,34 +798,54 @@ export default function AnnotationSession({
     if (!isOpen || !patient?.id) return
     setIsDirty(false)
     setShowEndModal(false)
-    penDetectedRef.current = false // C-1: reset palm rejection on every new session
+    penDetectedRef.current = false
 
-    // Carrega rascunho do localStorage — prioridade: sessionId > patientId (legado)
-    const saved = loadCanvasPages(sessionId, patient.id)
-    const restored = saved
-      ? saved.map(p => ({ id: p.id, pageType: p.pageType || 'draw', canvasRef: { current: null }, dataUrl: p.dataUrl || null, textHtml: p.textHtml || null }))
-      : []
+    const init = async () => {
+      // 1. Tenta localStorage primeiro (rápido, sem latência)
+      let saved = loadCanvasPages(sessionId, patient.id)
 
-    if (initialPageType && restored.length > 0) {
-      // Nova anotação sobre histórico existente: adiciona nova página ao final
-      const nova = { id: newPageId(), pageType: initialPageType, canvasRef: { current: null }, dataUrl: null, textHtml: null }
-      const all = [...restored, nova]
-      setPages(all)
-      setActivePage(all.length - 1)
-      setTimeout(() => {
-        const c = mainScrollRef.current
-        if (c) c.scrollTo({ top: c.scrollHeight, behavior: 'smooth' })
-      }, 200)
-    } else if (restored.length > 0) {
-      // Recovery/histórico: exibe páginas existentes do início
-      setPages(restored)
-      setActivePage(0)
-    } else {
-      // Primeiro acesso: nova página em branco do tipo solicitado
-      const nova = { id: newPageId(), pageType: initialPageType || 'draw', canvasRef: { current: null }, dataUrl: null, textHtml: null }
-      setPages([nova])
-      setActivePage(0)
+      // 2. Fallback: se localStorage vazio E há sessionId, busca canvasData do backend
+      //    Isso garante recuperação em outros dispositivos ou após limpeza do browser
+      if (!saved && sessionId && onFetchSession) {
+        try {
+          const raw = await onFetchSession(sessionId)
+          if (raw) {
+            const parsed = (() => { try { return JSON.parse(raw) } catch { return null } })()
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              saved = parsed
+              // Migra para localStorage para próximos acessos ficarem rápidos
+              saveCanvasPages(sessionId, patient.id, saved)
+            }
+          }
+        } catch { /* backend indisponível — continua sem dados */ }
+      }
+
+      const restored = saved
+        ? saved.map(p => ({ id: p.id, pageType: p.pageType || 'draw', canvasRef: { current: null }, dataUrl: p.dataUrl || null, textHtml: p.textHtml || null }))
+        : []
+
+      if (initialPageType && restored.length > 0) {
+        // Nova anotação sobre histórico existente: adiciona nova página ao final
+        const nova = { id: newPageId(), pageType: initialPageType, canvasRef: { current: null }, dataUrl: null, textHtml: null }
+        const all = [...restored, nova]
+        setPages(all)
+        setActivePage(all.length - 1)
+        setTimeout(() => {
+          const c = mainScrollRef.current
+          if (c) c.scrollTo({ top: c.scrollHeight, behavior: 'smooth' })
+        }, 200)
+      } else if (restored.length > 0) {
+        setPages(restored)
+        setActivePage(0)
+      } else {
+        // Primeiro acesso ou sem dados recuperáveis: nova página em branco
+        const nova = { id: newPageId(), pageType: initialPageType || 'draw', canvasRef: { current: null }, dataUrl: null, textHtml: null }
+        setPages([nova])
+        setActivePage(0)
+      }
     }
+
+    init()
   }, [isOpen, patient?.id, initialPageType]) // eslint-disable-line
 
   // ── Autosave backend — debounce 6s + flush no unload/hidden ──────────────────
@@ -843,11 +864,17 @@ export default function AnnotationSession({
       const textContent = htmlContent
         ? (new DOMParser().parseFromString(htmlContent, 'text/html').body.textContent || '').slice(0, 80_000)
         : null
-      // Serializa canvas pages para JSON (sem as imagens — pesadas demais para autosave)
-      const canvasData = JSON.stringify(pagesSnapshot.map(p => ({
-        id: p.id, pageType: p.pageType, textHtml: p.textHtml || null
-        // dataUrl omitido no autosave — só vai no save final
-      }))).slice(0, 4_000_000)
+      // Serializa canvas pages para o backend — inclui dataUrl (PNG) para não perder desenhos
+      // Se o payload com imagens exceder 4MB, envia sem imagens (melhor do que truncar JSON no meio)
+      const pagesWithImages = JSON.stringify(pagesSnapshot.map(p => ({
+        id: p.id, pageType: p.pageType, textHtml: p.textHtml || null,
+        dataUrl: p.dataUrl || null,  // PNG do desenho — essencial para não perder em crashes
+      })))
+      const pagesStructureOnly = JSON.stringify(pagesSnapshot.map(p => ({
+        id: p.id, pageType: p.pageType, textHtml: p.textHtml || null,
+        // dataUrl omitido apenas quando payload total > 4MB
+      })))
+      const canvasData = pagesWithImages.length <= 4_000_000 ? pagesWithImages : pagesStructureOnly
       await onAutosave(sessionIdRef.current, { textContent, htmlContent, canvasData })
       isDirtyForBackend.current = false  // backend está sincronizado
       setBackendSyncStatus('saved')

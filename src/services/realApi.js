@@ -324,6 +324,10 @@ export const api = {
     return res
   },
 
+  async getSession(sessionId) {
+    return get(`/api/v1/sessions/${sessionId}`)
+  },
+
   async getTodaySessions() {
     return get('/api/v1/sessions/today')
   },
