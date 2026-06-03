@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { auth } from '../services/index.js'
 
 const ESPECIALIDADES = [
   'Psicologia Clínica', 'Neuropsicologia', 'Psicologia Hospitalar',
@@ -84,6 +85,7 @@ export default function RegisterFlow({ onLogin, onBack }) {
   const [loading, setLoading] = useState(false)
   const [showPass, setShowPass] = useState(false)
   const [errors, setErrors] = useState({})
+  const [registeredUser, setRegisteredUser] = useState(null)
   const [form, setForm] = useState({
     name: '', crp: '', email: '', password: '',
     specialty: '', approach: '', clinicName: '', city: '',
@@ -117,39 +119,32 @@ export default function RegisterFlow({ onLogin, onBack }) {
       if (!form.approach) e.approach = 'Selecione sua abordagem principal'
       if (Object.keys(e).length) { setErrors(e); return }
       setLoading(true)
-      await new Promise(r => setTimeout(r, 1100))
-      setLoading(false)
-      fadeAndGo(() => setStep(3))
+      try {
+        const result = await auth.register({
+          name: form.name.trim(),
+          email: form.email.trim().toLowerCase(),
+          password: form.password,
+          crp: form.crp.trim() || undefined,
+        })
+        setRegisteredUser(result.user)
+        fadeAndGo(() => setStep(3))
+      } catch (err) {
+        const msg = err.message || 'Erro ao criar conta. Tente novamente.'
+        if (msg.toLowerCase().includes('email') || msg.toLowerCase().includes('cadastrado')) {
+          setErrors({ _global: msg })
+          fadeAndGo(() => setStep(1))
+        } else {
+          setErrors({ _global: msg })
+        }
+      } finally {
+        setLoading(false)
+      }
     }
   }
 
   const handleEnter = () => {
-    const user = {
-      id: 'usr-' + Date.now(),
-      email: form.email,
-      name: form.name,
-      crp: form.crp || '',
-      specialty: form.specialty,
-      clinicName: form.clinicName || `Consultório ${firstName}`,
-      plan: 'base',
-      analysesRemaining: 3,
-      analysesUsedThisMonth: 0,
-      subscriptionStatus: 'trial',
-      trialDaysRemaining: 14,
-      preferences: {
-        defaultApproach: form.approach,
-        defaultSessionDuration: 50,
-        defaultSessionValue: 200,
-        workingHours: { start: 8, end: 18 },
-        notifyOnAlert: true,
-        notifyByEmail: true,
-        notifyByWhatsApp: false,
-      },
-    }
-    localStorage.setItem('psicoai_token', 'mock-jwt-' + Date.now())
-    localStorage.setItem('psicoai_user', JSON.stringify(user))
-    localStorage.removeItem('psicoai_onboarding_seen') // garante tour para novo usuário
-    onLogin(user)
+    localStorage.removeItem('psicoai_onboarding_seen')
+    onLogin(registeredUser)
   }
 
   const firstName = (form.name.split(' ').filter(Boolean)[0] || 'você')
@@ -291,6 +286,12 @@ export default function RegisterFlow({ onLogin, onBack }) {
                   onChange={e => set('city', e.target.value)} onFocus={onFo} onBlur={onBl}
                   placeholder="São Paulo, SP" />
               </div>
+
+              {errors._global && (
+                <div style={{ background: '#FEF2F2', border: '1px solid #FCA5A5', borderRadius: '10px', padding: '12px 14px', fontSize: '13px', color: '#DC2626' }}>
+                  {errors._global}
+                </div>
+              )}
 
               {/* What's personalised */}
               <div style={{ background: 'var(--ow)', borderRadius: '10px', padding: '12px 14px', border: '1px solid var(--gr2)' }}>
