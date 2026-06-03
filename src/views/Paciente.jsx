@@ -95,7 +95,15 @@ export default function Paciente({ patient: propPatient, setCurrentView, onSessa
       setAnalyses(als.content || [])
       setNotes((sum?.patient?.notes) || (propPatient?.notes) || '')
     })
-    .catch(e => setError(e.message || 'Erro ao carregar paciente'))
+    .catch(e => {
+      // Se paciente não existe (ID de mock ou deletado), volta para lista
+      if (e.message?.includes('não encontrado') || e.message?.includes('404') || e.message?.includes('inválido')) {
+        try { sessionStorage.removeItem('psicoai_nav_patient'); sessionStorage.removeItem('psicoai_nav_view') } catch {}
+        if (setCurrentView) setCurrentView('pacientes')
+        return
+      }
+      setError(e.message || 'Erro ao carregar paciente')
+    })
     .finally(() => setLoading(false))
   }
 
