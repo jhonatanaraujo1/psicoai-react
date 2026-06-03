@@ -379,7 +379,25 @@ export const api = {
   },
 
   async createAnalysis({ sessionId, additionalSessionIds = [], template = null }) {
-    return post('/api/v1/analyses', { sessionId, additionalSessionIds, template })
+    // POST retorna 202 imediatamente com { id, status: "processing" }
+    const initial = await post('/api/v1/analyses', { sessionId, additionalSessionIds, template })
+
+    // Se já veio completo (análise muito rápida ou resposta legada), retorna direto
+    if (!initial?.id || initial.status === 'completed' || !initial.status) return initial
+
+    // Polling: verifica a cada 3 segundos por até 3 minutos
+    const analysisId = initial.id
+    for (let attempt = 0; attempt < 60; attempt++) {
+      await new Promise(r => setTimeout(r, 3000))
+      const status = await get(`/api/v1/analyses/${analysisId}/status`).catch(() => null)
+      if (!status) continue  // erro de rede transitório — tenta de novo
+      if (status.status === 'completed') return get(`/api/v1/analyses/${analysisId}`)
+      if (status.status === 'failed') {
+        throw new Error(status.errorMessage || 'Falha na análise clínica. Tente novamente.')
+      }
+      // status === 'processing' → continua polling
+    }
+    throw new Error('Tempo de análise excedido. O servidor pode estar sobrecarregado. Tente novamente em instantes.')
   },
 
   async refineAnalysis(analysisId, feedback = null) {
