@@ -72,7 +72,7 @@ function Skeleton() {
 
 // ── Card ───────────────────────────────────────────────────────────────────────
 
-function CadernoCard({ patient, canvas, onOpen, onOpenPatient }) {
+function CadernoCard({ patient, canvas, onOpen, onOpenPatient, isOpenSession }) {
   const [hovered, setHovered] = useState(false)
   const _col = avatarColor(patient.id)
   const col = { bg: patient.avatarBg || _col.bg, fg: patient.avatarColor || _col.fg }
@@ -111,17 +111,34 @@ function CadernoCard({ patient, canvas, onOpen, onOpenPatient }) {
     >
       {/* Patient row */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-        <div style={{
-          width: 36, height: 36, borderRadius: '50%', flexShrink: 0,
-          background: col.bg, color: col.fg,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: '12px', fontWeight: 700,
-        }}>
-          {getInitials(patient.name)}
+        <div style={{ position: 'relative', flexShrink: 0 }}>
+          <div style={{
+            width: 36, height: 36, borderRadius: '50%',
+            background: col.bg, color: col.fg,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: '12px', fontWeight: 700,
+          }}>
+            {getInitials(patient.name)}
+          </div>
+          {/* Badge de sessão em andamento */}
+          {isOpenSession && (
+            <div style={{
+              position: 'absolute', bottom: -2, right: -2,
+              width: 11, height: 11, borderRadius: '50%',
+              background: '#27AE60', border: '2px solid #fff',
+            }} title="Sessão em andamento" />
+          )}
         </div>
         <div style={{ minWidth: 0, flex: 1 }}>
-          <div style={{ fontSize: '13.5px', fontWeight: 600, color: 'var(--d)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {patient.name}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+            <div style={{ fontSize: '13.5px', fontWeight: 600, color: 'var(--d)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {patient.name}
+            </div>
+            {isOpenSession && (
+              <span style={{ fontSize: 9, fontWeight: 700, padding: '1px 5px', borderRadius: 10, background: '#E8F5E9', color: '#27AE60', border: '1px solid #C8E6C9', flexShrink: 0, letterSpacing: '0.3px' }}>
+                EM SESSÃO
+              </span>
+            )}
           </div>
           <div style={{ fontSize: '11px', color: 'var(--gr4)', marginTop: '2px' }}>
             {subLabel}
@@ -167,7 +184,7 @@ function CadernoCard({ patient, canvas, onOpen, onOpenPatient }) {
 
 // ── Main view ──────────────────────────────────────────────────────────────────
 
-export default function Cadernos({ onOpenCanvas, onOpenPatient }) {
+export default function Cadernos({ onOpenCanvas, onOpenPatient, openSessionPatientIds = new Set() }) {
   const [patients, setPatients] = useState([])
   const [loading, setLoading]   = useState(true)
   const [search, setSearch]     = useState('')
@@ -295,6 +312,7 @@ export default function Cadernos({ onOpenCanvas, onOpenPatient }) {
               canvas={canvas}
               onOpen={onOpenCanvas}
               onOpenPatient={onOpenPatient}
+              isOpenSession={openSessionPatientIds.has(patient.id)}
             />
           ))}
         </div>

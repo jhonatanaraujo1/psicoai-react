@@ -809,6 +809,10 @@ export default function App() {
           setCurrentPatient(patient)
           setCurrentView('paciente')
         }}
+        openSessionPatientIds={new Set([
+          ...(activeSessionId && currentPatient?.id ? [currentPatient.id] : []),
+          ...backgroundSessions.map(s => s.patient?.id).filter(Boolean),
+        ])}
       />
       case 'anotacoes':   return <Anotacoes setCurrentView={handleSetView} onOpenCanvas={handleOpenCanvasFromHistory} />
       case 'teleatendimento': return <Teleatendimento />
