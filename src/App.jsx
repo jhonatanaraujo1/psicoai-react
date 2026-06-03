@@ -789,7 +789,7 @@ export default function App() {
 
   const renderView = () => {
     switch (currentView) {
-      case 'dashboard':    return <Agenda currentUser={currentUser} />
+      case 'dashboard':    return <Dashboard setCurrentView={handleSetView} currentUser={currentUser} />
       case 'pacientes':   return <Pacientes setCurrentView={handleSetView} onNovoCadastro={() => setCadastroOpen(true)} />
       case 'paciente':    return <Paciente patient={currentPatient} setCurrentView={handleSetView} onSessao={() => handleSetView('sessao', currentPatient)} onQuickNote={() => setQuickNoteOpen(true)} onReopenSession={handleReopenSession} onViewProntuario={() => setProntuarioOpen(true)} />
       case 'agenda':      return <Agenda currentUser={currentUser} />

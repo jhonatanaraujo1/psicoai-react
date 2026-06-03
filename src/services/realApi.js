@@ -318,7 +318,7 @@ export const api = {
     if (res?.content) {
       res.content = res.content.map(s => ({
         ...s,
-        canvasDataJson: s.type === 'canvas' ? (s.canvasData ?? true) : null,
+        canvasDataJson: s.type === 'canvas' ? (s.canvasData ?? null) : null,
       }))
     }
     return res
@@ -575,7 +575,7 @@ export const api = {
   async getRecentAnnotations({ search = '', patientId = '' } = {}) {
     const normalize = (s) => ({
       ...s,
-      canvasDataJson: s.type === 'canvas' ? (s.canvasData ?? true) : null,
+      canvasDataJson: s.type === 'canvas' ? (s.canvasData ?? null) : null,
     })
     if (patientId) {
       const res = await get(`/api/v1/patients/${patientId}/sessions`, { page: 0, size: 50 })

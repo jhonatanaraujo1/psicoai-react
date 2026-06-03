@@ -308,7 +308,7 @@ export default function Dashboard({ setCurrentView, currentUser }) {
                     strokeLinecap="round" style={{ transition: 'stroke-dasharray 1s ease' }} />
                 </svg>
                 <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Fraunces', serif", fontSize: 14, color: 'var(--d)' }}>
-                  {stats ? Math.round(stats.analyzedPatients / stats.activePatients * 100) : 0}%
+                  {stats ? Math.round(stats.analyzedPatients / (stats.activePatients || 1) * 100) : 0}%
                 </div>
               </div>
               <div>

@@ -279,11 +279,18 @@ export default function Anotacoes({ setCurrentView, onOpenCanvas }) {
   }
 
   // Stats
-  const displayed    = filterEv ? sessions.filter(s => s.evolution === filterEv) : sessions
-  const withAi       = sessions.filter(s => s.hasAnalysis).length
-  const positive     = sessions.filter(s => s.evolution === 'positive').length
-  const needsAttn    = sessions.filter(s => s.evolution === 'negative').length
-  const totalWords   = sessions.reduce((a, s) => a + (s.wordCount || 0), 0)
+  const afterSearch  = debouncedSearch
+    ? sessions.filter(s =>
+        s.patientName?.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+        s.notePreview?.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+        s.canvasTextContent?.toLowerCase().includes(debouncedSearch.toLowerCase())
+      )
+    : sessions
+  const displayed    = filterEv ? afterSearch.filter(s => s.evolution === filterEv) : afterSearch
+  const withAi       = afterSearch.filter(s => s.hasAnalysis).length
+  const positive     = afterSearch.filter(s => s.evolution === 'positive').length
+  const needsAttn    = afterSearch.filter(s => s.evolution === 'negative').length
+  const totalWords   = afterSearch.reduce((a, s) => a + (s.wordCount || 0), 0)
 
   const EV_FILTERS = [
     { key: '',         label: 'Todas' },

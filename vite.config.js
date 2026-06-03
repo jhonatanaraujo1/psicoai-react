@@ -4,7 +4,7 @@ import { VitePWA } from 'vite-plugin-pwa'
 
 // SEC-018: garantir que build de produção não rode sem API configurada
 if (process.env.NODE_ENV === 'production' && !process.env.VITE_API_BASE_URL) {
-  console.warn('[vite] AVISO: VITE_API_BASE_URL não definido — modo mock ativo em produção')
+  throw new Error('[vite] VITE_API_BASE_URL não definida — build de produção requer a variável de ambiente')
 }
 
 export default defineConfig({
