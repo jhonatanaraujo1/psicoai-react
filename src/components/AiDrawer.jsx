@@ -255,7 +255,7 @@ export default function AiDrawer({ isOpen, onClose, onSave, patient, result, loa
                         </div>
                         {(h.rationale || h.reasoning || h.description) && (
                           <div style={{ fontSize: '11px', color: 'var(--gr5)', lineHeight: 1.5, background: 'var(--gr1)', padding: '7px 10px', borderRadius: '6px' }}>
-                            {h.rationale || h.reasoning || h.description}
+                            {String(h.rationale || h.reasoning || h.description)}
                           </div>
                         )}
                       </div>

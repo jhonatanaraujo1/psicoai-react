@@ -14,13 +14,15 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import DOMPurify from 'dompurify'
 import { api } from '../services'
 
-// SEC-001: config de sanitização — apenas tags seguras para anotações clínicas
+// SEC-001: sanitização de HTML clínico — whitelist restritiva
+// Removido: 'style' (ALLOWED_STYLE_PROPS não é suporte nativo do DOMPurify, não tem efeito garantido)
+// Removido: 'div' (elemento genérico que pode ser explorado com position/overflow via style)
 const SANITIZE_CONFIG = {
-  ALLOWED_TAGS: ['p', 'br', 'b', 'i', 'u', 'strong', 'em', 'ul', 'ol', 'li', 'h1', 'h2', 'h3', 'hr', 'span', 'div'],
-  ALLOWED_ATTR: ['style'],
-  ALLOWED_STYLE_PROPS: ['font-weight', 'font-style', 'text-decoration'],
-  FORBID_TAGS: ['script', 'iframe', 'object', 'embed', 'form', 'input', 'button', 'link', 'meta'],
-  FORBID_ATTR: ['onerror', 'onload', 'onclick', 'onmouseover', 'href', 'src', 'action'],
+  ALLOWED_TAGS: ['p', 'br', 'b', 'i', 'u', 'strong', 'em', 'ul', 'ol', 'li', 'h1', 'h2', 'h3', 'hr', 'span'],
+  ALLOWED_ATTR: [],   // nenhum atributo — apenas tags semânticas puras
+  FORBID_TAGS: ['script', 'iframe', 'object', 'embed', 'form', 'input', 'button', 'link', 'meta', 'style'],
+  FORBID_ATTR: ['style', 'class', 'id', 'onerror', 'onload', 'onclick', 'onmouseover', 'href', 'src', 'action'],
+  KEEP_CONTENT: true,  // conteúdo de tags proibidas é mantido como texto
 }
 
 // ── Proporções A4 ──────────────────────────────────────────────────────────────
