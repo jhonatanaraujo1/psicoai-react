@@ -631,49 +631,52 @@ function TextPage({ page, isActive, onTextChange, onClick, sessionDate, onDateCh
         display: 'flex', flexDirection: 'column',
       }}
     >
-      {/* Header 3-colunas: label esq | data central | espaçador dir */}
+      {/* Header — data clínica centralizada, prominente */}
       <div style={{
-        padding: '10px 24px',
-        borderBottom: '1px solid #F0EDE8',
+        padding: '14px 24px 12px',
+        borderBottom: '2px solid #F0EDE8',
         display: 'grid',
         gridTemplateColumns: '1fr auto 1fr',
         alignItems: 'center',
         flexShrink: 0,
         gap: 8,
+        background: '#FDFAF6',
       }}>
         {/* Esquerda: ícone + label */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#C0B9B0" strokeWidth="2" style={{ flexShrink: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#C8C2BA" strokeWidth="2" style={{ flexShrink: 0 }}>
             <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
             <polyline points="14 2 14 8 20 8"/>
-            <line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="13" y2="17"/>
           </svg>
-          <span style={{ fontSize: 10, color: '#C0B9B0', fontFamily: "'DM Sans', sans-serif", letterSpacing: '0.4px', textTransform: 'uppercase', fontWeight: 500 }}>
-            Anotação
+          <span style={{ fontSize: 9.5, color: '#C8C2BA', fontFamily: "'DM Sans', sans-serif", letterSpacing: '0.6px', textTransform: 'uppercase', fontWeight: 600 }}>
+            Sessão clínica
           </span>
         </div>
 
-        {/* Centro: data destacada */}
-        {onDateChange && (
+        {/* Centro: DatePill proeminente */}
+        {onDateChange ? (
           <div style={{ display: 'flex', justifyContent: 'center' }}>
             <DatePill value={sessionDate} onChange={onDateChange} />
           </div>
+        ) : (
+          <div />
         )}
 
-        {/* Direita: espaçador vazio para equilibrar */}
+        {/* Direita: espaçador */}
         <div />
       </div>
       <div
         ref={editorRef}
         contentEditable
         suppressContentEditableWarning
-        data-placeholder="Escreva aqui..."
+        data-placeholder="Escreva suas observações clínicas aqui…"
         style={{
-          flex: 1, padding: '24px 40px 40px',
-          minHeight: PAGE_H - 60, outline: 'none',
-          fontSize: 15, lineHeight: 1.85,
-          color: '#1C1C1C', fontFamily: "'DM Sans', sans-serif",
+          flex: 1, padding: '28px 44px 48px',
+          minHeight: PAGE_H - 80, outline: 'none',
+          fontSize: 15.5, lineHeight: 1.9,
+          color: '#1A1F1C', fontFamily: "'DM Sans', sans-serif",
           caretColor: '#4A7C59',
+          letterSpacing: '0.01em',
         }}
         onInput={e => onTextChange(page.id, e.currentTarget.innerHTML)}
         onKeyDown={e => {
@@ -968,6 +971,9 @@ export default function AnnotationSession({
     setIsDirty(true)
   }, [patient?.id, scheduleBackendSave])
 
+  // ── Contador de palavras (todas as páginas de texto) ─────────────────────
+  const [wordCount, setWordCount] = useState(0)
+
   // ── Canvas: atualizar texto em página de texto ────────────────────────────
   const handlePageTextChange = useCallback((pageId, html) => {
     setIsDirty(true)
@@ -975,6 +981,11 @@ export default function AnnotationSession({
       const updated = prev.map(p => p.id === pageId ? { ...p, textHtml: html } : p)
       if (patient?.id) saveCanvasPages(sessionIdRef.current, patient.id, updated)
       scheduleBackendSave(updated) // debounce 6s — não salva a cada tecla no backend
+      // Recalcula word count de todas as páginas de texto
+      const totalText = updated.filter(p => p.pageType === 'text' && p.textHtml)
+        .map(p => new DOMParser().parseFromString(p.textHtml, 'text/html').body.textContent || '')
+        .join(' ')
+      setWordCount(totalText.trim() ? totalText.trim().split(/\s+/).filter(Boolean).length : 0)
       return updated
     })
   }, [patient?.id, scheduleBackendSave])
@@ -1068,12 +1079,14 @@ export default function AnnotationSession({
     setIsDirty(true)
   }, [pages, activePage])
 
-  // Keyboard undo/redo (Ctrl+Z / Ctrl+Y / Ctrl+Shift+Z)
+  // Keyboard shortcuts: Undo/Redo + Cmd+S (save modal) + Cmd+Enter (finish)
   useEffect(() => {
     if (!isOpen || !isCanvas) return
     const onKey = (e) => {
       if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) { e.preventDefault(); handleUndo() }
       if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.key === 'z' && e.shiftKey))) { e.preventDefault(); handleRedo() }
+      if ((e.ctrlKey || e.metaKey) && e.key === 's') { e.preventDefault(); setShowEndModal(true) }
+      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); setShowEndModal(true) }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
@@ -1804,12 +1817,27 @@ export default function AnnotationSession({
           )}
         </div>
 
-        {isDirty && (
-          <span className="as-dirty" style={{ fontSize: 11, color: '#F0A500', display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
-            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-              <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
-            </svg>
-            Rascunho
+        {/* Auto-save indicator — sempre visível no header */}
+        {onAutosave && backendSyncStatus !== 'idle' ? (
+          <span style={{
+            fontSize: 10, display: 'flex', alignItems: 'center', gap: 3, flexShrink: 0,
+            color: backendSyncStatus === 'saved' ? '#7DC499'
+                 : backendSyncStatus === 'error' ? '#E88'
+                 : 'rgba(255,255,255,0.35)',
+            transition: 'color 0.3s',
+          }}>
+            {backendSyncStatus === 'pending' && <span style={{ width: 5, height: 5, borderRadius: '50%', background: 'currentColor', animation: 'pulse 1.2s ease-in-out infinite' }} />}
+            {backendSyncStatus === 'saved' && <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>}
+            {backendSyncStatus === 'error' && '!'}
+            {backendSyncStatus === 'pending' ? 'salvando…' : backendSyncStatus === 'saved' ? 'salvo' : 'erro'}
+          </span>
+        ) : isDirty ? (
+          <span style={{ fontSize: 10, color: 'rgba(240,165,0,0.7)', flexShrink: 0 }}>rascunho</span>
+        ) : null}
+        {/* Word count — visível quando há páginas de texto */}
+        {wordCount > 0 && (
+          <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.28)', flexShrink: 0, whiteSpace: 'nowrap' }}>
+            {wordCount} {wordCount === 1 ? 'palavra' : 'palavras'}
           </span>
         )}
 
