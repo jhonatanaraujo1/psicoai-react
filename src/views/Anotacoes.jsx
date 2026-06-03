@@ -124,7 +124,7 @@ function AnotacaoCard({ s, query, onPatientClick, onOpenCanvas, expanded, onTogg
               </span>
             )}
             <span style={{ fontSize: 11, color: 'var(--gr4)', marginLeft: 'auto', whiteSpace: 'nowrap', flexShrink: 0 }}>
-              {fmtDate(s.finishedAt || s.updatedAt || s.createdAt)}
+              {fmtDate(s.sessionDate || s.finishedAt || s.updatedAt || s.createdAt)}
               {dur && <span style={{ color: 'var(--gr3)' }}> · {dur}</span>}
             </span>
           </div>
@@ -429,9 +429,11 @@ export default function Anotacoes({ setCurrentView, onOpenCanvas }) {
           }
 
           // Monta mapa ordenado de grupos
+          // sessionDate é a data clínica definida pelo psicólogo (pode diferir de finishedAt)
+          // Prioridade: sessionDate > finishedAt > updatedAt > createdAt
           const grouped = new Map()
           displayed.forEach(s => {
-            const k = dayKey(s.finishedAt || s.updatedAt || s.createdAt)
+            const k = dayKey(s.sessionDate || s.finishedAt || s.updatedAt || s.createdAt)
             if (!grouped.has(k)) grouped.set(k, [])
             grouped.get(k).push(s)
           })
