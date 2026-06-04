@@ -60,8 +60,17 @@ function TabPerfil({ profile, onSaved }) {
 
   const save = async () => {
     setSaving(true)
-    try { await api.updateProfile(form); setSaved(true); onSaved && onSaved(form) }
-    finally { setSaving(false) }
+    try {
+      const updated = await api.updateProfile(form)
+      setSaved(true)
+      // Usa resposta do backend como fonte de verdade
+      onSaved && onSaved(updated || form)
+      showToast('Perfil atualizado com sucesso', 'success')
+    } catch (e) {
+      showToast('Erro ao salvar: ' + (e.message || 'Tente novamente'), 'error')
+    } finally {
+      setSaving(false)
+    }
   }
 
   const sel = (k, v) => ({ ...st.input, appearance: 'none', background: `var(--ow) ${st.selectBg}`, paddingRight: '32px', borderColor: 'var(--gr2)' })
@@ -270,6 +279,9 @@ function TabPreferencias({ profile, onSaved }) {
     try {
       await api.updateProfile({ preferences: { defaultApproach: form.defaultApproach, defaultSessionDuration: Number(form.defaultSessionDuration), defaultSessionValue: Number(form.defaultSessionValue), workingHours: { start: Number(form.workHourStart), end: Number(form.workHourEnd) }, notifyOnAlert: form.notifyOnAlert, notifyByEmail: form.notifyByEmail, notifyByWhatsApp: form.notifyByWhatsApp } })
       setSaved(true); onSaved && onSaved()
+      showToast('Preferências salvas', 'success')
+    } catch (e) {
+      showToast('Erro ao salvar preferências: ' + (e.message || 'Tente novamente'), 'error')
     } finally { setSaving(false) }
   }
 
