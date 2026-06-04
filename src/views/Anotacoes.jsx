@@ -113,11 +113,11 @@ function AnotacaoCard({ s, query, onPatientClick, onOpenCanvas, expanded, onTogg
             )}
             <span style={{
               fontSize: 9, fontWeight: 700, padding: '2px 6px', borderRadius: 20, letterSpacing: '0.5px',
-              background: isCanvas ? '#F0EBF8' : 'var(--g50)',
-              color: isCanvas ? '#7D3C98' : 'var(--g600)',
-              border: `1px solid ${isCanvas ? '#D7BDE2' : 'var(--g100)'}`,
+              background: isCanvas ? 'rgba(74,124,89,0.08)' : '#EBF3FD',
+              color: isCanvas ? 'var(--g600)' : '#2980B9',
+              border: `1px solid ${isCanvas ? 'var(--g100)' : 'rgba(41,128,185,0.2)'}`,
             }}>
-              {isCanvas ? 'CANVAS' : 'TEXTO'}
+              {isCanvas ? 'ANOTAÇÃO' : 'NOTA RÁPIDA'}
             </span>
             {hasAi && (
               <span style={{ fontSize: 9, fontWeight: 700, padding: '2px 6px', borderRadius: 20, letterSpacing: '0.5px', background: '#EBF4EE', color: 'var(--g700)', border: '1px solid var(--g100)' }}>

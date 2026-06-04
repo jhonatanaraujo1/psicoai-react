@@ -600,31 +600,100 @@ export const api = {
   },
 
   async generateReport({ patientId, type, sections }) {
-    // Relatórios serão gerados via IA no backend em v2
-    // Por ora: estrutura básica sem conteúdo IA
-    const patient = await api.getPatient(patientId)
+    // Busca dados do paciente e análises para montar o relatório
+    const [patient, sessionsRes, analysesRes] = await Promise.all([
+      api.getPatient(patientId).catch(() => ({ name: 'Paciente', id: patientId })),
+      api.getPatientSessions(patientId, { size: 10 }).catch(() => ({ content: [] })),
+      api.getPatientAnalyses(patientId, { size: 5 }).catch(() => ({ content: [] })),
+    ])
+
     const meta = {
       psychiatrist: { label: 'Encaminhamento Psiquiátrico', audience: 'Psiquiatra' },
-      evolution:    { label: 'Relatório de Evolução', audience: 'Arquivo / Supervisão' },
-      summary:      { label: 'Resumo Clínico', audience: 'Paciente' },
-      full:         { label: 'Prontuário Completo', audience: 'Arquivo / Transferência' },
+      evolution:    { label: 'Relatório de Evolução',       audience: 'Arquivo / Supervisão' },
+      summary:      { label: 'Resumo para o Paciente',      audience: 'Paciente' },
+      full:         { label: 'Prontuário Completo',          audience: 'Arquivo / Transferência' },
     }[type] || { label: 'Relatório', audience: 'Arquivo' }
 
-    const report = {
+    const fmt = (iso) => iso ? new Date(iso).toLocaleDateString('pt-BR') : '—'
+    const today = new Date().toLocaleDateString('pt-BR')
+
+    const p = patient
+    const sessionList = sessionsRes.content || []
+    const analysisList = analysesRes.content || []
+    const latestAnalysis = analysisList[0] || null
+
+    // ── Seções do relatório ───────────────────────────────────────────────────
+    const built = []
+
+    // Dados clínicos
+    if (sections?.clinical !== false) {
+      const lines = [
+        `Nome: ${p.name || '—'}`,
+        p.birthDate ? `Data de nascimento: ${fmt(p.birthDate)}` : null,
+        p.gender    ? `Gênero: ${p.gender}` : null,
+        p.cid       ? `Hipótese diagnóstica: ${p.cid} (hipótese CID-11/DSM-5)` : null,
+        '',
+        `Queixa principal: ${p.complaint || 'Não informado'}`,
+        p.history   ? `Histórico: ${p.history}` : null,
+        p.medication ? `Medicamentos em uso: ${p.medication}` : null,
+        '',
+        `Abordagem terapêutica: ${p.approach || p.abordagem || 'Não informado'}`,
+        p.frequency ? `Frequência de atendimento: ${p.frequency}` : null,
+      ].filter(Boolean).join('\n')
+      built.push({ id: 'clinical', label: 'Dados Clínicos', text: lines })
+    }
+
+    // Histórico de sessões
+    if (sections?.sessions !== false && sessionList.length > 0) {
+      const sessText = sessionList.slice(0, 6).map((s, i) => {
+        const date = fmt(s.sessionDate || s.finishedAt || s.createdAt)
+        const preview = s.summary || s.notePreview || (s.type === 'canvas' ? 'Anotação em canvas' : 'Sem resumo')
+        return `Sessão ${s.num || (i + 1)} — ${date}\n${preview.slice(0, 200)}${preview.length > 200 ? '…' : ''}`
+      }).join('\n\n')
+      built.push({ id: 'sessions', label: 'Histórico de Sessões', text: `Total de ${sessionList.length} sessões registradas.\n\n${sessText}` })
+    }
+
+    // Hipóteses e padrões (se houver análise)
+    if (sections?.hypotheses !== false && latestAnalysis) {
+      const hypoText = latestAnalysis.hypotheses?.length
+        ? latestAnalysis.hypotheses.map(h => `• ${h.label || h.code} — probabilidade ${Math.round((h.probability || 0) * 100)}%`).join('\n')
+        : 'Análise IA realizada. Consulte os Insights para detalhes.'
+      built.push({ id: 'hypotheses', label: 'Hipóteses Diagnósticas (IA)', text: hypoText })
+    }
+
+    if (sections?.patterns !== false && latestAnalysis?.patterns?.length) {
+      const patternsText = latestAnalysis.patterns.map(pt => `• ${pt.label || pt}`).join('\n')
+      built.push({ id: 'patterns', label: 'Padrões Identificados', text: patternsText })
+    }
+
+    // Assinatura profissional
+    built.push({
+      id: 'signature',
+      label: null,
+      isSignature: true,
+      text: `Gerado em ${today} via PsicoNotes\n\nPsicólogo(a) responsável`,
+    })
+
+    // Fallback se não construiu nenhuma seção
+    if (built.length <= 1) {
+      built.unshift({
+        id: 'intro',
+        label: 'Sumário',
+        text: `Relatório gerado em ${today} para ${p.name}.\nNenhuma seção selecionada ou dados insuficientes — cadastre sessões e análises IA para enriquecer o documento.`,
+      })
+    }
+
+    return {
       id: 'rpt-' + Date.now(),
       patientId,
-      patientName: patient.name,
+      patientName: p.name,
       type,
       typeLabel: meta.label,
       audience: meta.audience,
-      sections: [
-        { id: 'header', label: 'Relatório', text: `Paciente: ${patient.name}\nGerado em: ${new Date().toLocaleDateString('pt-BR')}` },
-        { id: 'note', label: null, text: 'Geração automática de relatório disponível em breve via backend.' },
-      ],
+      sections: built,
       sentChannels: [],
       createdAt: new Date().toISOString(),
     }
-    return report
   },
 
   async getPatientReports() {
