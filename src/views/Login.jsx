@@ -1,22 +1,150 @@
-import { useState } from 'react'
-import { auth } from '../services'
+import { useState, useEffect } from 'react'
+import { auth, api } from '../services'
 import RegisterFlow from '../components/RegisterFlow'
 import TermosDeUso from './TermosDeUso'
 
 export default function Login({ onLogin }) {
-  const [mode, setMode] = useState('login') // 'login' | 'register' | 'termos'
+  // 'login' | 'register' | 'termos' | 'forgot' | 'reset'
+  const [mode, setMode] = useState(() => {
+    const params = new URLSearchParams(window.location.search)
+    return params.has('reset') ? 'reset' : 'login'
+  })
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [showPass, setShowPass] = useState(false)
+  // Forgot password
+  const [forgotEmail, setForgotEmail] = useState('')
+  const [forgotSent, setForgotSent] = useState(false)
+  // Reset password
+  const [resetToken] = useState(() => new URLSearchParams(window.location.search).get('reset') || '')
+  const [newPassword, setNewPassword] = useState('')
+  const [newPasswordConfirm, setNewPasswordConfirm] = useState('')
+  const [resetDone, setResetDone] = useState(false)
 
-  if (mode === 'register') {
-    return <RegisterFlow onLogin={onLogin} onBack={() => setMode('login')} />
+  if (mode === 'register') return <RegisterFlow onLogin={onLogin} onBack={() => setMode('login')} />
+  if (mode === 'termos')   return <TermosDeUso onClose={() => setMode('login')} />
+
+  // ── Esqueci minha senha ─────────────────────────────────────────────────────
+  if (mode === 'forgot') {
+    const handleForgot = async (e) => {
+      e.preventDefault()
+      if (!forgotEmail.trim()) { setError('Informe seu e-mail.'); return }
+      setLoading(true); setError('')
+      try {
+        await api.forgotPassword(forgotEmail.trim())
+        setForgotSent(true)
+      } catch (err) {
+        // Mostra mensagem genérica — não revela se email existe
+        setForgotSent(true)
+      } finally { setLoading(false) }
+    }
+    return (
+      <div className="login-root">
+        <div className="login-left"><div className="login-left-inner">
+          <div className="login-brand"><div className="login-psi-icon">Ψ</div><span className="login-brand-name">PsicoNotes</span></div>
+          <div className="login-hero-text"><h1>Recuperação de acesso</h1><p>Enviaremos um link seguro para redefinir sua senha diretamente no seu e-mail profissional.</p></div>
+        </div></div>
+        <div className="login-right"><div className="login-form-wrap">
+          <div className="login-form-header">
+            <h2>{forgotSent ? 'E-mail enviado!' : 'Esqueci minha senha'}</h2>
+            <p>{forgotSent ? 'Verifique sua caixa de entrada (e a pasta de spam).' : 'Informe o e-mail cadastrado na plataforma.'}</p>
+          </div>
+          {forgotSent ? (
+            <div style={{ textAlign: 'center', padding: '20px 0' }}>
+              <div style={{ fontSize: '48px', marginBottom: '16px' }}>📬</div>
+              <p style={{ fontSize: '14px', color: 'var(--gr5)', lineHeight: 1.7, marginBottom: '24px' }}>
+                Se <strong>{forgotEmail}</strong> estiver cadastrado, você receberá as instruções em instantes.<br/>
+                O link expira em <strong>1 hora</strong>.
+              </p>
+              <button className="btn-outline" style={{ width: '100%', padding: '12px' }} onClick={() => setMode('login')}>Voltar para o login</button>
+            </div>
+          ) : (
+            <form onSubmit={handleForgot} className="login-form">
+              <div className="login-field">
+                <label>E-mail profissional</label>
+                <div className="login-input-wrap">
+                  <svg className="login-input-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                  <input type="email" value={forgotEmail} onChange={e => { setForgotEmail(e.target.value); setError('') }} placeholder="dr@exemplo.com.br" autoFocus />
+                </div>
+              </div>
+              {error && <div className="login-error"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>{error}</div>}
+              <button type="submit" className="login-submit" disabled={loading}>
+                {loading ? <><span className="login-spinner" />Enviando…</> : 'Enviar link de recuperação'}
+              </button>
+              <p style={{ textAlign: 'center', marginTop: '16px', fontSize: '13px' }}>
+                <a href="#" style={{ color: 'var(--g600)' }} onClick={e => { e.preventDefault(); setMode('login') }}>← Voltar para o login</a>
+              </p>
+            </form>
+          )}
+        </div></div>
+      </div>
+    )
   }
 
-  if (mode === 'termos') {
-    return <TermosDeUso onClose={() => setMode('login')} />
+  // ── Redefinir senha (vem do link do email) ──────────────────────────────────
+  if (mode === 'reset') {
+    const handleReset = async (e) => {
+      e.preventDefault()
+      if (newPassword.length < 8) { setError('A senha deve ter pelo menos 8 caracteres.'); return }
+      if (newPassword !== newPasswordConfirm) { setError('As senhas não coincidem.'); return }
+      setLoading(true); setError('')
+      try {
+        await api.resetPassword(resetToken, newPassword)
+        setResetDone(true)
+        window.history.replaceState({}, '', window.location.pathname)
+      } catch (err) {
+        setError(err.message || 'Link inválido ou expirado. Solicite um novo.')
+      } finally { setLoading(false) }
+    }
+    return (
+      <div className="login-root">
+        <div className="login-left"><div className="login-left-inner">
+          <div className="login-brand"><div className="login-psi-icon">Ψ</div><span className="login-brand-name">PsicoNotes</span></div>
+          <div className="login-hero-text"><h1>Nova senha</h1><p>Crie uma senha forte para proteger seu prontuário clínico.</p></div>
+        </div></div>
+        <div className="login-right"><div className="login-form-wrap">
+          <div className="login-form-header">
+            <h2>{resetDone ? 'Senha atualizada!' : 'Criar nova senha'}</h2>
+            <p>{resetDone ? 'Faça login com sua nova senha.' : 'Mínimo 8 caracteres.'}</p>
+          </div>
+          {resetDone ? (
+            <div style={{ textAlign: 'center', padding: '20px 0' }}>
+              <div style={{ fontSize: '48px', marginBottom: '16px' }}>✅</div>
+              <p style={{ fontSize: '14px', color: 'var(--gr5)', lineHeight: 1.7, marginBottom: '24px' }}>
+                Sua senha foi atualizada com sucesso. Faça login para continuar.
+              </p>
+              <button className="login-submit" onClick={() => setMode('login')}>Ir para o login</button>
+            </div>
+          ) : (
+            <form onSubmit={handleReset} className="login-form">
+              <div className="login-field">
+                <label>Nova senha</label>
+                <div className="login-input-wrap">
+                  <svg className="login-input-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                  <input type={showPass ? 'text' : 'password'} value={newPassword} onChange={e => { setNewPassword(e.target.value); setError('') }} placeholder="••••••••" autoFocus />
+                  <button type="button" className="login-pass-toggle" onClick={() => setShowPass(v => !v)} tabIndex={-1}>
+                    {showPass ? <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg> : <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>}
+                  </button>
+                </div>
+              </div>
+              <div className="login-field">
+                <label>Confirmar nova senha</label>
+                <div className="login-input-wrap">
+                  <svg className="login-input-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                  <input type={showPass ? 'text' : 'password'} value={newPasswordConfirm} onChange={e => { setNewPasswordConfirm(e.target.value); setError('') }} placeholder="••••••••" />
+                </div>
+              </div>
+              {error && <div className="login-error"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>{error}</div>}
+              <button type="submit" className="login-submit" disabled={loading}>
+                {loading ? <><span className="login-spinner" />Atualizando…</> : 'Salvar nova senha'}
+              </button>
+            </form>
+          )}
+        </div></div>
+      </div>
+    )
   }
 
   const handleDemo = () => {
@@ -119,7 +247,13 @@ export default function Login({ onLogin }) {
             </div>
 
             <div className="login-field">
-              <label htmlFor="password">Senha</label>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                <label htmlFor="password" style={{ margin: 0 }}>Senha</label>
+                <a href="#" style={{ fontSize: '12px', color: 'var(--g600)', textDecoration: 'none' }}
+                   onClick={e => { e.preventDefault(); setMode('forgot') }}>
+                  Esqueci minha senha
+                </a>
+              </div>
               <div className="login-input-wrap">
                 <svg className="login-input-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
                 <input

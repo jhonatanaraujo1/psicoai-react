@@ -82,6 +82,18 @@ export const auth = {
     }
   },
 
+  async forgotPassword(email) {
+    await delay(600)
+    // Mock: simula envio — nunca revela se email existe
+    return { message: 'Se este e-mail estiver cadastrado, você receberá as instruções em instantes.' }
+  },
+
+  async resetPassword(token, newPassword) {
+    await delay(600)
+    if (!token) throw new Error('Link inválido ou já utilizado. Solicite um novo.')
+    return { message: 'Senha atualizada com sucesso.' }
+  },
+
   isAuthenticated() {
     return !!localStorage.getItem('psicoai_token')
   },

@@ -251,6 +251,14 @@ export const auth = {
     return !!getToken()
   },
 
+  async forgotPassword(email) {
+    return post('/api/v1/auth/forgot-password', { email })
+  },
+
+  async resetPassword(token, newPassword) {
+    return post('/api/v1/auth/reset-password', { token, newPassword })
+  },
+
   async register({ name, email, password, crp }) {
     // Captura UTM params do localStorage (gravados pelo script de tracking da landing page)
     const tracking = {}
