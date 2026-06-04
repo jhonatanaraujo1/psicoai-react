@@ -320,87 +320,193 @@ export default function Agenda({ currentUser }) {
       </div>
 
       {/* ── LIST VIEW ──────────────────────────────────────────── */}
-      {agendaView === 'list' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
-          {loading
-            ? Array.from({ length: 5 }).map((_, i) => (
-                <div key={i} style={{ display: 'flex', gap: 14, padding: '14px 0', borderBottom: '1px solid var(--gr1)', alignItems: 'center' }}>
-                  <div className="skel-pulse" style={{ width: 44, height: 44, borderRadius: 10, flexShrink: 0 }} />
-                  <div style={{ flex: 1 }}>
-                    <div className="skel-pulse" style={{ height: 13, width: '60%', borderRadius: 4, marginBottom: 6 }} />
-                    <div className="skel-pulse" style={{ height: 10, width: '35%', borderRadius: 4 }} />
+      {agendaView === 'list' && (() => {
+        const todayStr = today.toDateString()
+        const upcomingSessions = listEvents.filter(e => e.type === 'session').length
+        const upcomingMinutes = listEvents
+          .filter(e => e.startAt && e.endAt)
+          .reduce((sum, e) => sum + Math.round((new Date(e.endAt) - new Date(e.startAt)) / 60000), 0)
+        const upcomingHours = (upcomingMinutes / 60).toFixed(1).replace('.0', '')
+
+        return (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+            {/* ── Summary bar ─────────────────────────────────── */}
+            {!loading && Object.keys(listGrouped).length > 0 && (
+              <div style={{
+                display: 'flex', gap: 20, marginBottom: 20,
+                padding: '14px 18px', background: 'var(--g50)',
+                border: '1px solid var(--g100)', borderRadius: 'var(--r2)',
+                flexWrap: 'wrap',
+              }}>
+                <div>
+                  <div style={{ fontSize: 11, color: 'var(--g600)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 2 }}>Próximos eventos</div>
+                  <div style={{ fontFamily: "'Fraunces', serif", fontSize: 22, color: 'var(--g700)', fontWeight: 400, lineHeight: 1 }}>{listEvents.length}</div>
+                </div>
+                {upcomingSessions > 0 && (
+                  <div style={{ borderLeft: '1px solid var(--g200)', paddingLeft: 20 }}>
+                    <div style={{ fontSize: 11, color: 'var(--g600)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 2 }}>Sessões clínicas</div>
+                    <div style={{ fontFamily: "'Fraunces', serif", fontSize: 22, color: 'var(--g700)', fontWeight: 400, lineHeight: 1 }}>{upcomingSessions}</div>
                   </div>
-                </div>
-              ))
-            : Object.keys(listGrouped).length === 0
-              ? (
-                <div style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--gr4)', fontSize: 13 }}>
-                  <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--gr2)" strokeWidth="1.5" style={{ marginBottom: 14, display: 'block', margin: '0 auto 14px' }}>
-                    <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
-                  </svg>
-                  Nenhum evento agendado nos próximos dias
-                </div>
-              )
-              : Object.entries(listGrouped).map(([dateLabel, evts]) => (
-                  <div key={dateLabel}>
-                    {/* Date heading */}
-                    <div style={{
-                      fontSize: 11, fontWeight: 700, color: 'var(--gr4)',
-                      letterSpacing: '0.6px', textTransform: 'uppercase',
-                      padding: '14px 0 8px',
-                      borderBottom: '1px solid var(--gr2)',
-                    }}>
-                      {dateLabel}
+                )}
+                {upcomingMinutes > 0 && (
+                  <div style={{ borderLeft: '1px solid var(--g200)', paddingLeft: 20 }}>
+                    <div style={{ fontSize: 11, color: 'var(--g600)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 2 }}>Horas agendadas</div>
+                    <div style={{ fontFamily: "'Fraunces', serif", fontSize: 22, color: 'var(--g700)', fontWeight: 400, lineHeight: 1 }}>{upcomingHours}h</div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {loading
+              ? Array.from({ length: 5 }).map((_, i) => (
+                  <div key={i} style={{ display: 'flex', gap: 14, padding: '14px 0', borderBottom: '1px solid var(--gr1)', alignItems: 'center' }}>
+                    <div className="skel-pulse" style={{ width: 48, height: 48, borderRadius: 10, flexShrink: 0 }} />
+                    <div style={{ flex: 1 }}>
+                      <div className="skel-pulse" style={{ height: 13, width: '60%', borderRadius: 4, marginBottom: 6 }} />
+                      <div className="skel-pulse" style={{ height: 10, width: '40%', borderRadius: 4 }} />
                     </div>
-                    {evts.map(evt => {
-                      const ts = TYPE_STYLES[evt.type] || TYPE_STYLES.session
-                      return (
-                        <div
-                          key={evt.id}
-                          onClick={() => openEdit(evt)}
-                          style={{
-                            display: 'flex', alignItems: 'center', gap: 14,
-                            padding: '12px 4px',
-                            borderBottom: '1px solid var(--gr1)',
-                            cursor: 'pointer',
-                            transition: 'background 0.13s',
-                            borderRadius: 8,
-                            margin: '2px 0',
-                          }}
-                          onMouseEnter={e => e.currentTarget.style.background = 'var(--gr1)'}
-                          onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                        >
-                          {/* Time box */}
-                          <div style={{
-                            width: 48, textAlign: 'center', flexShrink: 0,
-                          }}>
-                            <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--d)', fontVariantNumeric: 'tabular-nums' }}>{fmtHour(evt.startAt)}</div>
-                            <div style={{ fontSize: 9, color: 'var(--gr4)', marginTop: 1 }}>{fmtHour(evt.endAt)}</div>
-                          </div>
-                          {/* Color bar */}
-                          <div style={{ width: 3, height: 36, borderRadius: 2, background: ts.border, flexShrink: 0 }} />
-                          {/* Info */}
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--d)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                              {evt.patientName || evt.title}
-                            </div>
-                            <div style={{ fontSize: 11, color: 'var(--gr5)', marginTop: 2 }}>
-                              {TYPE_LABELS[evt.type] || evt.type}
-                              {evt.meetLink && ' · 📹 Remota'}
-                            </div>
-                          </div>
-                          {/* Arrow */}
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--gr3)" strokeWidth="2">
-                            <polyline points="9 18 15 12 9 6"/>
-                          </svg>
-                        </div>
-                      )
-                    })}
+                    <div className="skel-pulse" style={{ width: 80, height: 30, borderRadius: 8 }} />
                   </div>
                 ))
-          }
-        </div>
-      )}
+              : Object.keys(listGrouped).length === 0
+                ? (
+                  <div style={{ textAlign: 'center', padding: '60px 20px' }}>
+                    <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="var(--gr2)" strokeWidth="1.3" style={{ display: 'block', margin: '0 auto 16px' }}>
+                      <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+                    </svg>
+                    <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--d)', marginBottom: 6 }}>Nenhum evento agendado</div>
+                    <div style={{ fontSize: 13, color: 'var(--gr4)', marginBottom: 18 }}>Crie seu primeiro evento para começar a organizar a semana clínica.</div>
+                    <button className="btn-primary" style={{ fontSize: '13px' }} onClick={() => openCreate()}>
+                      + Novo evento
+                    </button>
+                  </div>
+                )
+                : Object.entries(listGrouped).map(([dateLabel, evts]) => {
+                    const isToday_ = evts.some(e => new Date(e.startAt).toDateString() === todayStr)
+                    return (
+                      <div key={dateLabel}>
+                        {/* Date heading */}
+                        <div style={{
+                          display: 'flex', alignItems: 'center', gap: 10,
+                          padding: '16px 0 8px',
+                          borderBottom: '1px solid var(--gr2)',
+                        }}>
+                          <div style={{
+                            fontSize: 11, fontWeight: 700, color: isToday_ ? 'var(--g600)' : 'var(--gr4)',
+                            letterSpacing: '0.6px', textTransform: 'uppercase', flex: 1,
+                          }}>
+                            {dateLabel}
+                          </div>
+                          {isToday_ && (
+                            <span style={{ fontSize: 10, fontWeight: 700, background: 'var(--g600)', color: '#fff', padding: '2px 8px', borderRadius: 20, letterSpacing: '0.4px' }}>
+                              HOJE
+                            </span>
+                          )}
+                          <span style={{ fontSize: 11, color: 'var(--gr4)' }}>{evts.length} evento{evts.length !== 1 ? 's' : ''}</span>
+                        </div>
+
+                        {evts.map(evt => {
+                          const ts = TYPE_STYLES[evt.type] || TYPE_STYLES.session
+                          const isEvtToday = new Date(evt.startAt).toDateString() === todayStr
+                          const isSession = evt.type === 'session'
+
+                          // Duration in minutes
+                          const durationMin = evt.startAt && evt.endAt
+                            ? Math.round((new Date(evt.endAt) - new Date(evt.startAt)) / 60000)
+                            : null
+
+                          return (
+                            <div
+                              key={evt.id}
+                              onClick={() => openEdit(evt)}
+                              style={{
+                                display: 'flex', alignItems: 'center', gap: 14,
+                                padding: '14px 6px',
+                                borderBottom: '1px solid var(--gr1)',
+                                cursor: 'pointer',
+                                transition: 'background 0.13s',
+                                borderRadius: 8,
+                                margin: '2px 0',
+                              }}
+                              onMouseEnter={e => e.currentTarget.style.background = 'var(--gr1)'}
+                              onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                            >
+                              {/* Time block */}
+                              <div style={{ width: 52, textAlign: 'center', flexShrink: 0 }}>
+                                <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--d)', fontVariantNumeric: 'tabular-nums', lineHeight: 1 }}>
+                                  {fmtHour(evt.startAt)}
+                                </div>
+                                {evt.endAt && (
+                                  <div style={{ fontSize: 10, color: 'var(--gr4)', marginTop: 3, fontVariantNumeric: 'tabular-nums' }}>
+                                    até {fmtHour(evt.endAt)}
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* Color bar */}
+                              <div style={{ width: 3, height: 42, borderRadius: 2, background: ts.border, flexShrink: 0 }} />
+
+                              {/* Main info */}
+                              <div style={{ flex: 1, minWidth: 0 }}>
+                                <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--d)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: 3 }}>
+                                  {evt.patientName || evt.title}
+                                </div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                                  <span style={{
+                                    fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 20,
+                                    background: ts.bg, color: ts.color,
+                                  }}>
+                                    {TYPE_LABELS[evt.type] || evt.type}
+                                  </span>
+                                  {durationMin && (
+                                    <span style={{ fontSize: 11, color: 'var(--gr4)' }}>
+                                      {durationMin} min
+                                    </span>
+                                  )}
+                                  {evt.meetLink && (
+                                    <span style={{ fontSize: 11, color: '#2980B9', display: 'flex', alignItems: 'center', gap: 3 }}>
+                                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
+                                      Remota
+                                    </span>
+                                  )}
+                                  {evt.description && (
+                                    <span style={{ fontSize: 11, color: 'var(--gr4)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 160 }}>
+                                      {evt.description}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+
+                              {/* Right: action or arrow */}
+                              {isEvtToday && isSession ? (
+                                <button
+                                  onClick={e => { e.stopPropagation(); openEdit(evt) }}
+                                  style={{
+                                    flexShrink: 0, padding: '7px 13px',
+                                    background: 'var(--g600)', color: '#fff',
+                                    border: 'none', borderRadius: 'var(--r)',
+                                    fontSize: 12, fontWeight: 600,
+                                    cursor: 'pointer', fontFamily: "'DM Sans', sans-serif",
+                                    whiteSpace: 'nowrap',
+                                  }}
+                                >
+                                  Ver sessão
+                                </button>
+                              ) : (
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--gr3)" strokeWidth="2" style={{ flexShrink: 0 }}>
+                                  <polyline points="9 18 15 12 9 6"/>
+                                </svg>
+                              )}
+                            </div>
+                          )
+                        })}
+                      </div>
+                    )
+                  })
+            }
+          </div>
+        )
+      })()}
 
       {agendaView === 'week' && (
 
