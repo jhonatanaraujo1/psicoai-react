@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { api } from '../services'
-import { DatePicker, TimePicker } from '../components/DateTimePickers'
+import { DatePicker, TimePicker, CustomSelect } from '../components/DateTimePickers'
 
 const DAYS = ['SEG', 'TER', 'QUA', 'QUI', 'SEX']
 const HOURS = [8, 9, 10, 11, 12, 13, 14, 15, 16, 17]
@@ -57,85 +57,6 @@ const inSt = {
 
 const EMPTY_MODAL = { open: false, mode: 'create', data: null }
 
-// ── CustomSelect — dropdown estilizado, substitui <select> nativo ────────────
-function CustomSelect({ value, onChange, options, placeholder = 'Selecionar…' }) {
-  const [open, setOpen] = useState(false)
-  const ref = useRef(null)
-
-  useEffect(() => {
-    if (!open) return
-    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false) }
-    document.addEventListener('mousedown', handler)
-    return () => document.removeEventListener('mousedown', handler)
-  }, [open])
-
-  const selected = options.find(o => String(o.value) === String(value))
-
-  return (
-    <div ref={ref} style={{ position: 'relative' }}>
-      <button
-        type="button"
-        onClick={() => setOpen(o => !o)}
-        style={{
-          ...inSt,
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          cursor: 'pointer', textAlign: 'left',
-          borderColor: open ? 'var(--g300)' : 'var(--gr2)',
-          boxShadow: open ? '0 0 0 3px rgba(74,124,89,0.10)' : 'none',
-          transition: 'border-color 0.15s, box-shadow 0.15s',
-          userSelect: 'none',
-        }}
-      >
-        <span style={{ color: selected ? 'var(--d)' : 'var(--gr4)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-          {selected ? selected.label : placeholder}
-        </span>
-        <svg
-          width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--gr4)" strokeWidth="2" strokeLinecap="round"
-          style={{ flexShrink: 0, marginLeft: 8, transition: 'transform 0.18s', transform: open ? 'rotate(180deg)' : 'none' }}
-        >
-          <polyline points="6 9 12 15 18 9"/>
-        </svg>
-      </button>
-
-      {open && (
-        <div style={{
-          position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0, zIndex: 270,
-          background: 'var(--w)', border: '1px solid var(--gr2)',
-          borderRadius: 'var(--r)', boxShadow: '0 8px 28px rgba(0,0,0,0.14)',
-          overflow: 'hidden', maxHeight: 240, overflowY: 'auto',
-        }}>
-          {options.map(o => {
-            const isActive = String(o.value) === String(value)
-            return (
-              <button
-                key={o.value}
-                type="button"
-                onClick={() => { onChange(o.value); setOpen(false) }}
-                style={{
-                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                  width: '100%', padding: '10px 14px', border: 'none', cursor: 'pointer',
-                  background: isActive ? 'var(--g50)' : 'var(--w)',
-                  color: isActive ? 'var(--g700)' : 'var(--d)',
-                  fontSize: '13px', fontFamily: "'DM Sans', sans-serif",
-                  fontWeight: isActive ? 600 : 400, textAlign: 'left',
-                }}
-                onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = 'var(--ow)' }}
-                onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = 'var(--w)' }}
-              >
-                {o.label}
-                {isActive && (
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--g600)" strokeWidth="2.5" strokeLinecap="round">
-                    <polyline points="20 6 9 17 4 12"/>
-                  </svg>
-                )}
-              </button>
-            )
-          })}
-        </div>
-      )}
-    </div>
-  )
-}
 
 export default function Agenda({ currentUser }) {
   const [weekOffset, setWeekOffset] = useState(0)
@@ -286,7 +207,7 @@ export default function Agenda({ currentUser }) {
     }
   }
 
-  // Merge PsicoAI + Google events into unified list
+  // Merge PsicoNotes + Google events into unified list
   const allEvents = [
     ...events,
     ...googleEvents.map(g => ({

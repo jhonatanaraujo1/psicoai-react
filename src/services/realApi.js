@@ -1,5 +1,5 @@
 /**
- * realApi.js — Cliente HTTP para o backend PsicoAI.
+ * realApi.js — Cliente HTTP para o backend PsicoNotes.
  * Interface idêntica à mockApi.js — troca transparente via services/index.js.
  *
  * Token lifecycle:
@@ -11,7 +11,7 @@
  * Session expired: dispara evento 'psicoai:session-expired' e limpa storage.
  */
 
-const BASE = import.meta.env.VITE_API_BASE_URL // e.g. https://api.psicoai.com.br
+const BASE = import.meta.env.VITE_API_BASE_URL // e.g. https://api.psicnotes.com
 
 // ── Token helpers ──────────────────────────────────────────────────────────────
 

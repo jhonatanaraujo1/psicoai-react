@@ -8,7 +8,7 @@
  *   2. Nenhuma var definida      → mockApi (demo offline, sem backend)
  *
  * Setup:
- *   Modo Railway → .env.local: VITE_API_BASE_URL=https://api.psicoai.com.br
+ *   Modo Railway → .env.local: VITE_API_BASE_URL=https://api.psicnotes.com
  *   Modo Demo    → não precisa de .env.local
  */
 
@@ -23,7 +23,7 @@ export const api  = HAS_RAILWAY ? realModule.api  : mockModule.api
 export const API_MODE = HAS_RAILWAY ? 'railway' : 'mock'
 
 if (import.meta.env.DEV) {
-  console.info(`[PsicoAI] API mode: ${API_MODE}`)
+  console.info(`[PsicoNotes] API mode: ${API_MODE}`)
 }
 
 export default api

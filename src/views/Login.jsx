@@ -20,7 +20,7 @@ export default function Login({ onLogin }) {
   }
 
   const handleDemo = () => {
-    setEmail('demo@psicoai.com.br')
+    setEmail('demo@psicnotes.com')
     setPassword('demo1234')
     setError('')
   }
@@ -48,7 +48,7 @@ export default function Login({ onLogin }) {
         <div className="login-left-inner">
           <div className="login-brand">
             <div className="login-psi-icon">Ψ</div>
-            <span className="login-brand-name">PsicoAI</span>
+            <span className="login-brand-name">PsicoNotes</span>
           </div>
 
           <div className="login-hero-text">
@@ -158,7 +158,7 @@ export default function Login({ onLogin }) {
           </p>
 
           <div className="login-footer-note">
-            PsicoAI não é um serviço médico e não substitui o julgamento clínico profissional.<br />
+            PsicoNotes não é um serviço médico e não substitui o julgamento clínico profissional.<br />
             Conformidade CFP 09/2024 · Dados criptografados · LGPD<br />
             <button type="button" onClick={() => setMode('termos')} style={{ background: 'none', border: 'none', padding: 0, color: 'inherit', opacity: 0.6, textDecoration: 'underline', cursor: 'pointer', fontSize: 'inherit', fontFamily: 'inherit' }}>Termos de Uso</button>
           </div>

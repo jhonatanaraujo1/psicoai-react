@@ -137,7 +137,7 @@ export default function RegisterFlow({ onLogin, onBack }) {
       <div className="login-left-inner">
         <div className="login-brand">
           <div className="login-psi-icon">Ψ</div>
-          <span className="login-brand-name">PsicoAI</span>
+          <span className="login-brand-name">PsicoNotes</span>
         </div>
         <div className="login-hero-text">
           <h1>O raciocínio clínico que faltava na sua prática.</h1>

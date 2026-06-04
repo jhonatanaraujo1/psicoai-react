@@ -115,7 +115,7 @@ export default function App() {
           }))
         return toAdd.length > 0 ? [...prev, ...toAdd] : prev
       })
-    }).catch(e => console.warn('[PsicoAI] getOpenSessions failed:', e))
+    }).catch(e => console.warn('[PsicoNotes] getOpenSessions failed:', e))
   }, [currentUser?.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Navigation — persiste em sessionStorage (por aba, não cross-tab) ────────
@@ -330,7 +330,7 @@ export default function App() {
     }
     api.createSession({ patientId: pat?.id, type: 'text' })
       .then(session => setSession(session.id))
-      .catch(e => console.warn('[PsicoAI] createSession failed:', e))
+      .catch(e => console.warn('[PsicoNotes] createSession failed:', e))
     setCanvasOpen(true)
   }
 
@@ -354,7 +354,7 @@ export default function App() {
     }
     api.createSession({ patientId: pat?.id, type: 'canvas' })
       .then(session => setSession(session.id))
-      .catch(e => console.warn('[PsicoAI] createSession (canvas) failed:', e))
+      .catch(e => console.warn('[PsicoNotes] createSession (canvas) failed:', e))
     setCanvasOpen(true)
   }
 
@@ -385,7 +385,7 @@ export default function App() {
     }
     api.createSession({ patientId: pat?.id, type: 'canvas' })
       .then(s => setSession(s.id))
-      .catch(e => console.warn('[PsicoAI] createSession failed:', e))
+      .catch(e => console.warn('[PsicoNotes] createSession failed:', e))
     setCanvasOpen(true)
   }
 
@@ -487,7 +487,7 @@ export default function App() {
             duration: 8000,
           })
         } else {
-          console.warn('[PsicoAI] createSession (canvas) failed:', e)
+          console.warn('[PsicoNotes] createSession (canvas) failed:', e)
         }
       })
     setCanvasOpen(true)
@@ -523,7 +523,7 @@ export default function App() {
             duration: 8000,
           })
         } else {
-          console.warn('[PsicoAI] createSession failed, session will not be persisted:', e)
+          console.warn('[PsicoNotes] createSession failed, session will not be persisted:', e)
         }
       })
 
@@ -763,7 +763,7 @@ export default function App() {
     // Create new session record in background
     api.createSession({ patientId: currentPatient?.id, type: session.type || 'text' })
       .then(s => setSession(s.id))
-      .catch(e => console.warn('[PsicoAI] createSession (reopen) failed:', e))
+      .catch(e => console.warn('[PsicoNotes] createSession (reopen) failed:', e))
 
     setCanvasInitialPageType(null) // recovery mode: não adiciona nova página
     setCanvasOpen(true)

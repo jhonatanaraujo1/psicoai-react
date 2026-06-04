@@ -2,7 +2,7 @@
  * mockApi.js — Camada de API mockada que espelha os endpoints reais do backend.
  * Quando o backend estiver disponível, basta trocar as funções aqui para usar fetch() real.
  *
- * Demo user: demo@psicoai.com.br / demo123
+ * Demo user: demo@psicnotes.com / demo123
  */
 
 const delay = (ms = 400) => new Promise(r => setTimeout(r, ms + Math.random() * 200))
@@ -23,7 +23,7 @@ export function psicoaiClearClinicalStorage() {
 
 const DEMO_USER = {
   id: 'usr-demo-001',
-  email: 'demo@psicoai.com.br',
+  email: 'demo@psicnotes.com',
   name: 'Dra. Camila Rezende',
   crp: '06/89234',
   specialty: 'Psicologia Clínica',
@@ -51,7 +51,7 @@ const DEMO_USER = {
 export const auth = {
   async login({ email, password }) {
     await delay(700)
-    const isDemo = email === 'demo@psicoai.com.br' && password === 'demo123'
+    const isDemo = email === 'demo@psicnotes.com' && password === 'demo123'
     const isReal = email && password && password.length >= 6
     if (!isDemo && !isReal) {
       throw new Error('E-mail ou senha incorretos.')
@@ -1193,14 +1193,14 @@ export const api = {
   async exportProntuarioPdf(patientId) {
     await delay(1200)
     const patient = PATIENTS.find(p => p.id === patientId)
-    const text = `PRONTUÁRIO ELETRÔNICO\nPsicoAI · Demo\n\nPaciente: ${patient?.name || 'Paciente'}\nGerado em: ${new Date().toLocaleString('pt-BR')}\n\n[Versão de demonstração — conecte o backend para PDF real]`
+    const text = `PRONTUÁRIO ELETRÔNICO\nPsicoNotes · Demo\n\nPaciente: ${patient?.name || 'Paciente'}\nGerado em: ${new Date().toLocaleString('pt-BR')}\n\n[Versão de demonstração — conecte o backend para PDF real]`
     return new Blob([text], { type: 'application/pdf' })
   },
 
   async exportRelatorioPdf(patientId, type = 'encaminhamento') {
     await delay(1000)
     const patient = PATIENTS.find(p => p.id === patientId)
-    const text = `RELATÓRIO DE ENCAMINHAMENTO\nPsicoAI · Demo\n\nPaciente: ${patient?.name || 'Paciente'}\nTipo: ${type}\nGerado em: ${new Date().toLocaleString('pt-BR')}\n\n[Versão de demonstração — conecte o backend para PDF real]`
+    const text = `RELATÓRIO DE ENCAMINHAMENTO\nPsicoNotes · Demo\n\nPaciente: ${patient?.name || 'Paciente'}\nTipo: ${type}\nGerado em: ${new Date().toLocaleString('pt-BR')}\n\n[Versão de demonstração — conecte o backend para PDF real]`
     return new Blob([text], { type: 'application/pdf' })
   },
 

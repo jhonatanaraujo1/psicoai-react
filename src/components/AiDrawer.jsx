@@ -432,7 +432,7 @@ export default function AiDrawer({ isOpen, onClose, onSave, patient, result, loa
           lineHeight: 1.5,
           flexShrink: 0,
         }}>
-          PsicoAI não realiza diagnósticos. Esta análise é um instrumento de apoio ao raciocínio clínico do psicólogo e não substitui avaliação profissional presencial. Conforme Resolução CFP 09/2024.
+          PsicoNotes não realiza diagnósticos. Esta análise é um instrumento de apoio ao raciocínio clínico do psicólogo e não substitui avaliação profissional presencial. Conforme Resolução CFP 09/2024.
         </div>
       </div>
     </>

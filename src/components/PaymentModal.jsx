@@ -10,7 +10,7 @@ import { api } from '../services'
 const PLANS = [
   {
     id: 'base',
-    name: 'PsicoAI',
+    name: 'PsicoNotes',
     price: 'R$79',
     period: '/mês',
     tagline: 'Tudo incluído · 5 análises IA/mês · sem surpresa no bolso',

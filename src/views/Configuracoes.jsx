@@ -164,7 +164,7 @@ function TabPlano({ profile }) {
       <div style={{ background: 'var(--g700)', borderRadius: 'var(--r2)', padding: '24px', marginBottom: '16px', position: 'relative', overflow: 'hidden' }}>
         <div style={{ position: 'absolute', top: '-40px', right: '-40px', width: '140px', height: '140px', borderRadius: '50%', background: 'rgba(255,255,255,0.04)' }} />
         <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '1px', color: 'var(--g300)', textTransform: 'uppercase', marginBottom: '5px' }}>Plano ativo</div>
-        <div style={{ fontFamily: "'Fraunces', serif", fontSize: '26px', color: '#fff', fontWeight: 300, marginBottom: '3px' }}>PsicoAI — R$79/mês</div>
+        <div style={{ fontFamily: "'Fraunces', serif", fontSize: '26px', color: '#fff', fontWeight: 300, marginBottom: '3px' }}>PsicoNotes — R$49/mês</div>
         <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.5)', marginBottom: '18px' }}>Tudo incluído · 5 análises IA/mês · extras por R$4,90</div>
         <div style={{ display: 'flex', gap: '7px', flexWrap: 'wrap' }}>
           {['Prontuário ilimitado', 'Canvas de anotações', 'Agenda integrada', 'Linha do tempo', '5 análises IA/mês'].map(f => (
@@ -388,7 +388,7 @@ function TabSeguranca() {
           <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--danger)', marginBottom: '2px' }}>Ação irreversível</div>
           <div style={{ fontSize: '12px', color: 'var(--danger)', opacity: 0.8 }}>Excluir sua conta e todos os dados clínicos de forma permanente</div>
         </div>
-        <button onClick={() => alert('Para excluir sua conta, entre em contato via suporte@psicoai.com.br. Remoção em até 30 dias (LGPD art. 18).')}
+        <button onClick={() => alert('Para excluir sua conta, entre em contato via suporte@psicnotes.com. Remoção em até 30 dias (LGPD art. 18).')}
           style={{ padding: '8px 16px', background: 'var(--danger)', color: '#fff', border: 'none', borderRadius: 'var(--r)', fontSize: '12px', fontWeight: 600, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", whiteSpace: 'nowrap', flexShrink: 0 }}>
           Excluir conta
         </button>
@@ -406,7 +406,7 @@ function TabAjuda({ onOpenOnboarding, onOpenTermos }) {
 
   const FAQS = [
     { q: 'Como funciona a análise IA?', a: 'Ao encerrar uma sessão (Canvas ou Texto), você aciona a análise. A IA processa as anotações e gera hipóteses diagnósticas DSM-5/CID-11 com probabilidade, detecta padrões comportamentais e emite alertas graduados.' },
-    { q: 'A IA substitui meu diagnóstico?', a: 'Não. O PsicoAI é um assistente de raciocínio clínico. Todo output é explicitamente marcado como "suporte clínico" e o diagnóstico final é sempre responsabilidade exclusiva do psicólogo.' },
+    { q: 'A IA substitui meu diagnóstico?', a: 'Não. O PsicoNotes é um assistente de raciocínio clínico. Todo output é explicitamente marcado como "suporte clínico" e o diagnóstico final é sempre responsabilidade exclusiva do psicólogo.' },
     { q: 'Meus dados são seguros?', a: 'Sim. Seus dados são criptografados em repouso e em trânsito. Cumprimos a LGPD e a Resolução CFP 09/2024. Nenhum dado clínico é usado para treinar modelos de IA.' },
     { q: 'Como cancelar o plano?', a: 'Sem burocracia — basta acessar a aba "Plano & Cobrança" e clicar em "Cancelar assinatura". Você mantém acesso até o fim do período pago.' },
   ]
@@ -487,10 +487,10 @@ function TabAjuda({ onOpenOnboarding, onOpenTermos }) {
           <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--d)', marginBottom: '3px' }}>Precisa de ajuda personalizada?</div>
           <div style={{ fontSize: '12px', color: 'var(--gr5)' }}>Nossa equipe responde em até 1 dia útil via e-mail.</div>
         </div>
-        <a href="mailto:suporte@psicoai.com.br" style={{ padding: '9px 16px', border: '1px solid var(--gr2)', borderRadius: 'var(--r)', background: 'var(--w)', fontSize: '13px', fontWeight: 500, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", color: 'var(--gr5)', textDecoration: 'none', whiteSpace: 'nowrap', transition: 'all 0.15s', display: 'inline-block' }}
+        <a href="mailto:suporte@psicnotes.com" style={{ padding: '9px 16px', border: '1px solid var(--gr2)', borderRadius: 'var(--r)', background: 'var(--w)', fontSize: '13px', fontWeight: 500, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", color: 'var(--gr5)', textDecoration: 'none', whiteSpace: 'nowrap', transition: 'all 0.15s', display: 'inline-block' }}
           onMouseOver={e => { e.currentTarget.style.borderColor = 'var(--g300)'; e.currentTarget.style.color = 'var(--g600)' }}
           onMouseOut={e => { e.currentTarget.style.borderColor = 'var(--gr2)'; e.currentTarget.style.color = 'var(--gr5)' }}>
-          suporte@psicoai.com.br →
+          suporte@psicnotes.com →
         </a>
       </div>
     </div>
@@ -649,7 +649,7 @@ function TabIntegracoes() {
               Sincronizar Google Agenda
             </div>
             <div style={{ fontSize: '12px', color: 'var(--gr5)', lineHeight: 1.5 }}>
-              Seus eventos do Google Agenda aparecem na Agenda do PsicoAI. Supervisões, reuniões e compromissos pessoais ficam visíveis junto com as sessões.
+              Seus eventos do Google Agenda aparecem na Agenda do PsicoNotes. Supervisões, reuniões e compromissos pessoais ficam visíveis junto com as sessões.
             </div>
           </div>
           <label style={{ flexShrink: 0, cursor: status?.connected ? 'pointer' : 'not-allowed' }}>
@@ -670,7 +670,7 @@ function TabIntegracoes() {
       {/* Info note */}
       <div style={{ padding: '12px 14px', background: 'var(--ow)', border: '1px solid var(--gr2)', borderRadius: 'var(--r)', fontSize: '12px', color: 'var(--gr5)', lineHeight: 1.6, display: 'flex', gap: '10px' }}>
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--gr4)" strokeWidth="2" style={{ flexShrink: 0, marginTop: '1px' }}><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-        O PsicoAI solicita apenas permissões de agenda (criar eventos e ler calendário). Nenhum dado clínico é enviado ao Google. Você pode revogar o acesso a qualquer momento.
+        O PsicoNotes solicita apenas permissões de agenda (criar eventos e ler calendário). Nenhum dado clínico é enviado ao Google. Você pode revogar o acesso a qualquer momento.
       </div>
     </div>
   )

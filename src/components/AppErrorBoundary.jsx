@@ -46,11 +46,11 @@ export default class AppErrorBoundary extends Component {
   }
 
   componentDidCatch(error) {
-    console.error('[PsicoAI] App crash:', error?.message)
+    console.error('[PsicoNotes] App crash:', error?.message)
 
     if (this.looped) {
       // Já tentou LOOP_MAX vezes — para o loop, não recarrega mais
-      console.warn('[PsicoAI] Loop de recovery detectado — parando auto-reload.')
+      console.warn('[PsicoNotes] Loop de recovery detectado — parando auto-reload.')
       return
     }
 
@@ -87,7 +87,7 @@ export default class AppErrorBoundary extends Component {
 
         <div style={{ textAlign: 'center', maxWidth: 300 }}>
           <div style={{ fontSize: 16, fontWeight: 600, color: '#1C1C1C', marginBottom: 6 }}>
-            {stuck ? 'Algo deu errado' : 'Atualizando o PsicoAI…'}
+            {stuck ? 'Algo deu errado' : 'Atualizando o PsicoNotes…'}
           </div>
           <div style={{ fontSize: 13, color: '#8B8B8B', lineHeight: 1.6 }}>
             {stuck
