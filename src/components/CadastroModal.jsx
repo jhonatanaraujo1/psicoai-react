@@ -1,10 +1,27 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { DatePicker, TimePicker, CustomSelect } from './DateTimePickers'
 
 const GENEROS = ['Feminino', 'Masculino', 'Não-binário', 'Prefiro não informar']
 const ABORDAGENS = ['TCC', 'Psicanálise', 'Humanista', 'EMDR', 'ACT', 'DBT', 'Gestalt', 'Outra']
 const FREQUENCIAS = ['Semanal', 'Quinzenal', 'Mensal', 'Sob demanda']
-const CID_SUGESTOES = ['F32.1 — Depressão moderada', 'F33.1 — Depressão recorrente', 'F40.1 — Fobia social', 'F41.1 — TAG', 'F43.1 — TEPT', 'F60.3 — TPB', 'F90.0 — TDAH']
+
+// CIDs mais comuns — aparecem como sugestões de tag
+const CID_SUGESTOES = [
+  { code: 'F32.1', label: 'Depressão moderada' },
+  { code: 'F33.1', label: 'Depressão recorrente' },
+  { code: 'F40.1', label: 'Fobia social' },
+  { code: 'F41.1', label: 'TAG' },
+  { code: 'F41.0', label: 'Transtorno de pânico' },
+  { code: 'F43.1', label: 'TEPT' },
+  { code: 'F43.2', label: 'Transtorno adaptativo' },
+  { code: 'F60.3', label: 'TPB' },
+  { code: 'F90.0', label: 'TDAH' },
+  { code: 'F20.0', label: 'Esquizofrenia paranoide' },
+  { code: 'F31.1', label: 'Transtorno bipolar' },
+  { code: 'F50.0', label: 'Anorexia nervosa' },
+  { code: 'F50.2', label: 'Bulimia nervosa' },
+]
+
 const DIAS_SEMANA = [
   { label: 'Segunda-feira', value: '1' },
   { label: 'Terça-feira',   value: '2' },
@@ -15,12 +32,13 @@ const DIAS_SEMANA = [
   { label: 'Domingo',       value: '7' },
 ]
 
-const Field = ({ label, required, children }) => (
+const Field = ({ label, required, hint, children }) => (
   <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
     <label style={{ fontSize: '11px', fontWeight: 600, color: 'var(--gr5)', letterSpacing: '0.5px', textTransform: 'uppercase' }}>
       {label}{required && <span style={{ color: 'var(--danger)', marginLeft: '3px' }}>*</span>}
     </label>
     {children}
+    {hint && <span style={{ fontSize: '11px', color: 'var(--gr4)' }}>{hint}</span>}
   </div>
 )
 
@@ -63,13 +81,149 @@ const CadastroTextarea = ({ value, onChange, placeholder, rows = 3, error = fals
   />
 )
 
+// ─── CID Tag Input ─────────────────────────────────────────────────────────────
+// Armazena como string separada por vírgula no form.cid (retrocompatível).
+function CidTagInput({ value, onChange }) {
+  const [inputVal, setInputVal]     = useState('')
+  const [showSugs, setShowSugs]     = useState(false)
+  const wrapRef = useRef(null)
+  const inputRef = useRef(null)
+
+  // Parse — value é string "F32.1 — Depressão moderada, F41.1 — TAG"
+  const tags = value
+    ? value.split(',').map(t => t.trim()).filter(Boolean)
+    : []
+
+  const filteredSugs = CID_SUGESTOES.filter(s => {
+    const q = inputVal.toLowerCase()
+    const full = `${s.code} ${s.label}`.toLowerCase()
+    const alreadyAdded = tags.some(t => t.includes(s.code))
+    return !alreadyAdded && (!q || full.includes(q))
+  })
+
+  function addTag(tag) {
+    const newTags = [...tags, tag]
+    onChange(newTags.join(', '))
+    setInputVal('')
+    inputRef.current?.focus()
+  }
+
+  function removeTag(idx) {
+    const newTags = tags.filter((_, i) => i !== idx)
+    onChange(newTags.join(', '))
+  }
+
+  function handleKey(e) {
+    if ((e.key === 'Enter' || e.key === ',') && inputVal.trim()) {
+      e.preventDefault()
+      addTag(inputVal.trim())
+      setInputVal('')
+    }
+    if (e.key === 'Backspace' && !inputVal && tags.length > 0) {
+      removeTag(tags.length - 1)
+    }
+  }
+
+  // Fecha dropdown ao clicar fora
+  useEffect(() => {
+    function handleClick(e) {
+      if (wrapRef.current && !wrapRef.current.contains(e.target)) setShowSugs(false)
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [])
+
+  return (
+    <div ref={wrapRef} style={{ position: 'relative' }}>
+      {/* Tag + input wrapper */}
+      <div
+        onClick={() => { inputRef.current?.focus(); setShowSugs(true) }}
+        style={{
+          display: 'flex', flexWrap: 'wrap', gap: '6px', alignItems: 'center',
+          minHeight: '40px', padding: '6px 10px',
+          border: '1px solid var(--gr2)', borderRadius: 'var(--r)',
+          background: 'var(--ow)', cursor: 'text',
+          transition: 'border-color 0.15s',
+        }}
+        onFocus={() => setShowSugs(true)}
+      >
+        {tags.map((tag, i) => (
+          <span key={i} style={{
+            display: 'inline-flex', alignItems: 'center', gap: '4px',
+            padding: '3px 8px', borderRadius: '20px',
+            background: 'var(--g50)', color: 'var(--g700)',
+            border: '1px solid var(--g100)',
+            fontSize: '12px', fontWeight: 500, lineHeight: 1.4,
+            fontFamily: "'DM Sans', sans-serif",
+          }}>
+            {tag}
+            <button
+              onMouseDown={e => { e.preventDefault(); removeTag(i) }}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--g500)', padding: '0', lineHeight: 1, fontSize: '13px', display: 'flex', alignItems: 'center' }}
+            >×</button>
+          </span>
+        ))}
+        <input
+          ref={inputRef}
+          value={inputVal}
+          onChange={e => { setInputVal(e.target.value); setShowSugs(true) }}
+          onFocus={() => setShowSugs(true)}
+          onKeyDown={handleKey}
+          placeholder={tags.length === 0 ? 'Digitar ou selecionar CID…' : ''}
+          style={{
+            border: 'none', outline: 'none', background: 'transparent',
+            fontSize: '13px', fontFamily: "'DM Sans', sans-serif",
+            color: 'var(--d)', flex: '1 1 120px', minWidth: '80px',
+            padding: '2px 0',
+          }}
+        />
+      </div>
+
+      {/* Dropdown sugestões */}
+      {showSugs && filteredSugs.length > 0 && (
+        <div style={{
+          position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0,
+          background: 'var(--w)', border: '1px solid var(--gr2)', borderRadius: 'var(--r)',
+          boxShadow: 'var(--sh2)', zIndex: 400,
+          maxHeight: '200px', overflowY: 'auto',
+        }}>
+          {filteredSugs.map(s => (
+            <div
+              key={s.code}
+              onMouseDown={e => { e.preventDefault(); addTag(`${s.code} — ${s.label}`) }}
+              style={{
+                padding: '9px 12px', cursor: 'pointer', fontSize: '13px',
+                display: 'flex', alignItems: 'center', gap: '8px',
+                transition: 'background 0.1s',
+              }}
+              onMouseEnter={e => e.currentTarget.style.background = 'var(--g50)'}
+              onMouseLeave={e => e.currentTarget.style.background = ''}
+            >
+              <span style={{ fontWeight: 700, fontSize: '12px', color: 'var(--g600)', minWidth: '52px' }}>{s.code}</span>
+              <span style={{ color: 'var(--gr5)' }}>{s.label}</span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <span style={{ fontSize: '11px', color: 'var(--gr4)', marginTop: '2px', display: 'block' }}>
+        Selecione nas sugestões ou digitar o código + Enter. Múltiplos CIDs permitidos.
+      </span>
+    </div>
+  )
+}
+
 const emptyForm = {
   nome: '', dataNasc: '', genero: '', email: '', telefone: '',
   queixa: '', historico: '', medicacao: '', abordagem: '', frequencia: '',
-  cid: '', pagamento: 'Particular', valor: '',
-  // Recorrência
+  cid: '', pagamento: 'Particular',
+  // Recorrência + cobrança
   recurringDayOfWeek: '', recurringTime: '', recurringDurationMin: '50',
-  billingType: '', monthlyValue: '',
+  billingType: '',
+  // Valor — campo único, semântica muda com billingType
+  // billingType === 'monthly' → monthlyValue; caso contrário → sessionValue (valor)
+  valor: '',
+  monthlyValue: '',
 }
 
 function formFromData(d) {
@@ -79,13 +233,14 @@ function formFromData(d) {
     email: d.email || '', telefone: d.phone || '', queixa: d.complaint || '',
     historico: d.history || '', medicacao: d.medication || '',
     abordagem: d.approach || '', frequencia: d.frequency || '',
-    cid: d.cid || '', pagamento: d.payment || 'Particular', valor: d.sessionValue || '',
+    cid: d.cid || '', pagamento: d.payment || 'Particular',
+    valor: d.sessionValue ? String(d.sessionValue) : '',
     // Recorrência
     recurringDayOfWeek:   d.recurringDayOfWeek   ? String(d.recurringDayOfWeek)   : '',
     recurringTime:        d.recurringTime         || '',
     recurringDurationMin: d.recurringDurationMin  ? String(d.recurringDurationMin) : '50',
     billingType:          d.billingType           || '',
-    monthlyValue:         d.monthlyValue          || '',
+    monthlyValue:         d.monthlyValue          ? String(d.monthlyValue)         : '',
   }
 }
 
@@ -119,6 +274,14 @@ export default function CadastroModal({ isOpen, onClose, onSave, initialData = n
     onSave(form)
     onClose()
   }
+
+  // Label e campo do valor dependem do modelo de cobrança
+  const isMonthly    = form.billingType === 'monthly'
+  const isPerSession = form.billingType === 'per_session' || !form.billingType
+  const valueLabel   = isMonthly ? 'Valor mensal (R$)' : 'Valor por sessão (R$)'
+  const valueKey     = isMonthly ? 'monthlyValue' : 'valor'
+  const valueVal     = isMonthly ? form.monthlyValue : form.valor
+  const valuePlaceholder = isMonthly ? 'Ex: 800' : 'Ex: 200'
 
   return (
     <div style={{
@@ -191,22 +354,7 @@ export default function CadastroModal({ isOpen, onClose, onSave, initialData = n
                 <CadastroInput value={form.medicacao} onChange={e => set('medicacao', e.target.value)} placeholder="Ex: Sertralina 50mg — prescrição Dr. João Silva (CRM 12345)" />
               </Field>
               <Field label="Hipótese diagnóstica — CID-10/11 (opcional)">
-                <div style={{ position: 'relative' }}>
-                  <input
-                    type="text"
-                    value={form.cid}
-                    onChange={e => set('cid', e.target.value)}
-                    placeholder="Ex: F43.1 — TEPT"
-                    onFocus={onFocus}
-                    onBlur={onBlur}
-                    style={inputStyle}
-                    list="cid-list"
-                  />
-                  <datalist id="cid-list">
-                    {CID_SUGESTOES.map(c => <option key={c} value={c} />)}
-                  </datalist>
-                </div>
-                <span style={{ fontSize: '11px', color: 'var(--gr4)' }}>Hipótese clínica inicial — a IA refinará após análise das sessões</span>
+                <CidTagInput value={form.cid} onChange={v => set('cid', v)} />
               </Field>
             </div>
           </div>
@@ -226,19 +374,16 @@ export default function CadastroModal({ isOpen, onClose, onSave, initialData = n
               <Field label="Modalidade de pagamento">
                 <CustomSelect value={form.pagamento} onChange={v => set('pagamento', v)} options={['Particular', 'Plano de saúde', 'Convênio empresarial', 'Gratuito'].map(o => ({ label: o, value: o }))} placeholder="Selecione" />
               </Field>
-              <Field label="Valor por sessão (R$)">
-                <CadastroInput value={form.valor} onChange={e => set('valor', e.target.value)} placeholder="Ex: 200" type="number" />
-              </Field>
             </div>
           </div>
 
-          {/* Seção: Recorrência */}
+          {/* Seção: Recorrência e Cobrança */}
           <div>
             <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '1px', textTransform: 'uppercase', color: 'var(--gr4)', marginBottom: '4px', paddingBottom: '8px', borderBottom: '1px solid var(--gr1)' }}>
               Recorrência e Cobrança
             </div>
             <div style={{ fontSize: '11px', color: 'var(--gr4)', marginBottom: '12px' }}>
-              Defina o horário fixo do paciente. Os lembretes automáticos usam essas informações.
+              Horário fixo para lembretes automáticos. O valor se adapta ao modelo escolhido.
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
               <Field label="Dia da semana fixo">
@@ -259,21 +404,30 @@ export default function CadastroModal({ isOpen, onClose, onSave, initialData = n
                 />
               </Field>
               <Field label="Modelo de cobrança">
-                <CustomSelect value={form.billingType} onChange={v => set('billingType', v)} options={[{ label: 'Não definido', value: '' }, { label: 'Por sessão', value: 'per_session' }, { label: 'Mensalidade fixa', value: 'monthly' }]} placeholder="Não definido" />
+                <CustomSelect
+                  value={form.billingType}
+                  onChange={v => set('billingType', v)}
+                  options={[
+                    { label: 'Não definido', value: '' },
+                    { label: 'Por sessão',   value: 'per_session' },
+                    { label: 'Mensalidade fixa', value: 'monthly' },
+                  ]}
+                  placeholder="Não definido"
+                />
               </Field>
-              {form.billingType === 'monthly' && (
-                <Field label="Valor mensal (R$)">
-                  <input
-                    type="number"
-                    value={form.monthlyValue}
-                    onChange={e => set('monthlyValue', e.target.value)}
-                    placeholder="Ex: 800"
-                    onFocus={onFocus} onBlur={onBlur}
-                    style={inputStyle}
-                    min="0"
-                  />
-                </Field>
-              )}
+
+              {/* Campo de valor — label e binding mudam com o modelo de cobrança */}
+              <Field label={valueLabel}>
+                <input
+                  type="number"
+                  value={valueVal}
+                  onChange={e => set(valueKey, e.target.value)}
+                  placeholder={valuePlaceholder}
+                  onFocus={onFocus} onBlur={onBlur}
+                  style={inputStyle}
+                  min="0"
+                />
+              </Field>
             </div>
           </div>
 

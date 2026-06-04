@@ -21,12 +21,16 @@ const setTokens   = (at, rt) => {
   localStorage.setItem('psicoai_token', at)
   if (rt) localStorage.setItem('psicoai_refresh', rt)
 }
+// Chaves que NÃO devem ser removidas no logout (consentimento LGPD persiste entre sessões)
+const PERSIST_KEYS = new Set(['psicoai_lgpd_consent'])
+
 const clearTokens = () => {
   // Remove auth + TODOS os dados clínicos (canvas, quicknote, session ativa)
+  // Preserva consentimento LGPD — deve ser solicitado apenas 1× por dispositivo.
   const keysToRemove = []
   for (let i = 0; i < localStorage.length; i++) {
     const k = localStorage.key(i)
-    if (k && k.startsWith('psicoai_')) keysToRemove.push(k)
+    if (k && k.startsWith('psicoai_') && !PERSIST_KEYS.has(k)) keysToRemove.push(k)
   }
   keysToRemove.forEach(k => localStorage.removeItem(k))
 }
@@ -304,7 +308,33 @@ export const api = {
   },
 
   async updatePatient(id, data) {
-    return patch(`/api/v1/patients/${id}`, data)
+    // Mapeia campos do formulário (nome/abordagem/…) para os campos da API (name/approach/…)
+    // Suporta tanto form keys (CadastroModal) quanto API keys diretas.
+    const body = {
+      name:       data.name       || data.nome       || undefined,
+      birthDate:  data.birthDate  || data.dataNasc   || undefined,
+      gender:     data.gender     || data.genero      || undefined,
+      email:      data.email      ?? undefined,
+      phone:      data.phone      || data.telefone   || undefined,
+      complaint:  data.complaint  || data.queixa     || undefined,
+      history:    data.history    || data.historico  || undefined,
+      medication: data.medication || data.medicacao  || undefined,
+      approach:   data.approach   || data.abordagem  || undefined,
+      frequency:  data.frequency  || data.frequencia || undefined,
+      payment:    data.payment    || data.pagamento  || undefined,
+      sessionValue: data.sessionValue !== undefined
+        ? data.sessionValue
+        : (data.valor !== undefined && data.valor !== '' ? Number(data.valor) : undefined),
+      cid:        data.cid        ?? undefined,
+      recurringDayOfWeek:   data.recurringDayOfWeek  !== undefined ? (data.recurringDayOfWeek  ? Number(data.recurringDayOfWeek)  : null) : undefined,
+      recurringTime:        data.recurringTime        !== undefined ? (data.recurringTime        || null) : undefined,
+      recurringDurationMin: data.recurringDurationMin !== undefined ? (data.recurringDurationMin ? Number(data.recurringDurationMin) : null) : undefined,
+      billingType:          data.billingType          !== undefined ? (data.billingType          || null) : undefined,
+      monthlyValue:         data.monthlyValue         !== undefined ? (data.monthlyValue         ? Number(data.monthlyValue)         : null) : undefined,
+    }
+    // Remove undefined — PATCH deve enviar apenas campos que mudaram
+    const clean = Object.fromEntries(Object.entries(body).filter(([, v]) => v !== undefined))
+    return patch(`/api/v1/patients/${id}`, clean)
   },
 
   async deletePatient(id) {

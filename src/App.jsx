@@ -319,6 +319,11 @@ export default function App() {
     } catch { return false }
   })
   const [cadastroOpen, setCadastroOpen] = useState(false)
+  // Incrementar força Pacientes + Anotacoes a refazer o fetch sem precisar de prop drilling complexo
+  const [patientsRefreshKey, setPatientsRefreshKey] = useState(0)
+  const [sessionsRefreshKey, setSessionsRefreshKey] = useState(0)
+  const bumpPatients  = () => setPatientsRefreshKey(k => k + 1)
+  const bumpSessions  = () => setSessionsRefreshKey(k => k + 1)
   // Pre-loaded content for reopening a session
   const [textInitialHtml, setTextInitialHtml] = useState('')
   const [canvasInitialData, setCanvasInitialData] = useState(null)
@@ -816,14 +821,16 @@ export default function App() {
 
     // Finish session in background — skip for view-only (sessão histórica já encerrada)
     if (sid && !wasViewOnly) {
-      api.finishSession(sid, { textContent, htmlContent, canvasDataJson, canvasTextContent, durationSeconds: duration, sessionDate }).catch(() => {})
+      api.finishSession(sid, { textContent, htmlContent, canvasDataJson, canvasTextContent, durationSeconds: duration, sessionDate })
+        .then(() => bumpSessions())  // atualiza lista de anotações
+        .catch(() => {})
     }
   }
 
   const renderView = () => {
     switch (currentView) {
       case 'dashboard':    return <Dashboard setCurrentView={handleSetView} currentUser={currentUser} />
-      case 'pacientes':   return <Pacientes setCurrentView={handleSetView} onNovoCadastro={() => setCadastroOpen(true)} />
+      case 'pacientes':   return <Pacientes key={patientsRefreshKey} setCurrentView={handleSetView} onNovoCadastro={() => setCadastroOpen(true)} />
       case 'paciente':    return <Paciente patient={currentPatient} setCurrentView={handleSetView} onSessao={() => handleSetView('sessao', currentPatient)} onQuickNote={() => setQuickNoteOpen(true)} onReopenSession={handleReopenSession} onViewProntuario={() => setProntuarioOpen(true)} />
       case 'agenda':      return <Agenda currentUser={currentUser} />
       case 'insights':    return <Insights onGoToPatient={(patient) => handleSetView('paciente', patient)} />
@@ -847,7 +854,7 @@ export default function App() {
           ...backgroundSessions.map(s => s.patient?.id).filter(Boolean),
         ])}
       />
-      case 'anotacoes':   return <Anotacoes setCurrentView={handleSetView} onOpenCanvas={handleOpenCanvasFromHistory} />
+      case 'anotacoes':   return <Anotacoes key={sessionsRefreshKey} setCurrentView={handleSetView} onOpenCanvas={handleOpenCanvasFromHistory} />
       case 'teleatendimento': return <Teleatendimento />
       case 'configuracoes': return <Configuracoes currentUser={currentUser} onProfileUpdate={(data) => setCurrentUser(u => ({ ...u, ...data }))} onOpenOnboarding={() => setOnboardingOpen(true)} onOpenTermos={() => setCurrentView('termos')} />
       case 'termos':      return <TermosDeUso onClose={() => setCurrentView('configuracoes')} />
@@ -1002,6 +1009,7 @@ export default function App() {
         onSave={async (form) => {
           const patient = await api.createPatient(form)
           setCadastroOpen(false)
+          bumpPatients()   // força refetch no grid
           showToast(`${patient.name} adicionado com sucesso`, 'success')
           setCurrentView('pacientes')
         }}
