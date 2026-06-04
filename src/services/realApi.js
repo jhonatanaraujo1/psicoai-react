@@ -668,6 +668,11 @@ export const api = {
   async getGoogleCalendarEvents(from, to) {
     return get('/api/v1/google/calendar-events', { from, to })
   },
+
+  // ── Feedback ──────────────────────────────────────────────────────────────
+  async submitFeedback({ type, message, context }) {
+    return post('/api/v1/feedback', { type, message, context })
+  },
 }
 
 export default api

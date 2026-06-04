@@ -1267,6 +1267,14 @@ export const api = {
     if (!c) return { code, valid: false, discountType: 'percentage', discountValue: 0, planRestriction: null, message: 'Cupom não encontrado ou inválido.' }
     return { code: code.toUpperCase(), valid: true, planRestriction: null, ...c }
   },
+
+  // ── Feedback ──────────────────────────────────────────────────────────────
+  async submitFeedback({ type, message, context }) {
+    await delay(500)
+    // Mock: só loga no console em modo dev
+    console.info('[PsicoNotes] Feedback (mock):', { type, message: message.slice(0, 80) })
+    return { id: `fb-mock-${Date.now()}`, type, status: 'NEW' }
+  },
 }
 
 export default api

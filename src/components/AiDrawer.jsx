@@ -68,7 +68,7 @@ const TEMPLATE_LABELS = {
   psicodinamica:         'Ψ Psicodinâmica',
 }
 
-export default function AiDrawer({ isOpen, onClose, onSave, patient, result, loading, onRefine }) {
+export default function AiDrawer({ isOpen, onClose, onSave, patient, result, loading, onRefine, onOpenFeedback }) {
   const [refineOpen, setRefineOpen] = useState(false)
   const [refineFeedback, setRefineFeedback] = useState('')
   const [refining, setRefining] = useState(false)
@@ -416,6 +416,35 @@ export default function AiDrawer({ isOpen, onClose, onSave, patient, result, loa
               {(result.refineCount ?? 0) >= 3 && (
                 <div style={{ marginTop: '8px', fontSize: '11px', color: 'var(--gr4)', textAlign: 'center', padding: '6px' }}>
                   Limite de 3 refinamentos atingido para esta sessão.
+                </div>
+              )}
+
+              {/* Feedback sutil sobre qualidade da IA */}
+              {onOpenFeedback && (
+                <div style={{ marginTop: '10px', display: 'flex', justifyContent: 'center' }}>
+                  <button
+                    type="button"
+                    onClick={() => onOpenFeedback({
+                      type: 'AI_ISSUE',
+                      context: {
+                        analysisId: result?.id,
+                        template:   result?.template,
+                        sessionCount: result?.sessionCount,
+                      },
+                    })}
+                    style={{
+                      background: 'none', border: 'none',
+                      color: 'var(--gr3)', fontSize: '11px',
+                      cursor: 'pointer', padding: '4px 8px',
+                      fontFamily: "'DM Sans', sans-serif",
+                      textDecoration: 'underline', textDecorationStyle: 'dotted',
+                      textUnderlineOffset: '2px', transition: 'color 0.12s',
+                    }}
+                    onMouseEnter={e => e.currentTarget.style.color = 'var(--gr5)'}
+                    onMouseLeave={e => e.currentTarget.style.color = 'var(--gr3)'}
+                  >
+                    Resultado incorreto ou estranho? Relate
+                  </button>
                 </div>
               )}
             </div>

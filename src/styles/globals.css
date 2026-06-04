@@ -911,3 +911,11 @@ body{font-family:'DM Sans',sans-serif;background:var(--ow);color:var(--d);displa
     bottom:calc(56px + env(safe-area-inset-bottom,0px));
   }
 }
+
+
+/* ── Feedback floating button ────────────────────────────────────────────────
+   Em mobile (≤640px): esconde o label, mantém só o ícone (pill menor)
+   Bottom 76px → acima do bottom-nav (56px) + safe-area                     */
+@media(max-width:640px){
+  .feedback-btn-label{ display:none }
+}

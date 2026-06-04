@@ -6,6 +6,7 @@ import { showToast, dismissToast, ToastContainer } from './components/Toast'
 import ProgressBar, { startProgress, finishProgress, failProgress } from './components/ProgressBar'
 import ConfirmDialog, { confirm } from './components/ConfirmDialog'
 import OnboardingTour from './components/OnboardingTour'
+import FeedbackModal from './components/FeedbackModal'
 import OpenSessionsPanel from './components/OpenSessionsPanel'
 import PaymentModal from './components/PaymentModal'
 import LgpdBanner from './components/LgpdBanner'
@@ -59,6 +60,15 @@ export default function App() {
 
   // ── Payment required (conta bloqueada) ───────────────────────────────────
   const [paymentRequired, setPaymentRequired] = useState(false)
+
+  // ── Feedback modal ────────────────────────────────────────────────────────
+  const [feedbackOpen, setFeedbackOpen]     = useState(false)
+  const [feedbackPreset, setFeedbackPreset] = useState(null)
+
+  const openFeedback = (preset = null) => {
+    setFeedbackPreset(preset)
+    setFeedbackOpen(true)
+  }
 
   useEffect(() => {
     const onSessionExpired = () => { auth.logout(); setCurrentUser(null) }
@@ -890,9 +900,17 @@ export default function App() {
           onClose={() => setAiDrawerOpen(false)}
           onSave={handleSaveAnalysis}
           onRefine={handleRefine}
+          onOpenFeedback={openFeedback}
           patient={currentPatient}
           result={analysisResult}
           loading={analysisLoading}
+        />
+        <FeedbackModal
+          isOpen={feedbackOpen}
+          onClose={() => setFeedbackOpen(false)}
+          preset={feedbackPreset}
+          currentView="sessao"
+          api={api}
         />
         <ProgressBar />
         <ConfirmDialog />
@@ -1010,6 +1028,7 @@ export default function App() {
         onClose={() => setAiDrawerOpen(false)}
         onSave={handleSaveAnalysis}
         onRefine={handleRefine}
+        onOpenFeedback={openFeedback}
         patient={currentPatient}
         result={analysisResult}
         loading={analysisLoading}
@@ -1038,6 +1057,52 @@ export default function App() {
           onReopenSession={handleReopenSession}
         />
       )}
+
+      {/* Botão flutuante de feedback — sutil, sempre acessível */}
+      <button
+        onClick={() => openFeedback(null)}
+        title="Feedback, sugestão ou problema?"
+        style={{
+          position: 'fixed',
+          bottom: '76px',   /* acima do BottomNav em mobile */
+          right: '16px',
+          zIndex: 8500,
+          background: 'var(--w)',
+          border: '1px solid var(--gr2)',
+          borderRadius: '20px',
+          padding: '7px 12px 7px 10px',
+          display: 'flex', alignItems: 'center', gap: '6px',
+          boxShadow: '0 2px 10px rgba(0,0,0,0.10)',
+          cursor: 'pointer',
+          fontFamily: "'DM Sans', sans-serif",
+          fontSize: '12px',
+          color: 'var(--gr5)',
+          fontWeight: 500,
+          transition: 'box-shadow 0.15s, border-color 0.15s',
+        }}
+        onMouseEnter={e => {
+          e.currentTarget.style.boxShadow = '0 4px 16px rgba(0,0,0,0.14)'
+          e.currentTarget.style.borderColor = 'var(--gr3)'
+        }}
+        onMouseLeave={e => {
+          e.currentTarget.style.boxShadow = '0 2px 10px rgba(0,0,0,0.10)'
+          e.currentTarget.style.borderColor = 'var(--gr2)'
+        }}
+      >
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ flexShrink: 0 }}>
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+        </svg>
+        <span className="feedback-btn-label">Feedback</span>
+      </button>
+
+      {/* Modal de feedback/bug/sugestão */}
+      <FeedbackModal
+        isOpen={feedbackOpen}
+        onClose={() => setFeedbackOpen(false)}
+        preset={feedbackPreset}
+        currentView={currentView}
+        api={api}
+      />
 
       {/* Sistema de feedback global */}
       <ProgressBar />
