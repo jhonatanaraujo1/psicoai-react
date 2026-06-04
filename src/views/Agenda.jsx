@@ -67,6 +67,7 @@ export default function Agenda({ currentUser }) {
   const [allPatients, setAllPatients] = useState([])
   const [saving, setSaving] = useState(false)
   const [agendaView, setAgendaView] = useState(() => window.innerWidth <= 640 ? 'list' : 'week')
+  const [listSelectedDate, setListSelectedDate] = useState('')   // YYYY-MM-DD ou '' = todos futuros
   const [form, setForm] = useState({
     title: '', type: 'session', patientId: '', date: '', startTime: '', endTime: '', meetLink: '', description: ''
   })
@@ -247,9 +248,16 @@ export default function Agenda({ currentUser }) {
     return d >= weekDates[0] && d <= weekDates[4] && e.type === 'session'
   }).length
 
-  // List view: all upcoming events, sorted, grouped by date
+  // List view: filtrado por data selecionada (ou últimos 7 dias + futuros)
   const listEvents = allEvents
-    .filter(e => new Date(e.startAt) >= new Date(today.getTime() - 86400000 * 7))
+    .filter(e => {
+      const d = new Date(e.startAt)
+      if (listSelectedDate) {
+        // Data específica selecionada — mostra APENAS eventos desse dia
+        return d.toISOString().slice(0, 10) === listSelectedDate
+      }
+      return d >= new Date(today.getTime() - 86400000 * 7)
+    })
     .sort((a, b) => new Date(a.startAt) - new Date(b.startAt))
 
   // Group by date string
@@ -312,6 +320,43 @@ export default function Agenda({ currentUser }) {
             <button className="btn-outline" style={{ padding: '8px 14px', fontSize: '12px', borderColor: 'var(--g300)', color: 'var(--g600)' }} onClick={() => setWeekOffset(0)}>Hoje</button>
             <button className="btn-outline" style={{ padding: '8px 14px', fontSize: '12px' }} onClick={() => setWeekOffset(w => w + 1)}>Próxima ›</button>
           </>}
+          {agendaView === 'list' && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <input
+                type="date"
+                value={listSelectedDate}
+                onChange={e => setListSelectedDate(e.target.value)}
+                title="Filtrar por data"
+                style={{
+                  border: `1px solid ${listSelectedDate ? 'var(--g300)' : 'var(--gr2)'}`,
+                  borderRadius: 'var(--r)', padding: '7px 10px',
+                  fontSize: '12px', color: listSelectedDate ? 'var(--g700)' : 'var(--d)',
+                  fontFamily: "'DM Sans', sans-serif",
+                  background: listSelectedDate ? 'var(--g50)' : 'var(--w)',
+                  outline: 'none', cursor: 'pointer',
+                }}
+              />
+              {listSelectedDate ? (
+                <button
+                  className="btn-outline"
+                  style={{ padding: '7px 12px', fontSize: '12px', borderColor: 'var(--g300)', color: 'var(--g600)' }}
+                  onClick={() => setListSelectedDate('')}
+                  title="Ver todos os eventos futuros"
+                >
+                  Todos
+                </button>
+              ) : (
+                <button
+                  className="btn-outline"
+                  style={{ padding: '7px 12px', fontSize: '12px', borderColor: 'var(--g300)', color: 'var(--g600)' }}
+                  onClick={() => setListSelectedDate(today.toISOString().slice(0, 10))}
+                  title="Ver apenas eventos de hoje"
+                >
+                  Hoje
+                </button>
+              )}
+            </div>
+          )}
           <button className="btn-primary" style={{ padding: '8px 16px', fontSize: '12px' }} onClick={() => openCreate()}>
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
             Novo Evento
@@ -322,6 +367,9 @@ export default function Agenda({ currentUser }) {
       {/* ── LIST VIEW ──────────────────────────────────────────── */}
       {agendaView === 'list' && (() => {
         const todayStr = today.toDateString()
+        const dateFilterLabel = listSelectedDate
+          ? new Date(listSelectedDate + 'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' })
+          : null
         const upcomingSessions = listEvents.filter(e => e.type === 'session').length
         const upcomingMinutes = listEvents
           .filter(e => e.startAt && e.endAt)
@@ -339,7 +387,9 @@ export default function Agenda({ currentUser }) {
                 flexWrap: 'wrap',
               }}>
                 <div>
-                  <div style={{ fontSize: 11, color: 'var(--g600)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 2 }}>Próximos eventos</div>
+                  <div style={{ fontSize: 11, color: 'var(--g600)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 2 }}>
+                    {dateFilterLabel ? dateFilterLabel : 'Próximos eventos'}
+                  </div>
                   <div style={{ fontFamily: "'Fraunces', serif", fontSize: 22, color: 'var(--g700)', fontWeight: 400, lineHeight: 1 }}>{listEvents.length}</div>
                 </div>
                 {upcomingSessions > 0 && (
@@ -374,9 +424,18 @@ export default function Agenda({ currentUser }) {
                     <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="var(--gr2)" strokeWidth="1.3" style={{ display: 'block', margin: '0 auto 16px' }}>
                       <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
                     </svg>
-                    <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--d)', marginBottom: 6 }}>Nenhum evento agendado</div>
-                    <div style={{ fontSize: 13, color: 'var(--gr4)', marginBottom: 18 }}>Crie seu primeiro evento para começar a organizar a semana clínica.</div>
-                    <button className="btn-primary" style={{ fontSize: '13px' }} onClick={() => openCreate()}>
+                    <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--d)', marginBottom: 6 }}>
+                      {listSelectedDate ? 'Nenhum evento neste dia' : 'Nenhum evento agendado'}
+                    </div>
+                    <div style={{ fontSize: 13, color: 'var(--gr4)', marginBottom: 18 }}>
+                      {listSelectedDate
+                        ? `Sem eventos em ${new Date(listSelectedDate + 'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' })}.`
+                        : 'Crie seu primeiro evento para começar a organizar a semana clínica.'}
+                    </div>
+                    {listSelectedDate
+                      ? <button className="btn-outline" style={{ fontSize: '13px', marginBottom: '8px' }} onClick={() => setListSelectedDate('')}>Ver todos os eventos</button>
+                      : null}
+                    <button className="btn-primary" style={{ fontSize: '13px' }} onClick={() => openCreate({ date: listSelectedDate || undefined })}>
                       + Novo evento
                     </button>
                   </div>

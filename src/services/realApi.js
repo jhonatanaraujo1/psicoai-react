@@ -43,27 +43,39 @@ async function doRefresh() {
   const rt = getRefresh()
   if (!rt) throw new Error('no_refresh_token')
 
-  let res
-  try {
-    res = await fetch(`${BASE}/api/v1/auth/refresh`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ refreshToken: rt }),
-    })
-  } catch {
-    // Erro de rede: servidor offline, connection refused, timeout de deploy
-    throw new Error('network_error')
+  // Retry 1× após 3s — Railway reinicia em ~2s durante deploys.
+  // Sem retry, o usuário seria deslogado por um 503 transitório.
+  // 401/403 no refresh = token genuinamente inválido → não retentar, deslogar.
+  for (let attempt = 0; attempt < 2; attempt++) {
+    if (attempt > 0) await new Promise(r => setTimeout(r, 3000))
+
+    let res
+    try {
+      res = await fetch(`${BASE}/api/v1/auth/refresh`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refreshToken: rt }),
+      })
+    } catch {
+      if (attempt === 0) continue          // rede caiu momentaneamente — tenta de novo
+      throw new Error('network_error')     // segunda falha → propaga sem deslogar
+    }
+
+    // 401/403 = refresh token inválido ou expirado → deslogar (não retentar)
+    if (res.status === 401 || res.status === 403) throw new Error('refresh_failed')
+    // 5xx = servidor temporariamente indisponível → tenta de novo na 1ª vez
+    if (!res.ok) {
+      if (attempt === 0) continue
+      throw new Error('server_error')      // segunda falha → propaga sem deslogar
+    }
+
+    const data = await res.json()
+    setTokens(data.accessToken, data.refreshToken)
+    if (data.user) localStorage.setItem('psicoai_user', JSON.stringify(normalizeUser(data.user)))
+    return data.accessToken
   }
-
-  // 401/403 = token realmente inválido ou expirado → deslogar
-  if (res.status === 401 || res.status === 403) throw new Error('refresh_failed')
-  // 5xx / outro = servidor temporariamente indisponível (restart Railway) → NÃO deslogar
-  if (!res.ok) throw new Error('server_error')
-
-  const data = await res.json()
-  setTokens(data.accessToken, data.refreshToken)
-  if (data.user) localStorage.setItem('psicoai_user', JSON.stringify(normalizeUser(data.user)))
-  return data.accessToken
+  // Nunca alcançado normalmente, mas satisfaz o tipo de retorno do TS
+  throw new Error('server_error')
 }
 
 async function refreshOnce() {
