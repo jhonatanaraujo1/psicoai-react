@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { api } from '../services'
-import AiDrawer from '../components/AiDrawer'
+import AiAnalysisPanel from '../components/AiAnalysisPanel'
 
 // Tradução dos padrões para linguagem acessível
 const PATTERN_INFO = {
@@ -24,7 +24,7 @@ function Skeleton({ style }) {
 
 function fmtDate(iso) {
   if (!iso) return '—'
-  return new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })
+  return new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' })
 }
 
 // Tooltip explicativo simples
@@ -45,7 +45,7 @@ function Tip({ text }) {
         <div style={{
           position: 'absolute', bottom: '20px', left: '50%', transform: 'translateX(-50%)',
           background: '#1C1C1C', color: '#fff', fontSize: '11px', lineHeight: 1.5,
-          padding: '7px 10px', borderRadius: '7px', whiteSpace: 'nowrap', maxWidth: '220px',
+          padding: '7px 10px', borderRadius: '7px', maxWidth: '220px',
           whiteSpace: 'normal', zIndex: 100, boxShadow: '0 4px 16px rgba(0,0,0,0.3)',
           pointerEvents: 'none',
         }}>
@@ -56,50 +56,167 @@ function Tip({ text }) {
   )
 }
 
+// ── Modal de Análise Completa ─────────────────────────────────────────────────
+// "O ouro do produto" — hipóteses detalhadas com base clínica, padrões, alertas
+function AnalysisDetailModal({ patient, onClose, onGoToProfile }) {
+  const [analysis, setAnalysis] = useState(null)
+  const [loading, setLoading]   = useState(true)
+  const [analysisDate, setAnalysisDate] = useState(null)
+
+  useEffect(() => {
+    if (!patient?.id) return
+    setLoading(true)
+    api.getPatientAnalyses(patient.id)
+      .then(async (res) => {
+        const list = res?.content ?? (Array.isArray(res) ? res : [])
+        if (list.length === 0) { setLoading(false); return }
+        const latest = list[0]
+        setAnalysisDate(latest.createdAt)
+        const full = await api.getAnalysis(latest.id)
+        setAnalysis(full)
+      })
+      .catch(() => setAnalysis(null))
+      .finally(() => setLoading(false))
+  }, [patient?.id])
+
+  // ESC fecha
+  useEffect(() => {
+    const handler = e => { if (e.key === 'Escape') onClose() }
+    document.addEventListener('keydown', handler)
+    return () => document.removeEventListener('keydown', handler)
+  }, [onClose])
+
+  return (
+    <div
+      style={{
+        position: 'fixed', inset: 0, zIndex: 800,
+        background: 'rgba(0,0,0,0.7)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        padding: '16px',
+        backdropFilter: 'blur(4px)',
+      }}
+      onClick={e => { if (e.target === e.currentTarget) onClose() }}
+    >
+      <div style={{
+        width: '100%', maxWidth: '680px', maxHeight: '90vh',
+        display: 'flex', flexDirection: 'column',
+        borderRadius: '16px', overflow: 'hidden',
+        boxShadow: '0 32px 80px rgba(0,0,0,0.5)',
+        background: 'linear-gradient(160deg, #0d1f15 0%, #0f1a14 60%, #111820 100%)',
+        border: '1px solid rgba(74,222,128,0.15)',
+        animation: 'slideUp 0.22s cubic-bezier(0.22,1,0.36,1)',
+      }}>
+        {/* Header do modal */}
+        <div style={{
+          padding: '18px 20px',
+          borderBottom: '1px solid rgba(255,255,255,0.07)',
+          display: 'flex', alignItems: 'center', gap: '12px',
+          background: 'rgba(74,222,128,0.05)',
+          flexShrink: 0,
+        }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'rgba(74,222,128,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: 700, color: '#4ade80', flexShrink: 0 }}>
+                {patient?.name?.split(' ').slice(0, 2).map(w => w[0]).join('')}
+              </div>
+              <div>
+                <div style={{ fontSize: '14px', fontWeight: 700, color: '#f1f5f9' }}>{patient?.name}</div>
+                {analysisDate && (
+                  <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.35)' }}>
+                    Última análise: {fmtDate(analysisDate)}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
+            {onGoToProfile && (
+              <button
+                onClick={onGoToProfile}
+                style={{
+                  background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)',
+                  color: 'rgba(255,255,255,0.6)', padding: '6px 12px',
+                  borderRadius: '8px', fontSize: '12px', cursor: 'pointer',
+                  fontFamily: "'DM Sans', sans-serif", fontWeight: 500,
+                  display: 'flex', alignItems: 'center', gap: '5px',
+                  transition: 'background 0.15s',
+                }}
+                onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.12)'}
+                onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.07)'}
+              >
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+                Ver paciente
+              </button>
+            )}
+            <button
+              onClick={onClose}
+              style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.5)', width: 32, height: 32, borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px', flexShrink: 0 }}
+            >✕</button>
+          </div>
+        </div>
+
+        {/* Conteúdo — AiAnalysisPanel ocupa tudo */}
+        <div style={{ flex: 1, overflowY: 'auto', scrollbarWidth: 'thin', scrollbarColor: 'rgba(74,222,128,0.2) transparent' }}>
+          {loading ? (
+            <div style={{ padding: '60px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
+              <span style={{ width: 24, height: 24, border: '2.5px solid rgba(74,222,128,0.25)', borderTopColor: '#4ade80', borderRadius: '50%', display: 'inline-block', animation: 'spin 0.8s linear infinite' }} />
+              <span style={{ fontSize: '13px', color: 'rgba(255,255,255,0.35)' }}>Carregando análise clínica…</span>
+            </div>
+          ) : !analysis ? (
+            <div style={{ padding: '60px 20px', textAlign: 'center' }}>
+              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="rgba(74,222,128,0.3)" strokeWidth="1.2" style={{ margin: '0 auto 14px', display: 'block' }}>
+                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+              </svg>
+              <div style={{ fontSize: '14px', color: 'rgba(255,255,255,0.4)', marginBottom: '6px' }}>
+                Nenhuma análise disponível para este paciente.
+              </div>
+              <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.25)', lineHeight: 1.6 }}>
+                Vá ao perfil do paciente, anote uma sessão e clique em "Analisar com IA".
+              </div>
+            </div>
+          ) : (
+            /* AiAnalysisPanel já existe e é o painel premium — renderiza direto */
+            <AiAnalysisPanel
+              sessionId={null}
+              analysis={analysis}
+              createdAt={analysisDate}
+            />
+          )}
+        </div>
+
+        {/* Rodapé */}
+        <div style={{
+          padding: '12px 20px', borderTop: '1px solid rgba(255,255,255,0.06)',
+          background: 'rgba(0,0,0,0.2)', flexShrink: 0,
+        }}>
+          <div style={{ fontSize: '10.5px', color: 'rgba(255,255,255,0.2)', textAlign: 'center' }}>
+            Hipóteses de suporte ao raciocínio clínico · O diagnóstico é de responsabilidade exclusiva do profissional
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function Insights({ onGoToPatient }) {
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
-  const [drawerOpen, setDrawerOpen] = useState(false)
-  const [drawerResult, setDrawerResult] = useState(null)
-  const [drawerLoading, setDrawerLoading] = useState(false)
-  const [drawerPatient, setDrawerPatient] = useState(null)
+
+  // Estado do modal de análise detalhada
+  const [analysisModal, setAnalysisModal] = useState(null) // { id, name } | null
 
   useEffect(() => {
     api.getInsights().then(setData).finally(() => setLoading(false))
   }, [])
 
-  const handlePatientClick = async (item) => {
+  const handlePatientClick = (item) => {
     if (!item.analyzed) {
+      // Sem análise → vai para o perfil para poder analisar
       onGoToPatient && onGoToPatient({ id: item.id, name: item.name })
       return
     }
-    setDrawerPatient({ name: item.name, id: item.id })
-    setDrawerOpen(true)
-    setDrawerResult(null)
-    setDrawerLoading(true)
-    try {
-      const res = await api.getPatientAnalyses(item.id)
-      const list = res?.content ?? (Array.isArray(res) ? res : [])
-      if (list.length === 0) {
-        setDrawerResult({ error: 'Nenhuma análise encontrada para este paciente.' })
-        return
-      }
-      // Fetch full AnalysisResponse (with hypotheses/patterns/riskAlerts)
-      const full = await api.getAnalysis(list[0].id)
-      setDrawerResult(full || { error: 'Não foi possível carregar a análise completa.' })
-    } catch {
-      setDrawerResult({ error: 'Não foi possível carregar a análise.' })
-    } finally {
-      setDrawerLoading(false)
-    }
-  }
-
-  const handleDrawerSave = (result) => {
-    if (!result || result.error) return
-    setDrawerOpen(false)
-    if (drawerPatient && onGoToPatient) {
-      onGoToPatient({ id: drawerPatient.id, name: drawerPatient.name })
-    }
+    // Com análise → abre modal de análise detalhada
+    setAnalysisModal({ id: item.id, name: item.name })
   }
 
   const coveragePct = data?.coveragePercent ?? 0
@@ -109,7 +226,6 @@ export default function Insights({ onGoToPatient }) {
 
   const totalAlerts = Object.values(data?.alertCount || {}).reduce((a, b) => a + b, 0)
 
-  // Evolução real baseada nos campos "evolution" das análises recentes
   const analyses = data?.recentAnalyses || []
   const evCounts = analyses.reduce((acc, a) => {
     const k = a.evolution || 'neutral'
@@ -121,17 +237,17 @@ export default function Insights({ onGoToPatient }) {
   return (
     <div className="view">
 
-      {/* Header simplificado */}
+      {/* Header */}
       <div style={{ marginBottom: '24px' }}>
         <div style={{ fontFamily: "'Fraunces', serif", fontSize: '22px', fontWeight: 400, color: 'var(--d)' }}>
           Resumo da Carteira
         </div>
         <div style={{ fontSize: '13px', color: 'var(--gr5)', marginTop: '4px' }}>
-          Uma visão geral de como seus pacientes estão — baseada nas análises IA que você gerou
+          Uma visão geral de como seus pacientes estão — baseada nas análises IA geradas
         </div>
       </div>
 
-      {/* Banner orientador para quem não tem análises ainda */}
+      {/* Banner orientador — só aparece sem análises */}
       {!loading && analyzedCount === 0 && (
         <div style={{ background: 'var(--g50)', border: '1px solid var(--g100)', borderRadius: '12px', padding: '20px 24px', marginBottom: '24px', display: 'flex', gap: '16px', alignItems: 'flex-start' }}>
           <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'var(--g700)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
@@ -142,13 +258,13 @@ export default function Insights({ onGoToPatient }) {
               Esta tela fica mais rica à medida que você usa a IA
             </div>
             <div style={{ fontSize: '13px', color: 'var(--g600)', lineHeight: 1.6 }}>
-              Vá até um paciente, anote uma sessão e clique em <strong>"Analisar com IA"</strong>. Os padrões, alertas e hipóteses vão aparecer aqui automaticamente.
+              Vá até um paciente, anote uma sessão e clique em <strong>"Analisar com IA"</strong>. As hipóteses diagnósticas, padrões e alertas aparecem aqui automaticamente.
             </div>
           </div>
         </div>
       )}
 
-      {/* Seus pacientes — lista principal */}
+      {/* Lista de pacientes */}
       <div className="card" style={{ marginBottom: '0' }}>
         <div className="card-header">
           <div>
@@ -185,6 +301,7 @@ export default function Insights({ onGoToPatient }) {
             : [...(data?.recentAnalyses || []).map(a => ({
                 id: a.patientId,
                 name: a.patientName,
+                initials: a.patientName?.split(' ').slice(0, 2).map(w => w[0]).join(''),
                 analyzed: true,
                 lastAnalysis: fmtDate(a.createdAt),
                 evolution: a.evolution,
@@ -201,30 +318,38 @@ export default function Insights({ onGoToPatient }) {
               }))
             ].map((item, i) => (
               <div
-                key={i}
+                key={`${item.id}-${i}`}
                 onClick={() => handlePatientClick(item)}
-                style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 12px', borderRadius: 'var(--r)', background: item.analyzed ? 'var(--g50)' : 'var(--ow)', border: `1px solid ${item.analyzed ? 'var(--g100)' : 'var(--gr2)'}`, marginBottom: '8px', cursor: 'pointer', transition: 'background 0.15s, border-color 0.15s' }}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '12px',
+                  padding: '10px 12px', borderRadius: 'var(--r)',
+                  background: item.analyzed ? 'var(--g50)' : 'var(--ow)',
+                  border: `1px solid ${item.analyzed ? 'var(--g100)' : 'var(--gr2)'}`,
+                  marginBottom: '8px', cursor: 'pointer',
+                  transition: 'background 0.15s, border-color 0.15s',
+                }}
                 onMouseEnter={e => { e.currentTarget.style.background = item.analyzed ? 'var(--g100)' : 'var(--g50)'; e.currentTarget.style.borderColor = item.analyzed ? 'var(--g300)' : 'var(--g200)' }}
                 onMouseLeave={e => { e.currentTarget.style.background = item.analyzed ? 'var(--g50)' : 'var(--ow)'; e.currentTarget.style.borderColor = item.analyzed ? 'var(--g100)' : 'var(--gr2)' }}
               >
                 <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: item.avatarBg || 'var(--g100)', color: item.avatarColor || 'var(--g600)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 600, flexShrink: 0 }}>
-                  {item.initials || item.name?.split(' ').slice(0, 2).map(w => w[0]).join('')}
+                  {item.initials}
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--d)' }}>{item.name}</div>
                   <div style={{ fontSize: '11px', color: 'var(--gr5)', marginTop: '1px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {item.analyzed
-                      ? item.summary || `Última análise: ${item.lastAnalysis}`
-                      : `${item.sessionCount} anotações · ainda sem análise IA`}
+                      ? item.summary?.slice(0, 100) || `Última análise: ${item.lastAnalysis}`
+                      : `${item.sessionCount || 0} anotações · ainda sem análise IA`}
                   </div>
                 </div>
                 {item.analyzed ? (
-                  <span style={{ fontSize: '11px', fontWeight: 600, padding: '3px 10px', borderRadius: '20px', background: 'var(--g100)', color: 'var(--g700)', border: '1px solid var(--g300)', flexShrink: 0, whiteSpace: 'nowrap' }}>
-                    Ver análise →
+                  <span style={{ fontSize: '11px', fontWeight: 600, padding: '3px 10px', borderRadius: '20px', background: 'var(--g100)', color: 'var(--g700)', border: '1px solid var(--g300)', flexShrink: 0, whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                    Ver análise
                   </span>
                 ) : (
                   <button
-                    onClick={e => { e.stopPropagation(); handlePatientClick(item) }}
+                    onClick={e => { e.stopPropagation(); onGoToPatient && onGoToPatient({ id: item.id, name: item.name }) }}
                     style={{ fontSize: '11px', fontWeight: 600, padding: '3px 10px', borderRadius: '20px', background: 'linear-gradient(135deg, #5C8F6A 0%, #4A7C59 100%)', color: '#fff', border: 'none', cursor: 'pointer', flexShrink: 0, whiteSpace: 'nowrap', fontFamily: "'DM Sans', sans-serif" }}
                   >
                     Analisar com IA →
@@ -236,7 +361,7 @@ export default function Insights({ onGoToPatient }) {
         </div>
       </div>
 
-      {/* Só mostra os cards de insights se houver dados */}
+      {/* Cards de insight — só se houver análises */}
       {!loading && analyzedCount > 0 && (
         <>
           <div style={{ background: 'var(--g50)', border: '1px solid var(--g100)', borderRadius: 'var(--r)', padding: '10px 14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -249,7 +374,7 @@ export default function Insights({ onGoToPatient }) {
 
           <div className="insights-grid">
 
-            {/* Alertas — linguagem de ação */}
+            {/* Alertas */}
             <div className="card">
               <div className="card-header">
                 <div>
@@ -288,7 +413,7 @@ export default function Insights({ onGoToPatient }) {
               </div>
             </div>
 
-            {/* Padrões — com descrição acessível */}
+            {/* Padrões */}
             <div className="card">
               <div className="card-header">
                 <div>
@@ -323,7 +448,7 @@ export default function Insights({ onGoToPatient }) {
               </div>
             </div>
 
-            {/* Temas frequentes — baseados nos registros do psicólogo */}
+            {/* Temas frequentes */}
             <div className="card">
               <div className="card-header">
                 <div>
@@ -360,7 +485,7 @@ export default function Insights({ onGoToPatient }) {
               </div>
             </div>
 
-            {/* Evolução real — baseada nos campos "evolution" das análises geradas */}
+            {/* Evolução */}
             <div className="card">
               <div className="card-header">
                 <div>
@@ -370,10 +495,10 @@ export default function Insights({ onGoToPatient }) {
               </div>
               <div className="card-body">
                 {[
-                  { key: 'positive', label: 'Evolução positiva', color: 'var(--g500)', bg: 'var(--g50)', border: 'var(--g100)', desc: 'Melhora, novo insight ou maior engajamento registrado' },
-                  { key: 'neutral',  label: 'Sessão descritiva',  color: 'var(--warn)',   bg: 'var(--warn-l)',   border: 'rgba(200,134,10,0.25)', desc: 'Sem indicação clara de direção ou dados insuficientes' },
-                  { key: 'negative', label: 'Requer atenção',    color: 'var(--danger)', bg: 'var(--danger-l)', border: 'rgba(176,58,46,0.25)',  desc: 'Piora, recaída ou desengajamento registrado' },
-                ].map(({ key, label, color, bg, border, desc }) => {
+                  { key: 'positive', label: 'Evolução positiva', color: 'var(--g500)', desc: 'Melhora, novo insight ou maior engajamento registrado' },
+                  { key: 'neutral',  label: 'Sessão descritiva',  color: 'var(--warn)',   desc: 'Sem indicação clara de direção ou dados insuficientes' },
+                  { key: 'negative', label: 'Requer atenção',    color: 'var(--danger)', desc: 'Piora, recaída ou desengajamento registrado' },
+                ].map(({ key, label, color, desc }) => {
                   const count = evCounts[key] || 0
                   const pct = Math.round((count / evTotal) * 100)
                   return (
@@ -404,14 +529,17 @@ export default function Insights({ onGoToPatient }) {
         </>
       )}
 
-      <AiDrawer
-        isOpen={drawerOpen}
-        onClose={() => setDrawerOpen(false)}
-        onSave={handleDrawerSave}
-        patient={drawerPatient}
-        result={drawerResult}
-        loading={drawerLoading}
-      />
+      {/* Modal de análise detalhada — o "ouro" do produto */}
+      {analysisModal && (
+        <AnalysisDetailModal
+          patient={analysisModal}
+          onClose={() => setAnalysisModal(null)}
+          onGoToProfile={() => {
+            setAnalysisModal(null)
+            onGoToPatient && onGoToPatient(analysisModal)
+          }}
+        />
+      )}
     </div>
   )
 }

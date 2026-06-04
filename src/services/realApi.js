@@ -21,8 +21,8 @@ const setTokens   = (at, rt) => {
   localStorage.setItem('psicoai_token', at)
   if (rt) localStorage.setItem('psicoai_refresh', rt)
 }
-// Chaves que NÃO devem ser removidas no logout (consentimento LGPD persiste entre sessões)
-const PERSIST_KEYS = new Set(['psicoai_lgpd_consent'])
+// Chaves que NÃO devem ser removidas no logout — persistem entre sessões no mesmo dispositivo
+const PERSIST_KEYS = new Set(['psicoai_lgpd_consent', 'psicoai_onboarding_seen'])
 
 const clearTokens = () => {
   // Remove auth + TODOS os dados clínicos (canvas, quicknote, session ativa)

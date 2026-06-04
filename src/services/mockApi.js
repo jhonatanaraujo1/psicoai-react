@@ -10,8 +10,8 @@ const delay = (ms = 400) => new Promise(r => setTimeout(r, ms + Math.random() * 
 // ── Clinical data cleanup — chamado no logout e em session-expired ────────────
 // Remove TODOS os dados clínicos do localStorage para não vazar entre usuários.
 // Os dados de canvas e anotações são dados de saúde — não devem persistir após logout.
-// Preserva consentimento LGPD — deve ser solicitado apenas 1× por dispositivo.
-const CLINICAL_PERSIST = new Set(['psicoai_lgpd_consent'])
+// Preserva estado que deve persistir entre sessões no mesmo dispositivo
+const CLINICAL_PERSIST = new Set(['psicoai_lgpd_consent', 'psicoai_onboarding_seen'])
 
 export function psicoaiClearClinicalStorage() {
   const keysToRemove = []

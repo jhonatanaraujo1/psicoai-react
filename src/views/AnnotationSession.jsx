@@ -2070,11 +2070,11 @@ export default function AnnotationSession({
                       </svg>
                   }
                   <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--g700)' }}>
-                    {saving ? 'Exportando…' : 'Gerar reflexão clínica com IA'}
+                    {saving ? 'Analisando…' : 'Analisar com IA'}
                   </span>
                 </div>
                 <div style={{ fontSize: 12, color: 'var(--g600)', lineHeight: 1.5, paddingLeft: 26 }}>
-                  A IA lê o que você escreveu e devolve hipóteses, padrões e conexões com sessões anteriores.
+                  A IA analisa suas anotações e devolve hipóteses diagnósticas, padrões e alertas de risco.
                 </div>
               </button>
 
