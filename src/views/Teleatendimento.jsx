@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { api } from '../services'
-import { DatePicker, TimePicker } from '../components/DateTimePickers'
+import { DatePicker, TimePicker, CustomSelect } from '../components/DateTimePickers'
+import { showToast } from '../components/Toast'
 
 export default function Teleatendimento() {
   const [platform, setPlatform] = useState('whereby')
@@ -24,7 +25,7 @@ export default function Teleatendimento() {
       if (typeof api.createTeleSession === 'function') {
         await api.createTeleSession({ patientId: teleForm.patientId, patientName, date: teleForm.date, time: teleForm.time, platform: teleForm.platform, notes: teleForm.notes, status: 'scheduled' })
       } else {
-        alert('Sessão agendada!')
+        showToast('Sessão agendada!', 'success')
       }
       setTeleModal(false)
       setTeleForm({ patientId: '', patientName: '', date: '', time: '', platform: 'whereby', notes: '' })
@@ -56,7 +57,7 @@ export default function Teleatendimento() {
               <div style={{ fontSize: '11px', color: 'var(--g600)', marginTop: '4px', fontWeight: 600 }}>● Em andamento</div>
             </div>
             <div className="tele-actions">
-              <button className="btn-start-call" onClick={() => alert('Entrando na sala de Lucas Martins...')}>
+              <button className="btn-start-call" onClick={() => showToast('Funcionalidade disponível em breve', 'info')}>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
                 Entrar na sala
               </button>
@@ -71,11 +72,11 @@ export default function Teleatendimento() {
               <div style={{ fontSize: '11px', color: 'var(--gr4)', marginTop: '4px' }}>Link de sala gerado · Lembrete enviado</div>
             </div>
             <div className="tele-actions">
-              <button className="btn-start-call secondary" onClick={() => { navigator.clipboard && navigator.clipboard.writeText('https://psico.ai/sala/rf-s8-20mai').then(() => alert('Link copiado!')) }}>
+              <button className="btn-start-call secondary" onClick={() => { navigator.clipboard && navigator.clipboard.writeText('https://psico.ai/sala/rf-s8-20mai').then(() => showToast('Link copiado!', 'success')) }}>
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
                 Copiar link
               </button>
-              <button className="btn-start-call" onClick={() => alert('Sala aberta para teste')}>Abrir sala</button>
+              <button className="btn-start-call" onClick={() => showToast('Funcionalidade disponível em breve', 'info')}>Abrir sala</button>
             </div>
           </div>
 
@@ -87,7 +88,7 @@ export default function Teleatendimento() {
               <div style={{ fontSize: '11px', color: 'var(--warn)', marginTop: '4px' }}>⚠ Confirmação pendente</div>
             </div>
             <div className="tele-actions">
-              <button className="btn-start-call secondary" onClick={() => alert('Link enviado para João via WhatsApp')}>Enviar link</button>
+              <button className="btn-start-call secondary" onClick={() => showToast('Funcionalidade disponível em breve', 'info')}>Enviar link</button>
             </div>
           </div>
 
@@ -133,8 +134,8 @@ export default function Teleatendimento() {
             <div className="card-body">
               <div className="tele-link-box">psico.ai/sala/dra-ana-ferreira</div>
               <div style={{ display: 'flex', gap: '8px' }}>
-                <button className="fin-action" style={{ flex: 1, textAlign: 'center' }} onClick={() => { navigator.clipboard && navigator.clipboard.writeText('https://psico.ai/sala/dra-ana-ferreira').then(() => alert('Link copiado!')) }}>Copiar link</button>
-                <button className="fin-action" style={{ flex: 1, textAlign: 'center' }} onClick={() => alert('Abrindo sala permanente...')}>Abrir sala</button>
+                <button className="fin-action" style={{ flex: 1, textAlign: 'center' }} onClick={() => { navigator.clipboard && navigator.clipboard.writeText('https://psico.ai/sala/dra-ana-ferreira').then(() => showToast('Link copiado!', 'success')) }}>Copiar link</button>
+                <button className="fin-action" style={{ flex: 1, textAlign: 'center' }} onClick={() => showToast('Funcionalidade disponível em breve', 'info')}>Abrir sala</button>
               </div>
               <div style={{ fontSize: '11px', color: 'var(--gr4)', marginTop: '10px', lineHeight: 1.5 }}>A sala fica ativa só quando você abre. O paciente aguarda na antessala.</div>
             </div>
@@ -183,16 +184,13 @@ export default function Teleatendimento() {
             {/* Paciente */}
             <div>
               <label style={labelSt}>Paciente</label>
-              <select
+              <CustomSelect
                 value={teleForm.patientId}
-                onChange={e => setTeleForm(f => ({ ...f, patientId: e.target.value }))}
+                onChange={v => setTeleForm(f => ({ ...f, patientId: v }))}
+                options={[{ label: 'Selecione um paciente…', value: '' }, ...allPatients.map(p => ({ label: p.name, value: p.id }))]}
+                placeholder="Selecione um paciente…"
                 style={inputSt}
-              >
-                <option value="">Selecione um paciente…</option>
-                {allPatients.map(p => (
-                  <option key={p.id} value={p.id}>{p.name}</option>
-                ))}
-              </select>
+              />
             </div>
 
             {/* Data + Horário */}
@@ -218,9 +216,10 @@ export default function Teleatendimento() {
             {/* Plataforma */}
             <div>
               <label style={labelSt}>Plataforma</label>
-              <select value="meet" disabled style={{ ...inputSt, opacity: 0.7 }}>
-                <option value="meet">Google Meet</option>
-              </select>
+              <div style={{ ...inputSt, opacity: 0.7, cursor: 'not-allowed', display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: 'var(--d)' }}>
+                <span>Google Meet</span>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--gr4)" strokeWidth="2"><polyline points="6 9 12 15 18 9"/></svg>
+              </div>
             </div>
 
             {/* Notas */}

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { api } from '../services'
+import { showToast } from '../components/Toast'
 import CadastroModal from '../components/CadastroModal'
 import ReportModal from '../components/ReportModal'
 import DocumentsPanel from '../components/DocumentsPanel'
@@ -75,7 +76,7 @@ export default function Paciente({ patient: propPatient, setCurrentView, onSessa
     try {
       const blob = await api.exportProntuarioPdf(patientId)
       downloadBlob(blob, `prontuario-${(p?.name || 'paciente').replace(/\s+/g, '_')}.pdf`)
-    } catch (e) { alert('Erro ao gerar PDF: ' + e.message) }
+    } catch (e) { showToast('Erro ao gerar PDF: ' + (e.message || 'Tente novamente'), 'error') }
     finally { setExportingPdf(false) }
   }
 
@@ -487,7 +488,7 @@ export default function Paciente({ patient: propPatient, setCurrentView, onSessa
                           setSessions(prev => prev.filter(x => x.id !== s.id))
                           setSessionDeleteId(null)
                         } catch (e) {
-                          alert('Não foi possível excluir a sessão: ' + (e.message || 'Erro desconhecido'))
+                          showToast('Não foi possível excluir a sessão: ' + (e.message || 'Erro desconhecido'), 'error')
                           setSessionDeleteId(null)
                         }
                       }} style={{ ...btnSt, background: 'var(--danger)', color: '#fff', fontSize: '11px', padding: '5px 10px' }}>Confirmar</button>

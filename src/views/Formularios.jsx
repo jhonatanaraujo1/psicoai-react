@@ -222,19 +222,19 @@ const formPreviews_extra = {
         <div className="form-section-title">Condições do atendimento</div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
           <div className="form-field"><label>FREQUÊNCIA</label>
-            <select><option>Semanal</option><option>Quinzenal</option><option>Mensal</option></select>
+            <div style={{ border: '1px solid var(--gr2)', borderRadius: 'var(--r)', padding: '8px 12px', fontSize: '13px', display: 'flex', justifyContent: 'space-between', background: 'var(--ow)', color: 'var(--gr4)', pointerEvents: 'none' }}><span>Semanal</span><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--gr4)" strokeWidth="2"><polyline points="6 9 12 15 18 9"/></svg></div>
           </div>
           <div className="form-field"><label>DURAÇÃO DA SESSÃO</label>
-            <select><option>50 min</option><option>60 min</option><option>90 min</option></select>
+            <div style={{ border: '1px solid var(--gr2)', borderRadius: 'var(--r)', padding: '8px 12px', fontSize: '13px', display: 'flex', justifyContent: 'space-between', background: 'var(--ow)', color: 'var(--gr4)', pointerEvents: 'none' }}><span>50 min</span><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--gr4)" strokeWidth="2"><polyline points="6 9 12 15 18 9"/></svg></div>
           </div>
           <div className="form-field"><label>HONORÁRIOS (R$)</label><input type="text" placeholder="Ex: 180,00" /></div>
           <div className="form-field"><label>FORMA DE PAGAMENTO</label>
-            <select><option>PIX</option><option>Transferência</option><option>Dinheiro</option></select>
+            <div style={{ border: '1px solid var(--gr2)', borderRadius: 'var(--r)', padding: '8px 12px', fontSize: '13px', display: 'flex', justifyContent: 'space-between', background: 'var(--ow)', color: 'var(--gr4)', pointerEvents: 'none' }}><span>PIX</span><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--gr4)" strokeWidth="2"><polyline points="6 9 12 15 18 9"/></svg></div>
           </div>
         </div>
         <div className="form-section-title" style={{ marginTop: '8px' }}>Cancelamento</div>
         <div className="form-field"><label>PRAZO MÍNIMO DE AVISO</label>
-          <select><option>24 horas</option><option>48 horas</option><option>Na hora — sem cobrança</option></select>
+          <div style={{ border: '1px solid var(--gr2)', borderRadius: 'var(--r)', padding: '8px 12px', fontSize: '13px', display: 'flex', justifyContent: 'space-between', background: 'var(--ow)', color: 'var(--gr4)', pointerEvents: 'none' }}><span>24 horas</span><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--gr4)" strokeWidth="2"><polyline points="6 9 12 15 18 9"/></svg></div>
         </div>
         <div className="form-field" style={{ marginTop: '8px' }}><label>COBRANÇA EM CASO DE FALTA SEM AVISO</label>
           <div className="form-radio-group">
