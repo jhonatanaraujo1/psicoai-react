@@ -87,18 +87,21 @@ export default function Login({ onLogin }) {
             <p>Acesse seu prontuário e o assistente clínico</p>
           </div>
 
-          {/* Demo CTA */}
-          <button type="button" className="login-demo-btn" onClick={handleDemo}>
-            <span className="login-demo-icon">▶</span>
-            <div>
-              <div className="login-demo-label">Experimentar sem cadastro</div>
-              <div className="login-demo-sub">Credenciais de demonstração já preenchidas</div>
-            </div>
-          </button>
-
-          <div className="login-divider">
-            <span>ou entre com sua conta</span>
-          </div>
+          {/* Demo CTA — só em modo mock/dev (sem backend real) */}
+          {!import.meta.env.VITE_API_BASE_URL && (
+            <>
+              <button type="button" className="login-demo-btn" onClick={handleDemo}>
+                <span className="login-demo-icon">▶</span>
+                <div>
+                  <div className="login-demo-label">Experimentar sem cadastro</div>
+                  <div className="login-demo-sub">Credenciais de demonstração já preenchidas</div>
+                </div>
+              </button>
+              <div className="login-divider">
+                <span>ou entre com sua conta</span>
+              </div>
+            </>
+          )}
 
           <form onSubmit={handleSubmit} className="login-form">
             <div className="login-field">
