@@ -32,6 +32,37 @@ const inputStyle = {
   width: '100%', boxSizing: 'border-box',
 }
 
+const onFocus = e => { e.target.style.borderColor = 'var(--g300)'; e.target.style.boxShadow = '0 0 0 3px rgba(74,124,89,0.08)' }
+const onBlur  = e => { e.target.style.borderColor = 'var(--gr2)'; e.target.style.boxShadow = 'none' }
+
+// ─── Top-level input primitives ───────────────────────────────────────────────
+// MUST stay outside any component function — defining them inside causes React to
+// create a new component type on every render, unmounting/remounting the element
+// and losing focus after every keystroke.
+const CadastroInput = ({ value, onChange, placeholder, type = 'text', error = false }) => (
+  <input
+    type={type}
+    value={value}
+    onChange={onChange}
+    placeholder={placeholder}
+    onFocus={onFocus}
+    onBlur={onBlur}
+    style={{ ...inputStyle, borderColor: error ? 'var(--danger)' : 'var(--gr2)' }}
+  />
+)
+
+const CadastroTextarea = ({ value, onChange, placeholder, rows = 3, error = false }) => (
+  <textarea
+    value={value}
+    onChange={onChange}
+    placeholder={placeholder}
+    rows={rows}
+    onFocus={onFocus}
+    onBlur={onBlur}
+    style={{ ...inputStyle, resize: 'vertical', lineHeight: 1.5, borderColor: error ? 'var(--danger)' : 'var(--gr2)' }}
+  />
+)
+
 const emptyForm = {
   nome: '', dataNasc: '', genero: '', email: '', telefone: '',
   queixa: '', historico: '', medicacao: '', abordagem: '', frequencia: '',
@@ -72,8 +103,6 @@ export default function CadastroModal({ isOpen, onClose, onSave, initialData = n
   if (!isOpen) return null
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
-  const focusStyle = e => { e.target.style.borderColor = 'var(--g300)'; e.target.style.boxShadow = '0 0 0 3px rgba(74,124,89,0.08)' }
-  const blurStyle = e => { e.target.style.borderColor = 'var(--gr2)'; e.target.style.boxShadow = 'none' }
 
   const validate = () => {
     const e = {}
@@ -90,31 +119,6 @@ export default function CadastroModal({ isOpen, onClose, onSave, initialData = n
     onSave(form)
     onClose()
   }
-
-  const Input = ({ field, placeholder, type = 'text' }) => (
-    <input
-      type={type}
-      value={form[field]}
-      onChange={e => set(field, e.target.value)}
-      placeholder={placeholder}
-      onFocus={focusStyle}
-      onBlur={blurStyle}
-      style={{ ...inputStyle, borderColor: errors[field] ? 'var(--danger)' : 'var(--gr2)' }}
-    />
-  )
-
-
-  const Textarea = ({ field, placeholder, rows = 3 }) => (
-    <textarea
-      value={form[field]}
-      onChange={e => set(field, e.target.value)}
-      placeholder={placeholder}
-      rows={rows}
-      onFocus={focusStyle}
-      onBlur={blurStyle}
-      style={{ ...inputStyle, resize: 'vertical', lineHeight: 1.5, borderColor: errors[field] ? 'var(--danger)' : 'var(--gr2)' }}
-    />
-  )
 
   return (
     <div style={{
@@ -150,7 +154,7 @@ export default function CadastroModal({ isOpen, onClose, onSave, initialData = n
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '12px' }}>
               <Field label="Nome completo" required>
-                <Input field="nome" placeholder="Como aparece no prontuário" />
+                <CadastroInput value={form.nome} onChange={e => set('nome', e.target.value)} placeholder="Como aparece no prontuário" error={!!errors.nome} />
               </Field>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                 <Field label="Data de nascimento">
@@ -162,10 +166,10 @@ export default function CadastroModal({ isOpen, onClose, onSave, initialData = n
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                 <Field label="E-mail">
-                  <Input field="email" placeholder="email@exemplo.com" type="email" />
+                  <CadastroInput value={form.email} onChange={e => set('email', e.target.value)} placeholder="email@exemplo.com" type="email" />
                 </Field>
                 <Field label="Telefone / WhatsApp">
-                  <Input field="telefone" placeholder="(11) 99999-9999" />
+                  <CadastroInput value={form.telefone} onChange={e => set('telefone', e.target.value)} placeholder="(11) 99999-9999" />
                 </Field>
               </div>
             </div>
@@ -178,13 +182,13 @@ export default function CadastroModal({ isOpen, onClose, onSave, initialData = n
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               <Field label="Queixa principal" required>
-                <Textarea field="queixa" placeholder="Motivo da procura, como o paciente descreve o sofrimento..." rows={2} />
+                <CadastroTextarea value={form.queixa} onChange={e => set('queixa', e.target.value)} placeholder="Motivo da procura, como o paciente descreve o sofrimento..." rows={2} error={!!errors.queixa} />
               </Field>
               <Field label="Histórico relevante">
-                <Textarea field="historico" placeholder="Histórico familiar, internações, tratamentos anteriores, eventos significativos..." rows={2} />
+                <CadastroTextarea value={form.historico} onChange={e => set('historico', e.target.value)} placeholder="Histórico familiar, internações, tratamentos anteriores, eventos significativos..." rows={2} />
               </Field>
               <Field label="Medicação em uso">
-                <Input field="medicacao" placeholder="Ex: Sertralina 50mg — prescrição Dr. João Silva (CRM 12345)" />
+                <CadastroInput value={form.medicacao} onChange={e => set('medicacao', e.target.value)} placeholder="Ex: Sertralina 50mg — prescrição Dr. João Silva (CRM 12345)" />
               </Field>
               <Field label="Hipótese diagnóstica — CID-10/11 (opcional)">
                 <div style={{ position: 'relative' }}>
@@ -193,8 +197,8 @@ export default function CadastroModal({ isOpen, onClose, onSave, initialData = n
                     value={form.cid}
                     onChange={e => set('cid', e.target.value)}
                     placeholder="Ex: F43.1 — TEPT"
-                    onFocus={focusStyle}
-                    onBlur={blurStyle}
+                    onFocus={onFocus}
+                    onBlur={onBlur}
                     style={inputStyle}
                     list="cid-list"
                   />
@@ -223,7 +227,7 @@ export default function CadastroModal({ isOpen, onClose, onSave, initialData = n
                 <CustomSelect value={form.pagamento} onChange={v => set('pagamento', v)} options={['Particular', 'Plano de saúde', 'Convênio empresarial', 'Gratuito'].map(o => ({ label: o, value: o }))} placeholder="Selecione" />
               </Field>
               <Field label="Valor por sessão (R$)">
-                <Input field="valor" placeholder="Ex: 200" type="number" />
+                <CadastroInput value={form.valor} onChange={e => set('valor', e.target.value)} placeholder="Ex: 200" type="number" />
               </Field>
             </div>
           </div>
@@ -249,7 +253,7 @@ export default function CadastroModal({ isOpen, onClose, onSave, initialData = n
                   value={form.recurringDurationMin}
                   onChange={e => set('recurringDurationMin', e.target.value)}
                   placeholder="50"
-                  onFocus={focusStyle} onBlur={blurStyle}
+                  onFocus={onFocus} onBlur={onBlur}
                   style={inputStyle}
                   min="10" max="240"
                 />
@@ -264,7 +268,7 @@ export default function CadastroModal({ isOpen, onClose, onSave, initialData = n
                     value={form.monthlyValue}
                     onChange={e => set('monthlyValue', e.target.value)}
                     placeholder="Ex: 800"
-                    onFocus={focusStyle} onBlur={blurStyle}
+                    onFocus={onFocus} onBlur={onBlur}
                     style={inputStyle}
                     min="0"
                   />
