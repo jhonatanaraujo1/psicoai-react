@@ -366,7 +366,7 @@ export default function Paciente({ patient: propPatient, setCurrentView, onSessa
                         textTransform: 'uppercase', letterSpacing: '0.5px',
                         display: 'inline-block',
                       }}>
-                        {isCanvas ? 'Canvas' : 'Texto'}
+                        {isCanvas ? 'Anotação' : 'Nota rápida'}
                       </span>
                     </div>
                     <div style={{ fontSize: '12px', color: 'var(--gr5)', lineHeight: 1.4, paddingRight: '16px', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
@@ -376,7 +376,7 @@ export default function Paciente({ patient: propPatient, setCurrentView, onSessa
                           IA
                         </span>
                       )}
-                      {s.summary || s.notePreview || (isCanvas ? 'Anotação em canvas' : 'Sem resumo')}
+                      {s.summary || s.notePreview || (isCanvas ? 'Anotação em canvas — abra para ver' : 'Sem conteúdo registrado')}
                     </div>
                     <div style={{ fontSize: '11px', color: 'var(--gr5)' }}>
                       {fmtDate(s.sessionDate || s.createdAt)}

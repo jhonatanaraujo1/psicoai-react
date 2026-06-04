@@ -366,7 +366,10 @@ export default function App() {
         startedAt:   Date.now(),
       }))
     }
-    api.createSession({ patientId: pat?.id, type: 'text' })
+    // Toda anotação vai para AnnotationSession (canvas unificado).
+    // O tipo de página (texto vs desenho) é controlado por canvasInitialPageType='text'.
+    // Usar type:'canvas' garante exibição correta no histórico do paciente.
+    api.createSession({ patientId: pat?.id, type: 'canvas' })
       .then(session => setSession(session.id))
       .catch(e => console.warn('[PsicoNotes] createSession failed:', e))
     setCanvasOpen(true)
@@ -799,7 +802,7 @@ export default function App() {
     const html = session.htmlContent ||
       (session.textContent ? session.textContent.split('\n').map(l => `<p>${l}</p>`).join('') : '')
     // Create new session record in background
-    api.createSession({ patientId: currentPatient?.id, type: session.type || 'text' })
+    api.createSession({ patientId: currentPatient?.id, type: session.type || 'canvas' })
       .then(s => setSession(s.id))
       .catch(e => console.warn('[PsicoNotes] createSession (reopen) failed:', e))
 
