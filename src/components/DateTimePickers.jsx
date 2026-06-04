@@ -69,47 +69,102 @@ export function DatePicker({ value, onChange, placeholder = 'dd/mm/aaaa', style 
   const [rect, setRect]           = useState(null)
   const [viewYear, setViewYear]   = useState(() => parseYMD(value)?.year  ?? new Date().getFullYear())
   const [viewMonth, setViewMonth] = useState(() => parseYMD(value)?.month ?? new Date().getMonth())
-  const triggerRef = useRef(null)
-  const dropRef    = useRef(null)
+  const [textValue, setTextValue] = useState(() => fmtDisplay(value))
+  const wrapRef  = useRef(null)
+  const inputRef = useRef(null)
+  const dropRef  = useRef(null)
+  // Ref so blur timeout always reads latest value, not stale closure
+  const valueRef = useRef(value)
+  valueRef.current = value
 
-  // Sync view when value changes externally
+  // Sync text + calendar view when value changes externally (e.g. parent reset)
   useEffect(() => {
+    setTextValue(fmtDisplay(value))
     const p = parseYMD(value)
     if (p) { setViewYear(p.year); setViewMonth(p.month) }
   }, [value])
 
-  const openDrop = useCallback(() => {
-    if (!triggerRef.current) return
-    const r = triggerRef.current.getBoundingClientRect()
-    const vh = window.innerHeight
-    const CALENDAR_H = 310
-    const spaceBelow = vh - r.bottom
-    const spaceAbove = r.top
-    const openUp = spaceBelow < CALENDAR_H && spaceAbove > CALENDAR_H
-    setRect({
+  const computeRect = () => {
+    if (!wrapRef.current) return null
+    const r   = wrapRef.current.getBoundingClientRect()
+    const vh  = window.innerHeight
+    const openUp = (vh - r.bottom) < 310 && r.top > 310
+    return {
       left:  r.left,
       width: Math.max(r.width, 272),
       ...(openUp ? { bottom: vh - r.top + 6 } : { top: r.bottom + 6 }),
-    })
-    setOpen(p => !p)
-  }, [])
+    }
+  }
 
-  // Outside click
+  const openCalendar = useCallback(() => {
+    setRect(computeRect())
+    setOpen(true)
+  }, []) // eslint-disable-line
+
+  // Outside click — only fires when click is truly outside both trigger and dropdown
   useEffect(() => {
     if (!open) return
     const h = (e) => {
       if (
-        triggerRef.current && !triggerRef.current.contains(e.target) &&
-        dropRef.current    && !dropRef.current.contains(e.target)
-      ) setOpen(false)
+        wrapRef.current && !wrapRef.current.contains(e.target) &&
+        dropRef.current && !dropRef.current.contains(e.target)
+      ) {
+        setOpen(false)
+        setTextValue(fmtDisplay(valueRef.current))
+      }
     }
     document.addEventListener('mousedown', h)
     return () => document.removeEventListener('mousedown', h)
   }, [open])
 
-  const today  = new Date()
-  const parsed = parseYMD(value)
+  // Auto-format dd/mm/aaaa as user types
+  const handleTextChange = (e) => {
+    const prev = textValue
+    const next = e.target.value
 
+    // Deletion: pass through without reformatting
+    if (next.length < prev.length) {
+      setTextValue(next)
+      if (!next) onChange('')
+      return
+    }
+
+    // Typing: extract digits, auto-insert slashes
+    const digits = next.replace(/\D/g, '').slice(0, 8)
+    let formatted = digits
+    if (digits.length > 2) formatted = digits.slice(0,2) + '/' + digits.slice(2)
+    if (digits.length > 4) formatted = digits.slice(0,2) + '/' + digits.slice(2,4) + '/' + digits.slice(4)
+    setTextValue(formatted)
+
+    // Validate and fire onChange when all 8 digits are present
+    if (digits.length === 8) {
+      const dd = parseInt(digits.slice(0,2)), mm = parseInt(digits.slice(2,4)), yyyy = parseInt(digits.slice(4,8))
+      const date = new Date(yyyy, mm - 1, dd)
+      if (
+        date.getFullYear() === yyyy && date.getMonth() === mm - 1 && date.getDate() === dd &&
+        yyyy >= 1900 && yyyy <= 2100
+      ) {
+        onChange(toIso(yyyy, mm - 1, dd))
+        setViewYear(yyyy); setViewMonth(mm - 1)
+      }
+    }
+  }
+
+  // When input loses focus, reset text to the last valid value
+  // (unless focus moved into the calendar dropdown)
+  const handleInputBlur = () => {
+    setTimeout(() => {
+      if (
+        (dropRef.current && dropRef.current.contains(document.activeElement)) ||
+        (wrapRef.current && wrapRef.current.contains(document.activeElement))
+      ) return
+      setOpen(false)
+      setTextValue(fmtDisplay(valueRef.current))
+    }, 200)
+  }
+
+  const prevYear  = () => setViewYear(y => y - 1)
+  const nextYear  = () => setViewYear(y => y + 1)
   const prevMonth = () => {
     if (viewMonth === 0) { setViewMonth(11); setViewYear(y => y - 1) }
     else setViewMonth(m => m - 1)
@@ -119,6 +174,8 @@ export function DatePicker({ value, onChange, placeholder = 'dd/mm/aaaa', style 
     else setViewMonth(m => m + 1)
   }
 
+  const today  = new Date()
+  const parsed = parseYMD(value)
   const offset = getMondayOffset(viewYear, viewMonth)
   const total  = daysInMonth(viewYear, viewMonth)
   const cells  = []
@@ -128,31 +185,53 @@ export function DatePicker({ value, onChange, placeholder = 'dd/mm/aaaa', style 
 
   return (
     <>
-      <button
-        ref={triggerRef}
-        type="button"
-        onClick={openDrop}
+      {/* Trigger wrapper — clicking anywhere focuses the text input */}
+      <div
+        ref={wrapRef}
+        onClick={() => { inputRef.current?.focus(); if (!open) openCalendar() }}
         style={{
           ...BASE, ...style,
-          color: value ? 'var(--d)' : 'var(--gr3)',
+          cursor: 'text',
+          padding: 0,
           borderColor: open ? 'var(--g300)' : 'var(--gr2)',
           boxShadow:   open ? '0 0 0 3px rgba(74,124,89,0.08)' : 'none',
         }}
       >
-        <span style={{ color: value ? 'var(--d)' : 'var(--gr3)' }}>
-          {value ? fmtDisplay(value) : placeholder}
+        <input
+          ref={inputRef}
+          type="text"
+          value={textValue}
+          onChange={handleTextChange}
+          onFocus={() => { if (!open) openCalendar() }}
+          onBlur={handleInputBlur}
+          placeholder={placeholder}
+          maxLength={10}
+          style={{
+            flex: 1, border: 'none', outline: 'none', background: 'transparent',
+            fontSize: '13px', fontFamily: "'DM Sans', sans-serif",
+            color: 'var(--d)', padding: '9px 0 9px 12px', cursor: 'text', minWidth: 0,
+          }}
+        />
+        {/* Calendar icon — preventDefault keeps focus on input */}
+        <span
+          onMouseDown={e => { e.preventDefault(); inputRef.current?.focus(); if (!open) openCalendar() }}
+          style={{ padding: '0 12px 0 8px', display: 'flex', alignItems: 'center', flexShrink: 0, cursor: 'pointer' }}
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--gr4)" strokeWidth="2" style={{ display: 'block' }}>
+            <rect x="3" y="4" width="18" height="18" rx="2"/>
+            <line x1="16" y1="2" x2="16" y2="6"/>
+            <line x1="8"  y1="2" x2="8"  y2="6"/>
+            <line x1="3"  y1="10" x2="21" y2="10"/>
+          </svg>
         </span>
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--gr4)" strokeWidth="2" style={{ flexShrink: 0 }}>
-          <rect x="3" y="4" width="18" height="18" rx="2"/>
-          <line x1="16" y1="2" x2="16" y2="6"/>
-          <line x1="8"  y1="2" x2="8"  y2="6"/>
-          <line x1="3"  y1="10" x2="21" y2="10"/>
-        </svg>
-      </button>
+      </div>
 
       {open && rect && (
+        // onMouseDown preventDefault on the whole dropdown — prevents input from
+        // losing focus when the user clicks calendar buttons or days
         <div
           ref={dropRef}
+          onMouseDown={e => e.preventDefault()}
           style={{
             position: 'fixed',
             left:  rect.left,
@@ -165,21 +244,41 @@ export function DatePicker({ value, onChange, placeholder = 'dd/mm/aaaa', style 
             fontFamily: "'DM Sans', sans-serif",
           }}
         >
-          {/* Month/Year navigation */}
+          {/* Navigation: «prev-year  ‹prev-month  Month Year  next-month›  next-year» */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-            <button type="button" onClick={prevMonth} style={navBtn}
-              onMouseEnter={e => e.currentTarget.style.background = 'var(--ow)'}
-              onMouseLeave={e => e.currentTarget.style.background = 'none'}>
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="15 18 9 12 15 6"/></svg>
-            </button>
+            <div style={{ display: 'flex', gap: 2 }}>
+              <button type="button" onClick={prevYear} style={navBtn} title="Ano anterior"
+                onMouseEnter={e => e.currentTarget.style.background = 'var(--ow)'}
+                onMouseLeave={e => e.currentTarget.style.background = 'none'}>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <polyline points="11 18 5 12 11 6"/><polyline points="19 18 13 12 19 6"/>
+                </svg>
+              </button>
+              <button type="button" onClick={prevMonth} style={navBtn} title="Mês anterior"
+                onMouseEnter={e => e.currentTarget.style.background = 'var(--ow)'}
+                onMouseLeave={e => e.currentTarget.style.background = 'none'}>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+              </button>
+            </div>
+
             <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--d)' }}>
               {MONTHS_PT[viewMonth]} {viewYear}
             </span>
-            <button type="button" onClick={nextMonth} style={navBtn}
-              onMouseEnter={e => e.currentTarget.style.background = 'var(--ow)'}
-              onMouseLeave={e => e.currentTarget.style.background = 'none'}>
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="9 18 15 12 9 6"/></svg>
-            </button>
+
+            <div style={{ display: 'flex', gap: 2 }}>
+              <button type="button" onClick={nextMonth} style={navBtn} title="Próximo mês"
+                onMouseEnter={e => e.currentTarget.style.background = 'var(--ow)'}
+                onMouseLeave={e => e.currentTarget.style.background = 'none'}>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+              </button>
+              <button type="button" onClick={nextYear} style={navBtn} title="Próximo ano"
+                onMouseEnter={e => e.currentTarget.style.background = 'var(--ow)'}
+                onMouseLeave={e => e.currentTarget.style.background = 'none'}>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <polyline points="5 18 11 12 5 6"/><polyline points="13 18 19 12 13 6"/>
+                </svg>
+              </button>
+            </div>
           </div>
 
           {/* Day-of-week headers */}
@@ -195,8 +294,8 @@ export function DatePicker({ value, onChange, placeholder = 'dd/mm/aaaa', style 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 2 }}>
             {cells.map((day, i) => {
               if (!day) return <div key={i} />
-              const isSel    = parsed && parsed.year === viewYear && parsed.month === viewMonth && parsed.day === day
-              const isToday  = today.getFullYear() === viewYear && today.getMonth() === viewMonth && today.getDate() === day
+              const isSel   = parsed && parsed.year === viewYear && parsed.month === viewMonth && parsed.day === day
+              const isToday = today.getFullYear() === viewYear && today.getMonth() === viewMonth && today.getDate() === day
               return (
                 <button key={i} type="button"
                   onClick={() => { onChange(toIso(viewYear, viewMonth, day)); setOpen(false) }}
@@ -221,15 +320,16 @@ export function DatePicker({ value, onChange, placeholder = 'dd/mm/aaaa', style 
           {/* Footer */}
           <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 10, paddingTop: 10, borderTop: '1px solid var(--gr1)' }}>
             <button type="button"
-              onClick={() => { onChange(''); setOpen(false) }}
+              onClick={() => { onChange(''); setTextValue(''); setOpen(false) }}
               style={footBtn('#8B8B8B')}
               onMouseEnter={e => e.currentTarget.style.color = 'var(--d)'}
               onMouseLeave={e => e.currentTarget.style.color = '#8B8B8B'}
             >Limpar</button>
             <button type="button"
               onClick={() => {
-                const t = new Date()
-                onChange(toIso(t.getFullYear(), t.getMonth(), t.getDate()))
+                const t   = new Date()
+                const iso = toIso(t.getFullYear(), t.getMonth(), t.getDate())
+                onChange(iso)
                 setViewYear(t.getFullYear()); setViewMonth(t.getMonth())
                 setOpen(false)
               }}
