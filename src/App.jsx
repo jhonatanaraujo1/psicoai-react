@@ -139,6 +139,29 @@ export default function App() {
     try { sessionStorage.setItem('psicoai_nav_view', view) } catch {}
   }
 
+  // ── Título dinâmico da aba por tela ──────────────────────────────────────
+  useEffect(() => {
+    const TITLES = {
+      agenda:          'Agenda',
+      dashboard:       'Painel clínico',
+      pacientes:       'Meus pacientes',
+      paciente:        'Prontuário',
+      anotacoes:       'Anotações',
+      insights:        'Insights clínicos',
+      financeiro:      'Financeiro',
+      lembretes:       'Lembretes',
+      formularios:     'Formulários',
+      cadernos:        'Cadernos',
+      teleatendimento: 'Videoatendimento',
+      configuracoes:   'Configurações',
+      sessao:          'Sessão em andamento',
+      liveSession:     'Sessão em andamento',
+      prontuario:      'Prontuário',
+    }
+    const label = TITLES[currentView] || 'PsicoNotes'
+    document.title = `${label} — PsicoNotes`
+  }, [currentView])
+
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   // ── Patient context ──────────────────────────────────────────────────────
