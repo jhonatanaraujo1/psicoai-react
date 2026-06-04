@@ -103,7 +103,7 @@ export default function Sidebar({ currentView, setCurrentView, isOpen, onClose, 
     <aside className={`sidebar${isOpen ? ' open' : ''}`}>
       <div className="sb-logo">
         <div className="sb-psi">Ψ</div>
-        <div className="sb-brand">Psico<span>AI</span></div>
+        <div className="sb-brand">Psico<span>Notes</span></div>
       </div>
 
       <nav className="sb-nav">
