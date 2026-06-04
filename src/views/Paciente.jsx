@@ -328,8 +328,9 @@ export default function Paciente({ patient: propPatient, setCurrentView, onSessa
           </div>
         ) : (
           <>
-            <div style={{ display: 'grid', gridTemplateColumns: '52px 48px 1fr 96px 80px 110px 28px 28px', borderBottom: '2px solid var(--gr2)', padding: '8px 20px', background: 'var(--ow)' }}>
-              {['Nº', 'Tipo', 'Resumo / Anotações', 'Criado', 'Duração', 'Status', '', ''].map((h, i) => (
+            {/* Colunas: Nº · Tipo · Resumo · Criado · Última alteração · Status · ações */}
+            <div style={{ display: 'grid', gridTemplateColumns: '52px 58px 1fr 88px 110px 110px 28px 28px', borderBottom: '2px solid var(--gr2)', padding: '8px 20px', background: 'var(--ow)' }}>
+              {['Nº', 'Tipo', 'Resumo / Anotações', 'Criado', 'Última alt.', 'Status', '', ''].map((h, i) => (
                 <div key={i} style={{ fontSize: '10px', fontWeight: 600, letterSpacing: '0.8px', textTransform: 'uppercase', color: 'var(--gr4)' }}>{h}</div>
               ))}
             </div>
@@ -339,12 +340,15 @@ export default function Paciente({ patient: propPatient, setCurrentView, onSessa
               const bs = badgeStyle(s.statusLabel)
               const isConfirmingDelete = sessionDeleteId === s.id
               const isExpanded = expandedSessionId === s.id
+              const isCanvas = s.type === 'canvas'
+              // Última alteração: prefere finishedAt, depois updatedAt, depois createdAt
+              const lastModified = s.finishedAt || s.updatedAt || s.createdAt
               return (
                 <div key={s.id} style={{ borderBottom: i < sessions.length - 1 ? '1px solid var(--gr1)' : 'none' }}>
                   {/* Row */}
                   <div
                     onClick={() => setExpandedSessionId(isExpanded ? null : s.id)}
-                    style={{ display: 'grid', gridTemplateColumns: '52px 48px 1fr 96px 80px 110px 28px 28px', padding: '12px 20px', alignItems: 'center', cursor: 'pointer', transition: 'background 0.12s', background: isExpanded ? 'var(--g50)' : '' }}
+                    style={{ display: 'grid', gridTemplateColumns: '52px 58px 1fr 88px 110px 110px 28px 28px', padding: '12px 20px', alignItems: 'center', cursor: 'pointer', transition: 'background 0.12s', background: isExpanded ? 'var(--g50)' : '' }}
                     onMouseEnter={e => { if (!isExpanded) e.currentTarget.style.background = 'var(--ow)' }}
                     onMouseLeave={e => { if (!isExpanded) e.currentTarget.style.background = '' }}
                   >
@@ -352,34 +356,34 @@ export default function Paciente({ patient: propPatient, setCurrentView, onSessa
                       {evColor && <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: evColor, flexShrink: 0, display: 'inline-block' }} />}
                       <span style={{ fontFamily: "'Fraunces', serif", fontSize: '14px', color: 'var(--d)' }}>{sessionNum}</span>
                     </div>
-                    {/* Type badge */}
+                    {/* Type badge — sem emoji para evitar quebra de layout */}
                     <div>
                       <span style={{
-                        fontSize: '9.5px', fontWeight: 600, padding: '2px 6px', borderRadius: '10px',
-                        background: s.type === 'canvas' ? 'rgba(74,124,89,0.08)' : 'rgba(41,128,185,0.08)',
-                        color: s.type === 'canvas' ? 'var(--g600)' : '#2980B9',
-                        border: `1px solid ${s.type === 'canvas' ? 'var(--g100)' : 'rgba(41,128,185,0.2)'}`,
-                        textTransform: 'uppercase', letterSpacing: '0.3px',
+                        fontSize: '9.5px', fontWeight: 700, padding: '2px 7px', borderRadius: '10px',
+                        background: isCanvas ? 'rgba(74,124,89,0.08)' : 'rgba(41,128,185,0.08)',
+                        color: isCanvas ? 'var(--g600)' : '#2980B9',
+                        border: `1px solid ${isCanvas ? 'var(--g100)' : 'rgba(41,128,185,0.2)'}`,
+                        textTransform: 'uppercase', letterSpacing: '0.5px',
+                        display: 'inline-block',
                       }}>
-                        {s.type === 'canvas' ? '✏ Canvas' : '⌨ Texto'}
+                        {isCanvas ? 'Canvas' : 'Texto'}
                       </span>
                     </div>
-                    <div style={{ fontSize: '12px', color: 'var(--gr5)', lineHeight: 1.4, paddingRight: '16px', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: isExpanded ? 'unset' : 2, WebkitBoxOrient: 'vertical' }}>
+                    <div style={{ fontSize: '12px', color: 'var(--gr5)', lineHeight: 1.4, paddingRight: '16px', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
                       {s.hasAnalysis && (
                         <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', fontSize: '10px', fontWeight: 600, color: 'var(--g600)', background: 'var(--g50)', border: '1px solid var(--g100)', padding: '1px 6px', borderRadius: '20px', marginRight: '6px', verticalAlign: 'middle' }}>
                           <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
                           IA
                         </span>
                       )}
-                      {s.summary}
+                      {s.summary || s.notePreview || (isCanvas ? 'Anotação em canvas' : 'Sem resumo')}
                     </div>
-                    <div style={{ fontSize: '11px', color: 'var(--gr5)', lineHeight: 1.4 }}>
-                      <div>{fmtDate(s.createdAt)}</div>
-                      {s.updatedAt && s.updatedAt !== s.createdAt && (
-                        <div style={{ fontSize: '10px', color: 'var(--gr3)' }}>Edit. {fmtDate(s.updatedAt)}</div>
-                      )}
+                    <div style={{ fontSize: '11px', color: 'var(--gr5)' }}>
+                      {fmtDate(s.sessionDate || s.createdAt)}
                     </div>
-                    <div style={{ fontSize: '12px', color: 'var(--gr5)', fontVariantNumeric: 'tabular-nums' }}>{fmtDuration(s.durationSeconds)}</div>
+                    <div style={{ fontSize: '11px', color: 'var(--gr5)' }}>
+                      {fmtDate(lastModified)}
+                    </div>
                     <div>
                       <span style={{ display: 'inline-block', fontSize: '11px', fontWeight: 600, padding: '3px 8px', borderRadius: '20px', background: bs.bg, color: bs.color }}>
                         {s.statusLabel}
