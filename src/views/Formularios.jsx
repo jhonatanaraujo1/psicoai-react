@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react'
 import { api } from '../services'
+import { showToast } from '../components/Toast'
 import FormBuilder, { loadCustomForms, saveCustomForms } from '../components/FormBuilder'
+import { DatePicker, CustomSelect } from '../components/DateTimePickers'
 
 const formTemplates = [
   { id: 'anamnese', name: 'Anamnese inicial', desc: 'Coleta dados demográficos, queixa principal e histórico de saúde', meta: '12 campos', type: 'anamnese', icon: '📋', badge: 'Padrão CFP', badgeClass: 'badge-green' },
@@ -23,9 +25,9 @@ const formPreviews = {
         <div className="form-section-title">Identificação</div>
         <div className="form-anamnese-grid">
           <div className="form-field"><label>NOME COMPLETO</label><input type="text" placeholder="Nome do paciente" /></div>
-          <div className="form-field"><label>DATA DE NASCIMENTO</label><input type="date" /></div>
+          <div className="form-field"><label>DATA DE NASCIMENTO</label><DatePicker value="" onChange={() => {}} /></div>
           <div className="form-field"><label>PROFISSÃO</label><input type="text" placeholder="Sua profissão" /></div>
-          <div className="form-field"><label>ESTADO CIVIL</label><select><option>Solteiro(a)</option><option>Casado(a)</option><option>Divorciado(a)</option><option>Viúvo(a)</option></select></div>
+          <div className="form-field"><label>ESTADO CIVIL</label><CustomSelect value="" onChange={() => {}} options={[{ label: 'Solteiro(a)', value: 'solteiro' }, { label: 'Casado(a)', value: 'casado' }, { label: 'Divorciado(a)', value: 'divorciado' }, { label: 'Viúvo(a)', value: 'viuvo' }]} placeholder="Solteiro(a)" /></div>
         </div>
         <div className="form-section-title" style={{ marginTop: '8px' }}>Queixa principal</div>
         <div className="form-field"><label>O QUE TE TROUXE À TERAPIA?</label><textarea placeholder="Descreva brevemente o que te levou a buscar atendimento…" /></div>
@@ -471,7 +473,7 @@ export default function Formularios() {
                       <button
                         className="fin-action"
                         style={row.status === 'pending' ? { color: 'var(--g600)', borderColor: 'var(--g300)' } : {}}
-                        onClick={() => row.status === 'pending' && alert(`Link copiado para envio!`)}
+                        onClick={() => row.status === 'pending' && (navigator.clipboard?.writeText(row.link || window.location.origin + '/f/' + row.id).catch(() => null), showToast('Link copiado para envio!', 'success'))}
                       >
                         {row.status === 'answered' ? 'Ver resposta' : 'Reenviar'}
                       </button>
@@ -501,38 +503,25 @@ export default function Formularios() {
             <div style={{ padding: '20px' }}>
               <div style={{ marginBottom: '16px' }}>
                 <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--gr5)', letterSpacing: '0.5px', marginBottom: '8px' }}>PACIENTE</div>
-                <select
+                <CustomSelect
                   value={sendPatient}
-                  onChange={e => setSendPatient(e.target.value)}
-                  style={{ border: '1px solid var(--gr2)', borderRadius: 'var(--r)', padding: '9px 12px', fontSize: '13px', fontFamily: "'DM Sans', sans-serif", outline: 'none', background: 'var(--ow)', width: '100%', boxSizing: 'border-box' }}
-                >
-                  <option value="">Selecione um paciente…</option>
-                  {sendPatients.map(p => (
-                    <option key={p.id} value={p.id}>{p.name}</option>
-                  ))}
-                </select>
+                  onChange={v => setSendPatient(v)}
+                  options={[{ label: 'Selecione um paciente…', value: '' }, ...sendPatients.map(p => ({ label: p.name, value: p.id }))]}
+                  placeholder="Selecione um paciente…"
+                />
               </div>
               <div style={{ marginBottom: '20px' }}>
                 <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--gr5)', letterSpacing: '0.5px', marginBottom: '8px' }}>FORMULÁRIO</div>
-                <select
+                <CustomSelect
                   value={sendFormType}
-                  onChange={e => setSendFormType(e.target.value)}
-                  style={{ border: '1px solid var(--gr2)', borderRadius: 'var(--r)', padding: '9px 12px', fontSize: '13px', fontFamily: "'DM Sans', sans-serif", outline: 'none', background: 'var(--ow)', width: '100%', boxSizing: 'border-box' }}
-                >
-                  <option value="">Selecione um formulário…</option>
-                  <optgroup label="Modelos prontos">
-                    {formTemplates.map(t => (
-                      <option key={t.id} value={t.id}>{t.name}</option>
-                    ))}
-                  </optgroup>
-                  {customForms.length > 0 && (
-                    <optgroup label="Meus formulários">
-                      {customForms.map(f => (
-                        <option key={f.id} value={f.id}>{f.name}</option>
-                      ))}
-                    </optgroup>
-                  )}
-                </select>
+                  onChange={v => setSendFormType(v)}
+                  options={[
+                    { label: 'Selecione um formulário…', value: '' },
+                    ...formTemplates.map(t => ({ label: t.name, value: t.id })),
+                    ...customForms.map(f => ({ label: f.name, value: f.id })),
+                  ]}
+                  placeholder="Selecione um formulário…"
+                />
               </div>
             </div>
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', padding: '14px 20px', borderTop: '1px solid var(--gr2)', background: 'var(--ow)' }}>
@@ -594,8 +583,8 @@ export default function Formularios() {
                   <div style={{ fontSize: '11px', color: 'var(--gr4)', marginTop: '3px' }}>Modelo PsicoNotes · Enviado via link seguro</div>
                 </div>
                 <div style={{ display: 'flex', gap: '8px' }}>
-                  <button className="btn-outline" style={{ fontSize: '12px', padding: '7px 14px' }} onClick={() => alert('Link copiado!')}>Copiar link</button>
-                  <button className="btn-primary" style={{ fontSize: '12px' }} onClick={() => alert('Selecione o paciente na tela principal.')}>Enviar a paciente</button>
+                  <button className="btn-outline" style={{ fontSize: '12px', padding: '7px 14px' }} onClick={() => { navigator.clipboard?.writeText(window.location.origin + '/f/' + preview).catch(() => null); showToast('Link copiado!', 'success') }}>Copiar link</button>
+                  <button className="btn-primary" style={{ fontSize: '12px' }} onClick={() => showToast('Selecione o paciente na tela principal para enviar.', 'info')}>Enviar a paciente</button>
                   <button style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '22px', color: 'var(--gr5)', marginLeft: '4px' }} onClick={() => setPreview(null)}>×</button>
                 </div>
               </div>

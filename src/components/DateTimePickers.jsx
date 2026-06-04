@@ -411,6 +411,113 @@ export function TimePicker({ value, onChange, placeholder = '--:--', minuteStep 
   )
 }
 
+// ── CustomSelect ───────────────────────────────────────────────────────────────
+export function CustomSelect({ value, onChange, options, placeholder = 'Selecionar…', error = false, style = {} }) {
+  const [open, setOpen] = useState(false)
+  const [rect, setRect] = useState(null)
+  const triggerRef = useRef(null)
+  const dropRef    = useRef(null)
+
+  const openDrop = useCallback(() => {
+    if (!triggerRef.current) return
+    const r = triggerRef.current.getBoundingClientRect()
+    const vh = window.innerHeight
+    const DROP_H = 260
+    const openUp = vh - r.bottom < DROP_H && r.top > DROP_H
+    setRect({
+      left:  r.left,
+      width: Math.max(r.width, 180),
+      ...(openUp ? { bottom: vh - r.top + 4 } : { top: r.bottom + 4 }),
+    })
+    setOpen(p => !p)
+  }, [])
+
+  useEffect(() => {
+    if (!open) return
+    const h = (e) => {
+      if (
+        triggerRef.current && !triggerRef.current.contains(e.target) &&
+        dropRef.current    && !dropRef.current.contains(e.target)
+      ) setOpen(false)
+    }
+    document.addEventListener('mousedown', h)
+    return () => document.removeEventListener('mousedown', h)
+  }, [open])
+
+  const selected = options.find(o => String(o.value) === String(value))
+
+  return (
+    <>
+      <button
+        ref={triggerRef}
+        type="button"
+        onClick={openDrop}
+        style={{
+          ...BASE, ...style,
+          borderColor: error ? 'var(--danger)' : open ? 'var(--g300)' : 'var(--gr2)',
+          boxShadow:   open ? '0 0 0 3px rgba(74,124,89,0.08)' : 'none',
+          color: selected ? 'var(--d)' : 'var(--gr3)',
+        }}
+      >
+        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: selected ? 'var(--d)' : 'var(--gr4)' }}>
+          {selected ? selected.label : placeholder}
+        </span>
+        <svg
+          width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--gr4)" strokeWidth="2" strokeLinecap="round"
+          style={{ flexShrink: 0, marginLeft: 8, transition: 'transform 0.18s', transform: open ? 'rotate(180deg)' : 'none' }}
+        >
+          <polyline points="6 9 12 15 18 9"/>
+        </svg>
+      </button>
+
+      {open && rect && (
+        <div
+          ref={dropRef}
+          style={{
+            position: 'fixed',
+            left:  rect.left,
+            width: rect.width,
+            ...(rect.top    !== undefined ? { top:    rect.top    } : {}),
+            ...(rect.bottom !== undefined ? { bottom: rect.bottom } : {}),
+            background: 'var(--w)', border: '1px solid var(--gr2)',
+            borderRadius: 'var(--r)', boxShadow: '0 8px 28px rgba(0,0,0,0.14)',
+            zIndex: 9000, overflow: 'hidden', maxHeight: 240, overflowY: 'auto',
+            fontFamily: "'DM Sans', sans-serif",
+          }}
+        >
+          {options.map(o => {
+            const isActive = String(o.value) === String(value)
+            return (
+              <button
+                key={String(o.value)}
+                type="button"
+                onClick={() => { onChange(o.value); setOpen(false) }}
+                style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  width: '100%', padding: '10px 14px', border: 'none', cursor: 'pointer',
+                  background: isActive ? 'var(--g50)' : 'var(--w)',
+                  color: isActive ? 'var(--g700)' : 'var(--d)',
+                  fontSize: '13px', fontFamily: "'DM Sans', sans-serif",
+                  fontWeight: isActive ? 600 : 400, textAlign: 'left',
+                }}
+                onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = 'var(--ow)' }}
+                onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = 'var(--w)' }}
+              >
+                {o.label}
+                {isActive && (
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--g600)" strokeWidth="2.5" strokeLinecap="round">
+                    <polyline points="20 6 9 17 4 12"/>
+                  </svg>
+                )}
+              </button>
+            )
+          })}
+        </div>
+      )}
+    </>
+  )
+}
+
 // ── shared micro-styles ────────────────────────────────────────────────────────
 const navBtn = {
   width: 28, height: 28, border: 'none', background: 'none',

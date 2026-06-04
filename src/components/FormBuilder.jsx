@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react'
+import { DatePicker } from './DateTimePickers'
 
 // ── Field type definitions ────────────────────────────────────────────────────
 export const FIELD_TYPES = [
@@ -54,7 +55,7 @@ function FieldPreview({ field }) {
   }
   if (field.type === 'text') return <input disabled placeholder={field.placeholder || 'Resposta curta'} style={{ ...s, width: '100%', border: '1px solid var(--gr2)', borderRadius: 'var(--r)', padding: '7px 10px', background: 'var(--ow)', boxSizing: 'border-box', opacity: 0.7 }} />
   if (field.type === 'textarea') return <textarea disabled placeholder={field.placeholder || 'Resposta longa…'} rows={2} style={{ ...s, width: '100%', border: '1px solid var(--gr2)', borderRadius: 'var(--r)', padding: '7px 10px', background: 'var(--ow)', resize: 'none', boxSizing: 'border-box', opacity: 0.7 }} />
-  if (field.type === 'date') return <input type="date" disabled style={{ ...s, border: '1px solid var(--gr2)', borderRadius: 'var(--r)', padding: '7px 10px', background: 'var(--ow)', opacity: 0.7 }} />
+  if (field.type === 'date') return <DatePicker value="" onChange={() => {}} style={{ opacity: 0.7, cursor: 'default', pointerEvents: 'none' }} />
   if (field.type === 'yesno') return (
     <div style={{ display: 'flex', gap: '10px' }}>
       {['Sim', 'Não'].map(o => <label key={o} style={{ ...s, display: 'flex', alignItems: 'center', gap: '5px', opacity: 0.7 }}><input type="radio" disabled /> {o}</label>)}
@@ -79,9 +80,10 @@ function FieldPreview({ field }) {
     )
   }
   if (field.type === 'select') return (
-    <select disabled style={{ ...s, border: '1px solid var(--gr2)', borderRadius: 'var(--r)', padding: '7px 10px', background: 'var(--ow)', opacity: 0.7 }}>
-      {(field.options || []).map((o, i) => <option key={i}>{o || `Opção ${i + 1}`}</option>)}
-    </select>
+    <div style={{ ...s, border: '1px solid var(--gr2)', borderRadius: 'var(--r)', padding: '7px 10px', background: 'var(--ow)', opacity: 0.7, display: 'flex', alignItems: 'center', justifyContent: 'space-between', pointerEvents: 'none' }}>
+      <span style={{ color: 'var(--gr4)' }}>{(field.options?.[0]) || 'Opção 1'}</span>
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--gr4)" strokeWidth="2"><polyline points="6 9 12 15 18 9"/></svg>
+    </div>
   )
   return null
 }

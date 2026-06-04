@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { api } from '../services'
 import { showToast } from '../components/Toast'
+import { CustomSelect } from '../components/DateTimePickers'
 
 const ABORDAGENS = ['TCC', 'Psicanálise', 'Humanista', 'EMDR', 'ACT', 'DBT', 'Gestalt', 'Integrativa', 'Outra']
 const ESPECIALIDADES = ['Psicologia Clínica', 'Neuropsicologia', 'Psicologia Hospitalar', 'Psicologia Escolar', 'Psicologia do Esporte', 'Psicologia Organizacional', 'Psicoterapia Infantil']
@@ -81,10 +82,7 @@ function TabPerfil({ profile, onSaved }) {
         <Field label="Nome completo *"><input style={st.input} value={form.name} onChange={e => set('name', e.target.value)} onFocus={onFocus} onBlur={onBlur} placeholder="Dra. Nome Sobrenome" /></Field>
         <Field label="Número do CRP" hint="Formato: estado/número — ex: 06/89234 (SP)"><input style={st.input} value={form.crp} onChange={e => set('crp', e.target.value)} onFocus={onFocus} onBlur={onBlur} placeholder="Ex: 06/89234" /></Field>
         <Field label="Especialidade">
-          <select style={sel()} value={form.specialty} onChange={e => set('specialty', e.target.value)} onFocus={onFocus} onBlur={onBlur}>
-            <option value="">Selecione</option>
-            {ESPECIALIDADES.map(x => <option key={x} value={x}>{x}</option>)}
-          </select>
+          <CustomSelect value={form.specialty} onChange={v => set('specialty', v)} options={[{ label: 'Selecione', value: '' }, ...ESPECIALIDADES.map(x => ({ label: x, value: x }))]} placeholder="Selecione" />
         </Field>
         <Field label="E-mail profissional"><input style={st.input} type="email" value={form.email} onChange={e => set('email', e.target.value)} onFocus={onFocus} onBlur={onBlur} placeholder="seu@email.com.br" /></Field>
         <Field label="Telefone / WhatsApp"><input style={st.input} value={form.phone} onChange={e => set('phone', e.target.value)} onFocus={onFocus} onBlur={onBlur} placeholder="(11) 99999-9999" /></Field>
@@ -140,7 +138,7 @@ function TabPlano({ profile }) {
       const { url } = await api.createCheckoutSession({ planId: 'clinico', successUrl, cancelUrl, couponCode: appliedCoupon })
       window.location.href = url
     } catch (e) {
-      alert('Erro ao iniciar checkout. Tente novamente.')
+      showToast('Erro ao iniciar checkout. Tente novamente.', 'error')
       setBillingLoading(false)
     }
   }
@@ -152,7 +150,7 @@ function TabPlano({ profile }) {
       const { url } = await api.createBillingPortalSession({ returnUrl })
       window.location.href = url
     } catch (e) {
-      alert('Erro ao abrir portal de cobrança. Tente novamente.')
+      showToast('Erro ao abrir portal de cobrança. Tente novamente.', 'error')
       setBillingLoading(false)
     }
   }
@@ -289,9 +287,7 @@ function TabPreferencias({ profile, onSaved }) {
       <Divider title="Atendimento" sub="Valores padrão ao criar novos pacientes e sessões" />
       <div className="cfg-grid-2" style={{ gridTemplateColumns: 'repeat(auto-fit,minmax(160px,1fr))' }}>
         <Field label="Abordagem padrão">
-          <select style={selectSt} value={form.defaultApproach} onChange={e => set('defaultApproach', e.target.value)} onFocus={onFocus} onBlur={onBlur}>
-            {ABORDAGENS.map(a => <option key={a} value={a}>{a}</option>)}
-          </select>
+          <CustomSelect value={form.defaultApproach} onChange={v => set('defaultApproach', v)} options={ABORDAGENS.map(a => ({ label: a, value: a }))} placeholder="Selecione" />
         </Field>
         <Field label="Duração padrão da sessão (min)"><input style={st.input} type="number" min={20} max={120} value={form.defaultSessionDuration} onChange={e => set('defaultSessionDuration', e.target.value)} onFocus={onFocus} onBlur={onBlur} /></Field>
         <Field label="Valor padrão da sessão (R$)"><input style={st.input} type="number" min={0} value={form.defaultSessionValue} onChange={e => set('defaultSessionValue', e.target.value)} onFocus={onFocus} onBlur={onBlur} /></Field>
@@ -377,7 +373,7 @@ function TabSeguranca() {
                 </div>
                 <div style={{ fontSize: '11px', color: 'var(--gr4)', marginTop: '2px' }}>{s.location} · {s.lastSeen}</div>
               </div>
-              {!s.current && <button onClick={() => alert('Sessão encerrada com sucesso')} style={{ fontSize: '11px', color: 'var(--danger)', background: 'none', border: 'none', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", padding: '4px 8px' }}>Encerrar sessão</button>}
+              {!s.current && <button onClick={() => showToast('Sessão encerrada com sucesso', 'success')} style={{ fontSize: '11px', color: 'var(--danger)', background: 'none', border: 'none', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", padding: '4px 8px' }}>Encerrar sessão</button>}
             </div>
           ))}
         </div>
@@ -388,7 +384,7 @@ function TabSeguranca() {
           <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--danger)', marginBottom: '2px' }}>Ação irreversível</div>
           <div style={{ fontSize: '12px', color: 'var(--danger)', opacity: 0.8 }}>Excluir sua conta e todos os dados clínicos de forma permanente</div>
         </div>
-        <button onClick={() => alert('Para excluir sua conta, entre em contato via suporte@psicnotes.com. Remoção em até 30 dias (LGPD art. 18).')}
+        <button onClick={() => showToast('Para excluir sua conta, contate suporte@psicnotes.com — remoção em até 30 dias (LGPD art. 18)', 'info', { duration: 8000 })}
           style={{ padding: '8px 16px', background: 'var(--danger)', color: '#fff', border: 'none', borderRadius: 'var(--r)', fontSize: '12px', fontWeight: 600, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", whiteSpace: 'nowrap', flexShrink: 0 }}>
           Excluir conta
         </button>

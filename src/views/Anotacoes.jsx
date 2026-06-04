@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { api } from '../services'
 import AiAnalysisPanel from '../components/AiAnalysisPanel'
+import { CustomSelect } from '../components/DateTimePickers'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -337,18 +338,13 @@ export default function Anotacoes({ setCurrentView, onOpenCanvas }) {
         </div>
 
         {/* Patient filter */}
-        <div style={{ position: 'relative', flexShrink: 0 }}>
-          <select
+        <div style={{ flexShrink: 0, minWidth: 180 }}>
+          <CustomSelect
             value={filterPatient}
-            onChange={e => setFilterPatient(e.target.value)}
-            style={{ height: 38, paddingLeft: 12, paddingRight: 28, border: '1px solid var(--gr2)', borderRadius: 'var(--r)', fontSize: 13, background: 'var(--w)', color: filterPatient ? 'var(--d)' : 'var(--gr4)', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", outline: 'none', appearance: 'none', WebkitAppearance: 'none' }}
-            onFocus={e => e.target.style.borderColor = 'var(--g300)'}
-            onBlur={e => e.target.style.borderColor = 'var(--gr2)'}
-          >
-            <option value="">Todos os pacientes</option>
-            {patients.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-          </select>
-          <svg style={{ position: 'absolute', right: 9, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--gr4)" strokeWidth="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+            onChange={v => setFilterPatient(v)}
+            options={[{ label: 'Todos os pacientes', value: '' }, ...patients.map(p => ({ label: p.name, value: p.id }))]}
+            placeholder="Todos os pacientes"
+          />
         </div>
 
         {/* Evolução filter pills */}

@@ -1,5 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { api } from '../services'
+import { showToast } from './Toast'
+import { CustomSelect } from './DateTimePickers'
 
 const CATEGORIES = [
   { value: 'tcle',      label: 'TCLE' },
@@ -104,7 +106,7 @@ export default function DocumentsPanel({ patientId, patientName }) {
       const blob = await api.downloadDocument(patientId, doc.id)
       downloadBlob(blob, doc.originalName)
     } catch (e) {
-      alert('Erro ao baixar arquivo: ' + e.message)
+      showToast('Erro ao baixar arquivo: ' + (e.message || 'Tente novamente'), 'error')
     } finally {
       setDownloading(null)
     }
@@ -115,7 +117,7 @@ export default function DocumentsPanel({ patientId, patientName }) {
       await api.deleteDocument(patientId, docId)
       setDocs(prev => prev.filter(d => d.id !== docId))
     } catch (e) {
-      alert('Erro ao excluir: ' + e.message)
+      showToast('Erro ao excluir: ' + (e.message || 'Tente novamente'), 'error')
     } finally {
       setDeleteId(null)
     }
@@ -172,13 +174,12 @@ export default function DocumentsPanel({ patientId, patientName }) {
             </div>
             <div>
               <label style={{ fontSize: '11px', fontWeight: 600, color: 'var(--gr5)', display: 'block', marginBottom: '4px' }}>Categoria</label>
-              <select
+              <CustomSelect
                 value={uploadCategory}
-                onChange={e => setUploadCategory(e.target.value)}
-                style={{ height: '34px', padding: '0 10px', border: '1px solid var(--gr2)', borderRadius: 'var(--r)', fontSize: '12px', fontFamily: "'DM Sans', sans-serif", outline: 'none', background: 'var(--w)', cursor: 'pointer' }}
-              >
-                {CATEGORIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
-              </select>
+                onChange={v => setUploadCategory(v)}
+                options={CATEGORIES}
+                placeholder="Categoria"
+              />
             </div>
             <button
               className="btn-primary"

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { api } from '../services'
-import { DatePicker } from '../components/DateTimePickers'
+import { DatePicker, CustomSelect } from '../components/DateTimePickers'
 
 function fmtBRL(n) {
   return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(n || 0)
@@ -276,12 +276,17 @@ export default function Financeiro() {
         <div className="card-body" style={{ padding: 0 }}>
           <div className="fin-filter-bar" style={{ padding: '12px 16px 0' }}>
             <input className="fin-search" placeholder="Buscar paciente ou descrição…" value={search} onChange={e => setSearch(e.target.value)} />
-            <select className="fin-filter-select" value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
-              <option value="">Todos os status</option>
-              <option value="received">Recebido</option>
-              <option value="pending">Pendente</option>
-              <option value="overdue">Atrasado</option>
-            </select>
+            <CustomSelect
+              value={statusFilter}
+              onChange={v => setStatusFilter(v)}
+              options={[
+                { label: 'Todos os status', value: '' },
+                { label: 'Recebido', value: 'received' },
+                { label: 'Pendente', value: 'pending' },
+                { label: 'Atrasado', value: 'overdue' },
+              ]}
+              style={{ minWidth: 160 }}
+            />
             <div className="fin-summary-chip">
               {loading ? '…' : `${events.filter(e => e.status === 'received').length} recebidos · ${fmtBRL(received)}`}
             </div>
@@ -411,35 +416,26 @@ export default function Financeiro() {
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                       <div>
                         <label style={lbSt}>TIPO</label>
-                        <select style={inSt} value={lancForm.direction} onChange={e => setLancForm(f => ({ ...f, direction: e.target.value }))}>
-                          <option value="credit">Receita</option>
-                          <option value="debit">Despesa</option>
-                        </select>
+                        <CustomSelect value={lancForm.direction} onChange={v => setLancForm(f => ({ ...f, direction: v }))} options={[{ label: 'Receita', value: 'credit' }, { label: 'Despesa', value: 'debit' }]} />
                       </div>
                       <div>
                         <label style={lbSt}>STATUS</label>
-                        <select style={inSt} value={lancForm.status} onChange={e => setLancForm(f => ({ ...f, status: e.target.value }))}>
-                          <option value="pending">Pendente</option>
-                          <option value="received">Recebido</option>
-                          <option value="overdue">Atrasado</option>
-                        </select>
+                        <CustomSelect value={lancForm.status} onChange={v => setLancForm(f => ({ ...f, status: v }))} options={[{ label: 'Pendente', value: 'pending' }, { label: 'Recebido', value: 'received' }, { label: 'Atrasado', value: 'overdue' }]} />
                       </div>
                     </div>
 
                     {lancForm.direction === 'credit' && (
                       <div>
                         <label style={lbSt}>PACIENTE</label>
-                        <select
-                          style={inSt}
+                        <CustomSelect
                           value={lancForm.patientId}
-                          onChange={e => {
-                            const pt = allPatients.find(p => String(p.id) === e.target.value)
-                            setLancForm(f => ({ ...f, patientId: e.target.value, patientName: pt ? pt.name : '' }))
+                          onChange={v => {
+                            const pt = allPatients.find(p => String(p.id) === v)
+                            setLancForm(f => ({ ...f, patientId: v, patientName: pt ? pt.name : '' }))
                           }}
-                        >
-                          <option value="">Selecionar paciente…</option>
-                          {allPatients.map(p => <option key={p.id} value={String(p.id)}>{p.name}</option>)}
-                        </select>
+                          options={[{ label: 'Selecionar paciente…', value: '' }, ...allPatients.map(p => ({ label: p.name, value: String(p.id) }))]}
+                          placeholder="Selecionar paciente…"
+                        />
                       </div>
                     )}
 
@@ -461,12 +457,7 @@ export default function Financeiro() {
 
                     <div>
                       <label style={lbSt}>FORMA DE PAGAMENTO</label>
-                      <select style={inSt} value={lancForm.paymentMethod} onChange={e => setLancForm(f => ({ ...f, paymentMethod: e.target.value }))}>
-                        <option value="pix">PIX</option>
-                        <option value="transfer">Transferência</option>
-                        <option value="insurance">Convênio</option>
-                        <option value="corporate">Plano empresarial</option>
-                      </select>
+                      <CustomSelect value={lancForm.paymentMethod} onChange={v => setLancForm(f => ({ ...f, paymentMethod: v }))} options={[{ label: 'PIX', value: 'pix' }, { label: 'Transferência', value: 'transfer' }, { label: 'Convênio', value: 'insurance' }, { label: 'Plano empresarial', value: 'corporate' }]} />
                     </div>
 
                     {lancModal.mode === 'edit' && (
@@ -524,7 +515,12 @@ export default function Financeiro() {
           </div>
           <div className="form-field">
             <label>PACIENTE</label>
-            <select>{events.filter(e => e.patientName).map(e => <option key={e.id}>{e.patientName} — {e.description}</option>)}</select>
+            <CustomSelect
+              value=""
+              onChange={() => {}}
+              options={events.filter(e => e.patientName).map(e => ({ label: `${e.patientName} — ${e.description}`, value: String(e.id) }))}
+              placeholder="Selecione um evento…"
+            />
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
             <div className="form-field"><label>DATA DA SESSÃO</label><DatePicker value={new Date().toISOString().slice(0, 10)} onChange={() => {}} /></div>

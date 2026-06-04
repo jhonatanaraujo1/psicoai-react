@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { DatePicker, TimePicker } from './DateTimePickers'
+import { DatePicker, TimePicker, CustomSelect } from './DateTimePickers'
 
 const GENEROS = ['Feminino', 'Masculino', 'Não-binário', 'Prefiro não informar']
 const ABORDAGENS = ['TCC', 'Psicanálise', 'Humanista', 'EMDR', 'ACT', 'DBT', 'Gestalt', 'Outra']
@@ -103,18 +103,6 @@ export default function CadastroModal({ isOpen, onClose, onSave, initialData = n
     />
   )
 
-  const Select = ({ field, options, placeholder }) => (
-    <select
-      value={form[field]}
-      onChange={e => set(field, e.target.value)}
-      onFocus={focusStyle}
-      onBlur={blurStyle}
-      style={{ ...inputStyle, borderColor: errors[field] ? 'var(--danger)' : 'var(--gr2)', appearance: 'none', backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238B8B8B' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 12px center', paddingRight: '32px' }}
-    >
-      <option value="">{placeholder}</option>
-      {options.map(o => <option key={o} value={o}>{o}</option>)}
-    </select>
-  )
 
   const Textarea = ({ field, placeholder, rows = 3 }) => (
     <textarea
@@ -169,7 +157,7 @@ export default function CadastroModal({ isOpen, onClose, onSave, initialData = n
                   <DatePicker value={form.dataNasc} onChange={v => set('dataNasc', v)} />
                 </Field>
                 <Field label="Gênero" required>
-                  <Select field="genero" options={GENEROS} placeholder="Selecione" />
+                  <CustomSelect value={form.genero} onChange={v => set('genero', v)} options={GENEROS.map(o => ({ label: o, value: o }))} placeholder="Selecione" error={!!errors.genero} />
                 </Field>
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
@@ -226,13 +214,13 @@ export default function CadastroModal({ isOpen, onClose, onSave, initialData = n
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
               <Field label="Abordagem" required>
-                <Select field="abordagem" options={ABORDAGENS} placeholder="Selecione" />
+                <CustomSelect value={form.abordagem} onChange={v => set('abordagem', v)} options={ABORDAGENS.map(o => ({ label: o, value: o }))} placeholder="Selecione" error={!!errors.abordagem} />
               </Field>
               <Field label="Frequência">
-                <Select field="frequencia" options={FREQUENCIAS} placeholder="Selecione" />
+                <CustomSelect value={form.frequencia} onChange={v => set('frequencia', v)} options={FREQUENCIAS.map(o => ({ label: o, value: o }))} placeholder="Selecione" />
               </Field>
               <Field label="Modalidade de pagamento">
-                <Select field="pagamento" options={['Particular', 'Plano de saúde', 'Convênio empresarial', 'Gratuito']} placeholder="Selecione" />
+                <CustomSelect value={form.pagamento} onChange={v => set('pagamento', v)} options={['Particular', 'Plano de saúde', 'Convênio empresarial', 'Gratuito'].map(o => ({ label: o, value: o }))} placeholder="Selecione" />
               </Field>
               <Field label="Valor por sessão (R$)">
                 <Input field="valor" placeholder="Ex: 200" type="number" />
@@ -250,15 +238,7 @@ export default function CadastroModal({ isOpen, onClose, onSave, initialData = n
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
               <Field label="Dia da semana fixo">
-                <select
-                  value={form.recurringDayOfWeek}
-                  onChange={e => set('recurringDayOfWeek', e.target.value)}
-                  onFocus={focusStyle} onBlur={blurStyle}
-                  style={{ ...inputStyle, appearance: 'none', backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238B8B8B' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 12px center', paddingRight: '32px' }}
-                >
-                  <option value="">Não definido</option>
-                  {DIAS_SEMANA.map(d => <option key={d.value} value={d.value}>{d.label}</option>)}
-                </select>
+                <CustomSelect value={form.recurringDayOfWeek} onChange={v => set('recurringDayOfWeek', v)} options={[{ label: 'Não definido', value: '' }, ...DIAS_SEMANA]} placeholder="Não definido" />
               </Field>
               <Field label="Horário fixo">
                 <TimePicker value={form.recurringTime} onChange={v => set('recurringTime', v)} />
@@ -275,16 +255,7 @@ export default function CadastroModal({ isOpen, onClose, onSave, initialData = n
                 />
               </Field>
               <Field label="Modelo de cobrança">
-                <select
-                  value={form.billingType}
-                  onChange={e => set('billingType', e.target.value)}
-                  onFocus={focusStyle} onBlur={blurStyle}
-                  style={{ ...inputStyle, appearance: 'none', backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238B8B8B' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 12px center', paddingRight: '32px' }}
-                >
-                  <option value="">Não definido</option>
-                  <option value="per_session">Por sessão</option>
-                  <option value="monthly">Mensalidade fixa</option>
-                </select>
+                <CustomSelect value={form.billingType} onChange={v => set('billingType', v)} options={[{ label: 'Não definido', value: '' }, { label: 'Por sessão', value: 'per_session' }, { label: 'Mensalidade fixa', value: 'monthly' }]} placeholder="Não definido" />
               </Field>
               {form.billingType === 'monthly' && (
                 <Field label="Valor mensal (R$)">

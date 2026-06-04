@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { auth } from '../services/index.js'
+import { CustomSelect } from './DateTimePickers'
 
 const ESPECIALIDADES = [
   'Psicologia Clínica', 'Neuropsicologia', 'Psicologia Hospitalar',
@@ -288,20 +289,12 @@ export default function RegisterFlow({ onLogin, onBack }) {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
               <div>
                 <Lbl>Especialidade</Lbl>
-                <select style={{ ...inputSt(errors.specialty), appearance: 'none', background: `#fff ${chevronBg}`, paddingRight: '34px' }}
-                  value={form.specialty} onChange={e => set('specialty', e.target.value)} onFocus={onFo} onBlur={onBl}>
-                  <option value="">Selecione sua especialidade</option>
-                  {ESPECIALIDADES.map(s => <option key={s} value={s}>{s}</option>)}
-                </select>
+                <CustomSelect value={form.specialty} onChange={v => set('specialty', v)} options={ESPECIALIDADES.map(s => ({ label: s, value: s }))} placeholder="Selecione sua especialidade" error={!!errors.specialty} />
                 <Err msg={errors.specialty} />
               </div>
               <div>
                 <Lbl>Abordagem principal</Lbl>
-                <select style={{ ...inputSt(errors.approach), appearance: 'none', background: `#fff ${chevronBg}`, paddingRight: '34px' }}
-                  value={form.approach} onChange={e => set('approach', e.target.value)} onFocus={onFo} onBlur={onBl}>
-                  <option value="">Selecione sua abordagem</option>
-                  {ABORDAGENS.map(a => <option key={a} value={a}>{a}</option>)}
-                </select>
+                <CustomSelect value={form.approach} onChange={v => set('approach', v)} options={ABORDAGENS.map(a => ({ label: a, value: a }))} placeholder="Selecione sua abordagem" error={!!errors.approach} />
                 <Err msg={errors.approach} />
               </div>
               <div>
