@@ -328,11 +328,14 @@ function TabPreferencias({ profile, onSaved }) {
 }
 
 // ────────────────────────────────────────────────────────────────────────────
-function TabSeguranca() {
+function TabSeguranca({ userEmail }) {
   const [pw, setPw] = useState({ current: '', next: '', confirm: '' })
   const [err, setErr] = useState('')
   const [saving, setSaving] = useState(false)
   const [pwOk, setPwOk] = useState(false)
+  // Esqueci minha senha (estando logado)
+  const [forgotSending, setForgotSending] = useState(false)
+  const [forgotSent, setForgotSent] = useState(false)
 
   const handlePw = async () => {
     if (!pw.current) { setErr('Informe a senha atual'); return }
@@ -346,6 +349,18 @@ function TabSeguranca() {
     } catch (e) {
       setSaving(false)
       setErr(e.message || 'Erro ao alterar senha. Tente novamente.')
+    }
+  }
+
+  const handleForgot = async () => {
+    setForgotSending(true)
+    try {
+      await api.forgotPassword(userEmail)
+      setForgotSent(true)
+    } catch {
+      setForgotSent(true) // anti-enumeration — sempre mostra sucesso
+    } finally {
+      setForgotSending(false)
     }
   }
 
@@ -367,9 +382,26 @@ function TabSeguranca() {
           </Field>
         ))}
         {err && <div style={{ fontSize: '12px', color: 'var(--danger)', background: 'var(--danger-l)', padding: '8px 12px', borderRadius: 'var(--r)', border: '1px solid #E8B4B0' }}>{err}</div>}
-        <button onClick={handlePw} disabled={saving} style={{ padding: '10px 22px', background: pwOk ? 'var(--g700)' : 'var(--g600)', color: '#fff', border: 'none', borderRadius: 'var(--r)', fontSize: '13px', fontWeight: 600, cursor: saving ? 'default' : 'pointer', fontFamily: "'DM Sans', sans-serif", alignSelf: 'flex-start', opacity: saving ? 0.7 : 1 }}>
-          {saving ? 'Salvando…' : pwOk ? '✓ Senha alterada' : 'Alterar senha'}
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
+          <button onClick={handlePw} disabled={saving} style={{ padding: '10px 22px', background: pwOk ? 'var(--g700)' : 'var(--g600)', color: '#fff', border: 'none', borderRadius: 'var(--r)', fontSize: '13px', fontWeight: 600, cursor: saving ? 'default' : 'pointer', fontFamily: "'DM Sans', sans-serif", opacity: saving ? 0.7 : 1 }}>
+            {saving ? 'Salvando…' : pwOk ? '✓ Senha alterada' : 'Alterar senha'}
+          </button>
+          {/* Esqueci minha senha — acessível também estando logado */}
+          {!forgotSent ? (
+            <button
+              onClick={handleForgot}
+              disabled={forgotSending}
+              style={{ background: 'none', border: 'none', padding: 0, fontSize: '12px', color: 'var(--g600)', cursor: forgotSending ? 'default' : 'pointer', fontFamily: "'DM Sans', sans-serif", textDecoration: 'underline', opacity: forgotSending ? 0.6 : 1 }}
+            >
+              {forgotSending ? 'Enviando…' : 'Não lembro da senha atual →'}
+            </button>
+          ) : (
+            <span style={{ fontSize: '12px', color: 'var(--g600)', display: 'flex', alignItems: 'center', gap: '5px' }}>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+              Link enviado para {userEmail}
+            </span>
+          )}
+        </div>
       </div>
 
       <div style={{ marginTop: '28px' }}>
@@ -752,7 +784,7 @@ export default function Configuracoes({ currentUser, onProfileUpdate, onOpenOnbo
           {tab === 'perfil' && <TabPerfil profile={profile} onSaved={handleSaved} />}
           {tab === 'plano' && <TabPlano profile={profile} />}
           {tab === 'preferencias' && <TabPreferencias profile={profile} onSaved={handleSaved} />}
-          {tab === 'seguranca' && <TabSeguranca />}
+          {tab === 'seguranca' && <TabSeguranca userEmail={profile?.email || currentUser?.email} />}
           {tab === 'integracoes' && <TabIntegracoes />}
           {tab === 'ajuda' && <TabAjuda onOpenOnboarding={onOpenOnboarding} onOpenTermos={onOpenTermos} />}
         </div>
