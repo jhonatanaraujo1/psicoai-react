@@ -676,7 +676,9 @@ function TextPage({ page, isActive, onTextChange, onClick, sessionDate, onDateCh
               📅 {sessionDate.split('-').reverse().join('/')}
             </span>
           </div>
-        ) : <div />
+        ) : (
+          <div />
+        )}
 
         {/* Direita: espaçador */}
         <div />
