@@ -727,15 +727,24 @@ export default function AnnotationSession({
   const isCanvas = true
   const isText   = false
 
-  // ── Data da sessão clínica (editável pelo psicólogo) ─────────────────────
+  // ── Data clínica do caderno (editável pelo psicólogo) ────────────────────
+  // Chaveada por PACIENTE (disponível na montagem) — não por sessionId, que
+  // chega assíncrono e fazia a data reverter para "hoje" após salvar.
   const todayIso = () => new Date().toISOString().slice(0, 10)
-  const metaKey  = sessionId ? `psicoai_meta_s${sessionId}` : null
+  const metaKey  = patient?.id ? `psicoai_meta_p${patient.id}` : null
 
-  const [sessionDate, setSessionDate] = useState(() => {
+  const readStoredDate = () => {
     if (!metaKey) return todayIso()
     try { const m = JSON.parse(localStorage.getItem(metaKey) || '{}'); return m.sessionDate || todayIso() }
     catch { return todayIso() }
-  })
+  }
+
+  const [sessionDate, setSessionDate] = useState(readStoredDate)
+
+  // Re-sincroniza se patient?.id chegar depois da montagem (evita reverter p/ hoje)
+  useEffect(() => {
+    if (metaKey) setSessionDate(readStoredDate())
+  }, [metaKey]) // eslint-disable-line
 
   const handleDateChange = (iso) => {
     setSessionDate(iso)
