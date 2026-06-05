@@ -1108,6 +1108,11 @@ img, video, svg, canvas { max-width: 100%; }
   .pac-grid { grid-template-columns: 1fr !important; }
 }
 
+/* ── STATS DASHBOARD — 2 cols tablet, 1 col phone ─────────────────── */
+.pac-stats-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; margin-bottom: 24px; }
+@media(max-width:768px) { .pac-stats-grid { grid-template-columns: 1fr 1fr !important; } }
+@media(max-width:480px) { .pac-stats-grid { grid-template-columns: 1fr 1fr !important; } }
+
 /* ── TIMELINE — compact on phone ─────────────────────────────────── */
 @media(max-width:640px) {
   .timeline-wrap { padding: 14px 14px !important; }

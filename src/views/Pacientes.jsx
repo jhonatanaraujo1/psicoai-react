@@ -67,6 +67,25 @@ function SkeletonCard() {
   )
 }
 
+// Calcula % de crescimento: mês atual vs média dos 2 meses anteriores
+function calcGrowth(all) {
+  const now   = new Date()
+  const thisM = now.getMonth(); const thisY = now.getFullYear()
+  const prev1 = thisM === 0  ? { m: 11, y: thisY - 1 } : { m: thisM - 1, y: thisY }
+  const prev2 = prev1.m === 0 ? { m: 11, y: prev1.y - 1 } : { m: prev1.m - 1, y: prev1.y }
+
+  const countMonth = (m, y) => all.filter(p => {
+    if (!p.createdAt) return false
+    const d = new Date(p.createdAt)
+    return d.getMonth() === m && d.getFullYear() === y
+  }).length
+
+  const current   = countMonth(thisM, thisY)
+  const avgPrev   = (countMonth(prev1.m, prev1.y) + countMonth(prev2.m, prev2.y)) / 2
+  if (avgPrev === 0) return current > 0 ? 100 : 0
+  return Math.round(((current - avgPrev) / avgPrev) * 100)
+}
+
 export default function Pacientes({ setCurrentView, onNovoCadastro }) {
   const [patients, setPatients] = useState([])
   const [total, setTotal] = useState(0)
@@ -80,6 +99,20 @@ export default function Pacientes({ setCurrentView, onNovoCadastro }) {
   const [importing, setImporting] = useState(false)
   const [importResult, setImportResult] = useState(null)
   const csvInputRef = useRef(null)
+
+  // Stats dashboard — calculado a partir de TODOS os pacientes (sem filtro)
+  const [stats, setStats] = useState(null)
+
+  useEffect(() => {
+    api.getPatients({ size: 1000 }).then(res => {
+      const all = res.content || []
+      const activeCount    = all.filter(p => p.active !== false).length
+      const inactiveCount  = all.filter(p => p.active === false).length
+      const recurringCount = all.filter(p => p.recurringDayOfWeek).length
+      const growth         = calcGrowth(all)
+      setStats({ total: all.length, activeCount, inactiveCount, recurringCount, growth })
+    }).catch(() => {})
+  }, [])
 
   // Debounce search
   useEffect(() => {
@@ -169,6 +202,73 @@ export default function Pacientes({ setCurrentView, onNovoCadastro }) {
           </button>
         </div>
       </div>
+
+      {/* ── Dashboard de métricas ──────────────────────────────────────────── */}
+      {stats && (
+        <div className="pac-stats-grid">
+
+          {/* Ativos */}
+          <div className="card" style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--gr4)', letterSpacing: '0.6px', textTransform: 'uppercase', marginBottom: 2 }}>Ativos</div>
+            <div style={{ fontSize: 28, fontWeight: 700, color: 'var(--g700)', fontFamily: "'Fraunces', serif", lineHeight: 1 }}>{stats.activeCount}</div>
+            <div style={{ fontSize: 11, color: 'var(--gr4)', marginTop: 4 }}>
+              {stats.total > 0 ? Math.round((stats.activeCount / stats.total) * 100) : 0}% do total
+            </div>
+            {/* Barra ativa/inativa */}
+            <div style={{ marginTop: 8, height: 4, borderRadius: 4, background: 'var(--gr1)', overflow: 'hidden' }}>
+              <div style={{ height: '100%', width: `${stats.total > 0 ? (stats.activeCount / stats.total) * 100 : 0}%`, background: 'var(--g500)', borderRadius: 4, transition: 'width 0.6s ease' }} />
+            </div>
+          </div>
+
+          {/* Inativos */}
+          <div className="card" style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--gr4)', letterSpacing: '0.6px', textTransform: 'uppercase', marginBottom: 2 }}>Inativos</div>
+            <div style={{ fontSize: 28, fontWeight: 700, color: stats.inactiveCount > 0 ? 'var(--warn)' : 'var(--gr3)', fontFamily: "'Fraunces', serif", lineHeight: 1 }}>{stats.inactiveCount}</div>
+            <div style={{ fontSize: 11, color: 'var(--gr4)', marginTop: 4 }}>
+              {stats.total > 0 ? Math.round((stats.inactiveCount / stats.total) * 100) : 0}% do total
+            </div>
+            <div style={{ marginTop: 8, height: 4, borderRadius: 4, background: 'var(--gr1)', overflow: 'hidden' }}>
+              <div style={{ height: '100%', width: `${stats.total > 0 ? (stats.inactiveCount / stats.total) * 100 : 0}%`, background: 'var(--warn)', borderRadius: 4, transition: 'width 0.6s ease' }} />
+            </div>
+          </div>
+
+          {/* Recorrentes */}
+          <div className="card" style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--gr4)', letterSpacing: '0.6px', textTransform: 'uppercase', marginBottom: 2 }}>Recorrentes</div>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
+              <span style={{ fontSize: 28, fontWeight: 700, color: 'var(--d)', fontFamily: "'Fraunces', serif", lineHeight: 1 }}>{stats.recurringCount}</span>
+              <span style={{ fontSize: 13, color: 'var(--gr4)' }}>/ {stats.activeCount} ativos</span>
+            </div>
+            <div style={{ fontSize: 11, color: 'var(--gr4)', marginTop: 4 }}>
+              {stats.activeCount > 0 ? Math.round((stats.recurringCount / stats.activeCount) * 100) : 0}% com horário fixo
+            </div>
+            {/* Barra recorrente/não-recorrente */}
+            <div style={{ marginTop: 8, height: 4, borderRadius: 4, background: 'var(--gr1)', overflow: 'hidden' }}>
+              <div style={{ height: '100%', width: `${stats.activeCount > 0 ? (stats.recurringCount / stats.activeCount) * 100 : 0}%`, background: '#7D3C98', borderRadius: 4, transition: 'width 0.6s ease' }} />
+            </div>
+          </div>
+
+          {/* Crescimento */}
+          <div className="card" style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--gr4)', letterSpacing: '0.6px', textTransform: 'uppercase', marginBottom: 2 }}>Crescimento</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ fontSize: 28, fontWeight: 700, fontFamily: "'Fraunces', serif", lineHeight: 1, color: stats.growth > 0 ? 'var(--g600)' : stats.growth < 0 ? 'var(--danger)' : 'var(--gr4)' }}>
+                {stats.growth > 0 ? '+' : ''}{stats.growth}%
+              </span>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={stats.growth > 0 ? 'var(--g500)' : stats.growth < 0 ? 'var(--danger)' : 'var(--gr3)'} strokeWidth="2.5">
+                {stats.growth >= 0
+                  ? <><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></>
+                  : <><polyline points="23 18 13.5 8.5 8.5 13.5 1 6"/><polyline points="17 18 23 18 23 12"/></>}
+              </svg>
+            </div>
+            <div style={{ fontSize: 11, color: 'var(--gr4)', marginTop: 4 }}>vs. média dos 2 meses anteriores</div>
+            <div style={{ marginTop: 8, height: 4, borderRadius: 4, background: 'var(--gr1)', overflow: 'hidden' }}>
+              <div style={{ height: '100%', width: `${Math.min(Math.abs(stats.growth), 100)}%`, background: stats.growth >= 0 ? 'var(--g500)' : 'var(--danger)', borderRadius: 4, transition: 'width 0.6s ease' }} />
+            </div>
+          </div>
+
+        </div>
+      )}
 
       {/* Import result */}
       {importResult && (
