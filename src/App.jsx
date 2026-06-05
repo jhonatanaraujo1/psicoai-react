@@ -792,10 +792,18 @@ export default function App() {
     }
   }
 
-  // Abre sessão histórica existente — VIEW mode (mesma lógica de handleOpenCanvasFromHistory)
+  // Abre sessão histórica existente — VIEW mode
   const handleReopenSession = (session) => {
-    setCurrentPatient(p => p || currentPatient)
-    setCanvasInitialData(session.canvasData || session.canvasDataJson || null)
+    // Reconstrói canvasData a partir de canvasData (canvas) ou htmlContent/textContent (nota rápida/texto)
+    let initialData = session.canvasData || session.canvasDataJson || null
+    if (!initialData) {
+      const html = session.htmlContent ||
+        (session.textContent ? session.textContent.split('\n').map(l => `<p>${l || '<br>'}</p>`).join('') : '')
+      if (html) {
+        initialData = JSON.stringify([{ id: 'p0', pageType: 'text', textHtml: html, dataUrl: null }])
+      }
+    }
+    setCanvasInitialData(initialData)
     setViewOnlySessionId(session.id)
     setCanvasViewOnly(true)
     setCanvasInitialPageType(null)
@@ -879,13 +887,23 @@ export default function App() {
             patient={currentPatient}
             isOpen={canvasOpen}
             initialPageType={canvasInitialPageType}
+            initialCanvasData={canvasInitialData}
             sessionId={canvasViewOnly ? viewOnlySessionId : activeSessionId}
             viewOnly={canvasViewOnly}
             onClose={handleSessionClose}
             onMinimize={handleMinimizeCanvas}
             onAnalyze={handleAnalyze}
             onAutosave={(id, data) => api.autosaveSession?.(id, data)}
-            onFetchSession={async (id) => { try { const s = await api.getSession(id); return s?.canvasData ?? null } catch { return null } }}
+            onFetchSession={async (id) => {
+              try {
+                const s = await api.getSession(id)
+                if (s?.canvasData) return s.canvasData
+                // Fallback: reconstrói página de texto a partir de htmlContent
+                const html = s?.htmlContent || (s?.textContent ? s.textContent.split('\n').map(l => `<p>${l || '<br>'}</p>`).join('') : '')
+                if (html) return JSON.stringify([{ id: 'p0', pageType: 'text', textHtml: html, dataUrl: null }])
+                return null
+              } catch { return null }
+            }}
           />
         </Suspense>
         {/* AnalyzeSessionsModal e AiDrawer aparecem após "Analisar com IA" no canvas */}

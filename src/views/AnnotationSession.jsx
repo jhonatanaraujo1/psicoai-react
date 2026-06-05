@@ -833,6 +833,14 @@ export default function AnnotationSession({
         } catch { /* backend indisponível — continua sem dados */ }
       }
 
+      // 3. Fallback: initialCanvasData prop (pre-construído pelo parent — ex: nota rápida sem canvas)
+      if (!saved && initialCanvasData) {
+        try {
+          const parsed = JSON.parse(initialCanvasData)
+          if (Array.isArray(parsed) && parsed.length > 0) saved = parsed
+        } catch { /* JSON inválido — ignora */ }
+      }
+
       const restored = saved
         ? saved.map(p => ({ id: p.id, pageType: p.pageType || 'draw', canvasRef: { current: null }, dataUrl: p.dataUrl || null, textHtml: p.textHtml || null }))
         : []
