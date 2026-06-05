@@ -434,22 +434,50 @@ export default function App() {
     } catch { return false }
   }
 
-  // Abre o prontuário existente de um paciente direto (sem picker de tipo)
-  const _openExistingAnnotation = (patient) => {
+  // Abre o caderno do paciente. Se localStorage vazio (ex: notas rápidas anteriores),
+  // reconstrói o notebook a partir das sessões do backend antes de abrir.
+  const _openExistingAnnotation = async (patient, targetSessionId = null) => {
     const pat = patient || currentPatient
+    setScrollToSessionId(targetSessionId)
     activeSessionRef.current = null
     setCanvasViewOnly(false)
     setViewOnlySessionId(null)
     setCurrentPatient(pat)
     setActiveSessionType('canvas')
-    setCanvasInitialPageType(null) // recovery — não adiciona nova página
+    setCanvasInitialPageType(null)
+
+    // Se localStorage do paciente está vazio, reconstrói do backend
+    const patKey = `psicoai_canvas2_p${pat?.id}`
+    const hasLocal = pat?.id && !!localStorage.getItem(patKey)
+    if (!hasLocal && pat?.id) {
+      try {
+        const sessions = await api.getPatientSessions(pat.id)
+        const list = ([...(sessions?.content || sessions || [])]).reverse() // oldest first
+        const pages = list.flatMap(s => {
+          // Sessão com canvas salvo
+          if (s.canvasData || s.canvasDataJson) {
+            try {
+              const parsed = JSON.parse(s.canvasData || s.canvasDataJson)
+              if (Array.isArray(parsed) && parsed.length > 0)
+                return parsed.map(p => ({ ...p, sessionId: s.id }))
+            } catch {}
+          }
+          // Sessão de texto / nota rápida → monta página de texto
+          const html = s.htmlContent ||
+            (s.textContent ? s.textContent.split('\n').map(l => `<p>${l || '<br>'}</p>`).join('') : '')
+          if (html) return [{ id: `p-${s.id}`, pageType: 'text', textHtml: html, dataUrl: null, sessionId: s.id }]
+          return []
+        })
+        if (pages.length > 0) setCanvasInitialData(JSON.stringify(pages))
+      } catch { /* backend indisponível */ }
+    }
+
     if (pat) {
       localStorage.setItem('psicoai_active_session', JSON.stringify({
         sessionId: null, sessionType: 'canvas', patientId: pat.id,
         patient: { id: pat.id, name: pat.name }, startedAt: Date.now(),
       }))
     }
-    // Reutiliza sessão aberta se já existir (evita 422 do backend)
     _getOrCreateSessionId(pat?.id, 'canvas').then(id => { if (id) setSession(id) })
     setCanvasOpen(true)
   }
@@ -796,8 +824,7 @@ export default function App() {
 
   // Clique numa anotação → abre o caderno completo e scrolla até a página daquela sessão
   const handleReopenSession = (session) => {
-    setScrollToSessionId(session?.id || null)
-    _openExistingAnnotation(currentPatient)
+    _openExistingAnnotation(currentPatient, session?.id || null)
   }
 
   // Called when the user closes the session without requesting AI analysis
@@ -825,7 +852,7 @@ export default function App() {
     switch (currentView) {
       case 'dashboard':    return <Dashboard setCurrentView={handleSetView} currentUser={currentUser} />
       case 'pacientes':   return <Pacientes key={patientsRefreshKey} setCurrentView={handleSetView} onNovoCadastro={() => setCadastroOpen(true)} />
-      case 'paciente':    return <Paciente patient={currentPatient} setCurrentView={handleSetView} onSessao={() => handleSetView('sessao', currentPatient)} onQuickNote={() => setQuickNoteOpen(true)} onReopenSession={handleReopenSession} onViewProntuario={() => setProntuarioOpen(true)} />
+      case 'paciente':    return <Paciente patient={currentPatient} setCurrentView={handleSetView} onSessao={() => handleSetView('sessao', currentPatient)} onReopenSession={handleReopenSession} onViewProntuario={() => setProntuarioOpen(true)} />
       case 'agenda':      return <Agenda currentUser={currentUser} />
       case 'insights':    return <Insights onGoToPatient={(patient) => handleSetView('paciente', patient)} />
       case 'financeiro':  return <Financeiro />
