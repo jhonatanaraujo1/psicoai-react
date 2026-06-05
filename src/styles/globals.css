@@ -919,3 +919,294 @@ body{font-family:'DM Sans',sans-serif;background:var(--ow);color:var(--d);displa
 @media(max-width:640px){
   .feedback-btn-label{ display:none }
 }
+
+/* ═══════════════════════════════════════════════════════════════════════
+   RESPONSIVE v2 — Mobile-first systematic fixes
+   Breakpoints:
+     ≤380px   phone XS   (Galaxy A03, SE 1st gen — 320-380px)
+     ≤480px   phone SM   (iPhone 12 mini, Pixel 4a)
+     ≤640px   phone MD   (iPhone 14, Galaxy S23)
+     641-900  tablet portrait — icon sidebar (iPad, Galaxy Tab)
+     901-1100 tablet landscape / small desktop
+     >1100    desktop full layout
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* ── OVERFLOW PROTECTION GLOBAL ─────────────────────────────────────────
+   Prevents any child from causing horizontal scroll on the page.
+   min-width:0 is critical for grid/flex children with text content.     */
+.view > *,
+.card > *,
+.card-body > * { min-width: 0; }
+img, video, svg, canvas { max-width: 100%; }
+
+/* ── PRONTUARIO HTML CONTENT ──────────────────────────────────────────── */
+.prontuario-html-content {
+  overflow-wrap: break-word;
+  word-break: break-word;
+  hyphens: auto;
+  max-width: 100%;
+}
+.prontuario-html-content img { max-width: 100%; height: auto; }
+
+/* ── SESSION HISTORY TABLE — mobile card layout ──────────────────────
+   A tabela de histórico de anotações tem 8 colunas com inline styles.
+   Usamos !important para sobrescrever os inline styles em mobile.
+   O resultado é um layout de 2 linhas por sessão (card compacto).       */
+
+/* Wrapper: scroll horizontal em viewports intermediários (641-768px) */
+.sess-tbl-outer {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  /* scroll-snap previne ficar travado no meio de uma coluna */
+  scroll-snap-type: x proximity;
+}
+
+@media(max-width:640px) {
+  /* Esconde cabeçalho de colunas — mobile usa layout de card */
+  .sess-tbl-hdr { display:none !important; }
+
+  /* Cada linha → 2-row card grid */
+  .sess-tbl-row {
+    display: grid !important;
+    grid-template-columns: auto auto 1fr auto auto auto !important;
+    grid-template-rows: auto auto !important;
+    padding: 11px 14px !important;
+    gap: 4px 6px !important;
+    align-items: center !important;
+  }
+  /* Nº + dot de evolução */
+  .sess-tbl-row > :nth-child(1) { grid-column:1; grid-row:1; }
+  /* Badge de tipo */
+  .sess-tbl-row > :nth-child(2) { grid-column:2; grid-row:1; }
+  /* Resumo — ocupa toda a segunda linha */
+  .sess-tbl-row > :nth-child(3) {
+    grid-column: 1 / span 6;
+    grid-row: 2;
+    padding-right: 0 !important;
+    -webkit-line-clamp: 2 !important;
+    font-size: 12px;
+    color: var(--gr5);
+  }
+  /* Criado — oculto em mobile (data visível no painel expandido) */
+  .sess-tbl-row > :nth-child(4) { display:none !important; }
+  /* Última alt. */
+  .sess-tbl-row > :nth-child(5) { grid-column:3; grid-row:1; font-size:10px !important; }
+  /* Status badge */
+  .sess-tbl-row > :nth-child(6) { grid-column:4; grid-row:1; }
+  /* Expand arrow */
+  .sess-tbl-row > :nth-child(7) { grid-column:5; grid-row:1; }
+  /* Delete button */
+  .sess-tbl-row > :nth-child(8) { grid-column:6; grid-row:1; }
+}
+
+/* ── STATS ROW — 1 col on very small phones ──────────────────────── */
+@media(max-width:380px) {
+  .stats-row { grid-template-columns: 1fr !important; gap: 8px !important; }
+  .stat-val { font-size: 24px !important; }
+}
+
+/* ── PATIENT HEADER — compact on phone ───────────────────────────── */
+@media(max-width:480px) {
+  .patient-header { padding: 14px !important; gap: 10px !important; }
+  .pat-av-lg {
+    width: 50px !important; height: 50px !important;
+    font-size: 18px !important; border-radius: 13px !important;
+  }
+  .pat-name { font-size: 17px !important; }
+  .pat-stats { gap: 14px !important; flex-wrap: wrap; }
+  .pat-stat-val { font-size: 18px !important; }
+  .pat-meta { gap: 6px !important; }
+  /* Botões do header: empilhados em 2 cols */
+  .pat-header-actions {
+    width: 100%;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px !important;
+    justify-content: flex-start !important;
+  }
+  .pat-header-actions > button {
+    flex: 1 1 calc(50% - 6px);
+    justify-content: center;
+    font-size: 11px !important;
+    padding: 8px 10px !important;
+    min-height: 40px;
+  }
+}
+
+/* ── CARD HEADER — stack on phone ────────────────────────────────── */
+@media(max-width:480px) {
+  .card-header {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 10px !important;
+    padding: 14px 16px 12px !important;
+  }
+  .card-header > div:last-child,
+  .card-header > div:only-child { display: flex; flex-wrap: wrap; gap: 6px; }
+  .card-body { padding: 12px 14px !important; }
+}
+
+/* ── BUTTON TOUCH TARGETS — 40px min ─────────────────────────────── */
+@media(max-width:640px) {
+  .btn-primary, .btn-outline { min-height: 40px; }
+  .btn-back { min-height: 36px; }
+  .tb-btn { min-width: 38px; min-height: 38px; }
+}
+
+/* ── AI DRAWER — full width + safe area on phone ─────────────────── */
+@media(max-width:640px) {
+  .ai-drawer {
+    width: 100vw !important;
+    right: -100vw !important;
+    border-radius: var(--r2) var(--r2) 0 0;
+    /* Sobe da bottom como sheet — mais natural em mobile */
+    top: auto !important;
+    bottom: 0;
+    height: min(92dvh, 92svh, 92vh) !important;
+    border-left: none !important;
+    box-shadow: 0 -6px 32px rgba(0,0,0,0.2) !important;
+  }
+  .ai-drawer.open { right: 0 !important; }
+  .ai-drawer-body { padding-bottom: max(16px, env(safe-area-inset-bottom, 0px)) !important; }
+}
+
+/* ── CFG LAYOUT — horizontal scrollable tabs on phone ───────────── */
+@media(max-width:640px) {
+  .cfg-layout { gap: 10px !important; }
+  .cfg-layout > :first-child {
+    position: static !important;
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    gap: 4px !important;
+    padding: 6px !important;
+    scrollbar-width: none;
+  }
+  .cfg-layout > :first-child::-webkit-scrollbar { display: none; }
+  .cfg-layout > :first-child button {
+    flex-shrink: 0 !important;
+    border-left: none !important;
+    border-bottom: none !important;
+    border-radius: var(--r) !important;
+    white-space: nowrap !important;
+    font-size: 12px !important;
+    padding: 9px 12px !important;
+    min-height: 38px;
+  }
+  .cfg-grid-2 { grid-template-columns: 1fr !important; }
+  .cfg-layout > :last-child { padding: 20px 16px !important; }
+}
+
+/* ── INSIGHTS — compact on phone ─────────────────────────────────── */
+@media(max-width:640px) {
+  .insights-grid { grid-template-columns: 1fr !important; }
+  .hm-cell { height: 32px !important; font-size: 8px !important; padding: 2px !important; }
+}
+
+/* ── PACIENTES GRID — 1 col on phone ─────────────────────────────── */
+@media(max-width:480px) {
+  .pac-grid { grid-template-columns: 1fr !important; }
+}
+
+/* ── TIMELINE — compact on phone ─────────────────────────────────── */
+@media(max-width:640px) {
+  .timeline-wrap { padding: 14px 14px !important; }
+  .tl-dot { min-width: 40px !important; }
+  .tl-dot-date, .tl-dot-num { font-size: 9px !important; }
+}
+
+/* ── FIN TABLE — scroll horizontal em qualquer viewport <901px ───── */
+@media(max-width:900px) {
+  .fin-table, .form-status-table {
+    display: block !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    white-space: nowrap !important;
+    width: 100% !important;
+    font-size: 12px !important;
+  }
+}
+@media(min-width:901px) {
+  .fin-table, .form-status-table { display: table !important; white-space: normal !important; }
+}
+
+/* ── FORM TEMPLATE — 1 col phone, 2 col tablet ───────────────────── */
+@media(max-width:640px) {
+  .form-template-grid { grid-template-columns: 1fr !important; }
+  .form-template-card { padding: 16px !important; }
+}
+
+/* ── SESSION ITEM (Dashboard) — compact ──────────────────────────── */
+@media(max-width:480px) {
+  .session-item { gap: 10px !important; padding: 10px 0 !important; }
+  .sess-av { width: 34px !important; height: 34px !important; font-size: 12px !important; }
+}
+
+/* ── CONTENT — consistent bottom padding ─────────────────────────── */
+@media(min-width:641px) {
+  /* tablet+ não tem bottom-nav, não precisa do padding extra */
+  .content { padding-bottom: 24px; }
+}
+
+/* ── DESKTOP WIDE — expand max-width ─────────────────────────────── */
+@media(min-width:1400px) {
+  .view { max-width: 1260px; }
+}
+
+/* ── TOPBAR TITLE — truncate long patient names ──────────────────── */
+@media(max-width:640px) {
+  .tb-left { overflow: hidden; min-width: 0; }
+  .tb-left h2 { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: calc(100vw - 160px); }
+}
+
+/* ── TELE SESSION — compact on phone ─────────────────────────────── */
+@media(max-width:480px) {
+  .tele-session-card { padding: 12px !important; }
+  .tele-av { width: 40px !important; height: 40px !important; font-size: 14px !important; }
+  .tele-grid { gap: 12px !important; }
+}
+
+/* ── LEM GRID — safe on tablet portrait ─────────────────────────── */
+@media(max-width:900px) {
+  .lem-grid { grid-template-columns: 1fr !important; }
+}
+
+/* ── MODAL: consistent max-height on all screens ────────────────── */
+@media(max-width:640px) {
+  .recibo-box { padding: 18px !important; border-radius: var(--r2) !important; }
+}
+
+/* ── AGENDA: full-width on tablet portrait ───────────────────────── */
+@media(max-width:900px) {
+  .agenda-layout { grid-template-columns: 1fr !important; }
+  .agenda-week { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .agenda-grid, .agenda-week-header { min-width: 520px; }
+}
+
+/* ── CANVAS SESSION: A4 page padding on phone ───────────────────── */
+@media(max-width:480px) {
+  .cs-page { padding: 20px 16px 40px !important; font-size: 14px !important; line-height: 28px !important; }
+  .cs-topbar { padding: 0 12px; gap: 8px; }
+  .cs-timer { font-size: 11px !important; padding: 4px 8px !important; }
+  .cs-logo { font-size: 16px !important; }
+}
+
+/* ── GRADE PERIÓDICA: smooth scroll em mobile ───────────────────── */
+@media(max-width:640px) {
+  .timeline-dots { scroll-snap-type: x mandatory; }
+  .tl-dot { scroll-snap-align: start; }
+}
+
+/* ── PAT-META: não estourar em phone ────────────────────────────── */
+.pat-meta { flex-wrap: wrap; row-gap: 4px; }
+.pat-cid { max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ── SAFE AREA: bottom + left + right em landscape ───────────────── */
+@media(orientation:landscape) and (max-width:900px) {
+  .content {
+    padding-left: max(18px, env(safe-area-inset-left, 0px));
+    padding-right: max(18px, env(safe-area-inset-right, 0px));
+  }
+}

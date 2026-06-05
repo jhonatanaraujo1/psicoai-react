@@ -327,9 +327,9 @@ export default function Paciente({ patient: propPatient, setCurrentView, onSessa
             <div style={{ fontSize: '13px', color: 'var(--gr4)' }}>Nenhuma anotação registrada ainda.</div>
           </div>
         ) : (
-          <>
+          <div className="sess-tbl-outer">
             {/* Colunas: Nº · Tipo · Resumo · Criado · Última alteração · Status · ações */}
-            <div style={{ display: 'grid', gridTemplateColumns: '52px 58px 1fr 88px 110px 110px 28px 28px', borderBottom: '2px solid var(--gr2)', padding: '8px 20px', background: 'var(--ow)' }}>
+            <div className="sess-tbl-hdr" style={{ display: 'grid', gridTemplateColumns: '52px 58px 1fr 88px 110px 110px 28px 28px', borderBottom: '2px solid var(--gr2)', padding: '8px 20px', background: 'var(--ow)' }}>
               {['Nº', 'Tipo', 'Resumo / Anotações', 'Criado', 'Última alt.', 'Status', '', ''].map((h, i) => (
                 <div key={i} style={{ fontSize: '10px', fontWeight: 600, letterSpacing: '0.8px', textTransform: 'uppercase', color: 'var(--gr4)' }}>{h}</div>
               ))}
@@ -347,6 +347,7 @@ export default function Paciente({ patient: propPatient, setCurrentView, onSessa
                 <div key={s.id} style={{ borderBottom: i < sessions.length - 1 ? '1px solid var(--gr1)' : 'none' }}>
                   {/* Row */}
                   <div
+                    className="sess-tbl-row"
                     onClick={() => setExpandedSessionId(isExpanded ? null : s.id)}
                     style={{ display: 'grid', gridTemplateColumns: '52px 58px 1fr 88px 110px 110px 28px 28px', padding: '12px 20px', alignItems: 'center', cursor: 'pointer', transition: 'background 0.12s', background: isExpanded ? 'var(--g50)' : '' }}
                     onMouseEnter={e => { if (!isExpanded) e.currentTarget.style.background = 'var(--ow)' }}
@@ -501,7 +502,7 @@ export default function Paciente({ patient: propPatient, setCurrentView, onSessa
                 </div>
               )
             })}
-          </>
+          </div>
         )}
       </div>
 
