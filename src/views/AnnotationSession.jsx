@@ -662,8 +662,18 @@ function TextPage({ page, isActive, onTextChange, onClick, sessionDate, onDateCh
           </span>
         </div>
 
-        {/* Centro: espaçador */}
-        <div />
+        {/* Centro: DatePill — data clínica visível no corpo do documento */}
+        {onDateChange ? (
+          <div style={{ display: 'flex', justifyContent: 'center' }}>
+            <DatePill value={sessionDate} onChange={onDateChange} />
+          </div>
+        ) : sessionDate ? (
+          <div style={{ display: 'flex', justifyContent: 'center' }}>
+            <span style={{ fontSize: 13, fontWeight: 700, color: '#3D6B4A', background: '#EBF4EE', border: '1.5px solid #D4E8DA', borderRadius: 20, padding: '5px 14px', fontFamily: "'DM Sans', sans-serif" }}>
+              📅 {sessionDate.split('-').reverse().join('/')}
+            </span>
+          </div>
+        ) : <div />
 
         {/* Direita: espaçador */}
         <div />
@@ -841,8 +851,8 @@ export default function AnnotationSession({
         setPages(restored)
         setActivePage(0)
       } else {
-        // Primeiro acesso ou sem dados recuperáveis: nova página em branco
-        const nova = { id: newPageId(), pageType: initialPageType || 'draw', canvasRef: { current: null }, dataUrl: null, textHtml: null }
+        // Primeiro acesso ou sem dados recuperáveis: nova página de texto (padrão clínico)
+        const nova = { id: newPageId(), pageType: initialPageType || 'text', canvasRef: { current: null }, dataUrl: null, textHtml: null }
         setPages([nova])
         setActivePage(0)
       }

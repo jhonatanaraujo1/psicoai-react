@@ -792,16 +792,14 @@ export default function App() {
     }
   }
 
-  // Reopen a finished session for continued annotation (creates a new session record)
+  // Abre sessão histórica existente — VIEW mode (mesma lógica de handleOpenCanvasFromHistory)
   const handleReopenSession = (session) => {
-    activeSessionRef.current = null // will be set once new session is created
-    // Prepare initial content
-    const html = session.htmlContent ||
-      (session.textContent ? session.textContent.split('\n').map(l => `<p>${l}</p>`).join('') : '')
-    // Create new session record in background
-    _getOrCreateSessionId(currentPatient?.id, session.type || 'canvas').then(id => { if (id) setSession(id) })
-
-    setCanvasInitialPageType(null) // recovery mode: não adiciona nova página
+    setCurrentPatient(p => p || currentPatient)
+    setCanvasInitialData(session.canvasData || session.canvasDataJson || null)
+    setViewOnlySessionId(session.id)
+    setCanvasViewOnly(true)
+    setCanvasInitialPageType(null)
+    setActiveSessionType('canvas')
     setCanvasOpen(true)
   }
 
