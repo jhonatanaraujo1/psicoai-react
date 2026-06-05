@@ -74,6 +74,8 @@ export default function Pacientes({ setCurrentView, onNovoCadastro }) {
   const [error, setError] = useState(null)
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
+  // 'active' | 'inactive' | 'all' — padrão: só ativos
+  const [activeTab, setActiveTab] = useState('active')
   const [debouncedSearch, setDebouncedSearch] = useState('')
   const [importing, setImporting] = useState(false)
   const [importResult, setImportResult] = useState(null)
@@ -85,17 +87,19 @@ export default function Pacientes({ setCurrentView, onNovoCadastro }) {
     return () => clearTimeout(t)
   }, [search])
 
+  const activeParam = activeTab === 'active' ? true : activeTab === 'inactive' ? false : undefined
+
   useEffect(() => {
     setLoading(true)
     setError(null)
-    api.getPatients({ search: debouncedSearch, status: statusFilter })
+    api.getPatients({ search: debouncedSearch, status: statusFilter, active: activeParam })
       .then(res => {
         setPatients(res.content)
         setTotal(res.totalElements)
       })
       .catch(e => setError(e.message || 'Erro ao carregar pacientes'))
       .finally(() => setLoading(false))
-  }, [debouncedSearch, statusFilter])
+  }, [debouncedSearch, statusFilter, activeTab])
 
   async function handleCsvImport(e) {
     const file = e.target.files?.[0]
@@ -106,8 +110,7 @@ export default function Pacientes({ setCurrentView, onNovoCadastro }) {
     try {
       const result = await api.importPatients(file)
       setImportResult(result)
-      // Refresh patient list
-      const res = await api.getPatients({ search: debouncedSearch, status: statusFilter })
+      const res = await api.getPatients({ search: debouncedSearch, status: statusFilter, active: activeParam })
       setPatients(res.content)
       setTotal(res.totalElements)
     } catch (err) {
@@ -190,6 +193,30 @@ export default function Pacientes({ setCurrentView, onNovoCadastro }) {
           <button onClick={() => setImportResult(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--gr4)', fontSize: '16px', lineHeight: 1, padding: '0 2px' }}>×</button>
         </div>
       )}
+
+      {/* Tabs Ativos / Inativos / Todos */}
+      <div style={{ display: 'flex', gap: '4px', marginBottom: '16px', background: 'var(--gr1)', borderRadius: 'var(--r)', padding: '4px', width: 'fit-content' }}>
+        {[
+          { id: 'active',   label: 'Ativos' },
+          { id: 'inactive', label: 'Inativos' },
+          { id: 'all',      label: 'Todos' },
+        ].map(tab => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            style={{
+              padding: '6px 18px', borderRadius: '8px', border: 'none', cursor: 'pointer',
+              fontSize: '13px', fontWeight: 600, fontFamily: "'DM Sans', sans-serif",
+              background: activeTab === tab.id ? 'var(--w)' : 'transparent',
+              color: activeTab === tab.id ? 'var(--g700)' : 'var(--gr4)',
+              boxShadow: activeTab === tab.id ? '0 1px 4px rgba(0,0,0,0.08)' : 'none',
+              transition: 'all 0.15s',
+            }}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
 
       {/* Filters */}
       <div style={{ display: 'flex', gap: '10px', marginBottom: '20px', flexWrap: 'wrap' }}>

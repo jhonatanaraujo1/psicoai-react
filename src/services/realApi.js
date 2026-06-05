@@ -314,8 +314,8 @@ export const api = {
   },
 
   // Patients
-  async getPatients({ search, status, page = 0, size = 20 } = {}) {
-    return get('/api/v1/patients', { search, status, page, size })
+  async getPatients({ search, status, active, page = 0, size = 20 } = {}) {
+    return get('/api/v1/patients', { search, status, active, page, size })
   },
 
   async getPatient(id) {
@@ -369,6 +369,7 @@ export const api = {
         ? data.sessionValue
         : (data.valor !== undefined && data.valor !== '' ? Number(data.valor) : undefined),
       cid:        data.cid        ?? undefined,
+      active:               data.active               !== undefined ? Boolean(data.active) : undefined,
       recurringDayOfWeek:   data.recurringDayOfWeek  !== undefined ? (data.recurringDayOfWeek  ? Number(data.recurringDayOfWeek)  : null) : undefined,
       recurringTime:        data.recurringTime        !== undefined ? (data.recurringTime        || null) : undefined,
       recurringDurationMin: data.recurringDurationMin !== undefined ? (data.recurringDurationMin ? Number(data.recurringDurationMin) : null) : undefined,

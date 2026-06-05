@@ -210,14 +210,47 @@ export default function Paciente({ patient: propPatient, setCurrentView, onSessa
                   }
                   {exportingPdf ? 'Gerando…' : 'Exportar PDF'}
                 </button>
+                {/* Arquivar / Reativar */}
+                {p.active === false ? (
+                  <button
+                    onClick={async () => {
+                      await api.updatePatient(patientId, { active: true })
+                      api.getPatientSummary(patientId).then(setSummary)
+                      showToast('Paciente reativado', 'success')
+                    }}
+                    style={{ ...btnSt, background: 'var(--g50)', color: 'var(--g700)', border: '1.5px solid var(--g300)' }}
+                  >
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+                    Reativar
+                  </button>
+                ) : (
+                  <button
+                    onClick={async () => {
+                      await api.updatePatient(patientId, { active: false })
+                      api.getPatientSummary(patientId).then(setSummary)
+                      showToast('Paciente arquivado', 'info')
+                    }}
+                    style={{ ...btnSt, background: 'var(--warn-l)', color: 'var(--warn)', border: '1px solid rgba(200,134,10,0.3)' }}
+                  >
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg>
+                    Arquivar
+                  </button>
+                )}
                 <button onClick={() => setDeleteConfirm(true)} style={{ ...btnSt, background: 'var(--danger-l)', color: 'var(--danger)' }}>
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
                   Excluir
                 </button>
-                <button className="btn-primary" onClick={onSessao}>
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
-                  Anotar
-                </button>
+                {p.active !== false && (
+                  <button className="btn-primary" onClick={onSessao}>
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+                    Anotar
+                  </button>
+                )}
+                {p.active === false && (
+                  <div style={{ fontSize: 11, color: 'var(--warn)', background: 'var(--warn-l)', border: '1px solid rgba(200,134,10,0.25)', borderRadius: 20, padding: '4px 10px', fontWeight: 600 }}>
+                    Paciente inativo
+                  </div>
+                )}
               </div>
             </div>
             <div className="pat-stats">
