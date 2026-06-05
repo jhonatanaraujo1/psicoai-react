@@ -44,7 +44,7 @@ const STATUS_BADGE = {
   gray:   'badge-gray',
 }
 
-export default function Paciente({ patient: propPatient, setCurrentView, onSessao, onReopenSession, onViewProntuario }) {
+export default function Paciente({ patient: propPatient, setCurrentView, onSessao, onReopenSession, onViewProntuario, onSyncAgenda }) {
   const [summary, setSummary] = useState(null)
   const [sessions, setSessions] = useState([])
   const [forms, setForms] = useState([])
@@ -545,6 +545,10 @@ export default function Paciente({ patient: propPatient, setCurrentView, onSessa
         })
         setEditOpen(false)
         api.getPatientSummary(patientId).then(setSummary)
+        // Re-sincroniza agenda se recorrência definida (isUpdate=true → apaga futuros e recria)
+        if (form.recurringDayOfWeek && form.recurringTime && onSyncAgenda) {
+          onSyncAgenda(patientId, form.nome, form, true).catch(() => {})
+        }
       }}
     />
     <ReportModal

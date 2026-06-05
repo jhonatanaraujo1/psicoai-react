@@ -386,6 +386,49 @@ export default function App() {
     setCanvasOpen(true)
   }
 
+  // ── Agenda: sincroniza eventos recorrentes do paciente ───────────────────
+  // isUpdate=true → apaga eventos futuros deste paciente antes de recriar
+  const _syncRecurringAgenda = async (patientId, patientName, form, isUpdate = false) => {
+    const { recurringDayOfWeek, recurringTime, recurringDurationMin } = form
+    if (!recurringDayOfWeek || !recurringTime) return
+
+    // Converte dia ISO (1=Seg…7=Dom) para JS getDay() (0=Dom, 1=Seg…6=Sáb)
+    const jsDay   = parseInt(recurringDayOfWeek) % 7
+    const [h, m]  = recurringTime.split(':').map(Number)
+    const duration = parseInt(recurringDurationMin) || 50
+    const today   = new Date(); today.setHours(0, 0, 0, 0)
+
+    // Se edição: remove eventos futuros deste paciente para recriar
+    if (isUpdate) {
+      try {
+        const toDate = new Date(today.getTime() + 365 * 24 * 60 * 60 * 1000)
+        const existing = await api.getAgendaEvents({ from: today.toISOString(), to: toDate.toISOString() })
+        const future = (existing || []).filter(e => e.patientId === patientId && new Date(e.startAt) >= today)
+        await Promise.all(future.map(e => api.deleteAgendaEvent(e.id).catch(() => {})))
+      } catch {}
+    }
+
+    // Encontra a próxima ocorrência do dia da semana a partir de hoje
+    let cursor = new Date(today)
+    while (cursor.getDay() !== jsDay) cursor.setDate(cursor.getDate() + 1)
+
+    // Cria 12 semanas (≈3 meses) de eventos na agenda
+    const creates = []
+    for (let i = 0; i < 12; i++) {
+      const startAt = new Date(cursor); startAt.setHours(h, m, 0, 0)
+      const endAt   = new Date(startAt); endAt.setMinutes(endAt.getMinutes() + duration)
+      creates.push(api.createAgendaEvent({
+        title: `Sessão — ${patientName}`,
+        type: 'session',
+        patientId,
+        startAt: startAt.toISOString(),
+        endAt:   endAt.toISOString(),
+      }).catch(() => {}))
+      cursor.setDate(cursor.getDate() + 7)
+    }
+    await Promise.all(creates)
+  }
+
   // Verifica se paciente já tem anotações salvas no localStorage
   const _hasAnnotations = (patientId) => {
     try {
@@ -768,7 +811,7 @@ export default function App() {
     switch (currentView) {
       case 'dashboard':    return <Dashboard setCurrentView={handleSetView} currentUser={currentUser} />
       case 'pacientes':   return <Pacientes key={patientsRefreshKey} setCurrentView={handleSetView} onNovoCadastro={() => setCadastroOpen(true)} />
-      case 'paciente':    return <Paciente patient={currentPatient} setCurrentView={handleSetView} onSessao={() => handleSetView('sessao', currentPatient)} onReopenSession={handleReopenSession} onViewProntuario={() => setProntuarioOpen(true)} />
+      case 'paciente':    return <Paciente patient={currentPatient} setCurrentView={handleSetView} onSessao={() => handleSetView('sessao', currentPatient)} onReopenSession={handleReopenSession} onViewProntuario={() => setProntuarioOpen(true)} onSyncAgenda={_syncRecurringAgenda} />
       case 'agenda':      return <Agenda currentUser={currentUser} />
       case 'insights':    return <Insights onGoToPatient={(patient) => handleSetView('paciente', patient)} />
       case 'financeiro':  return <Financeiro />
@@ -980,8 +1023,14 @@ export default function App() {
         onSave={async (form) => {
           const patient = await api.createPatient(form)
           setCadastroOpen(false)
-          bumpPatients()   // força refetch no grid
-          showToast(`${patient.name} adicionado com sucesso`, 'success')
+          bumpPatients()
+          // Agenda automática: cria eventos recorrentes se horário definido
+          if (form.recurringDayOfWeek && form.recurringTime) {
+            _syncRecurringAgenda(patient.id, patient.name, form, false).catch(() => {})
+            showToast(`${patient.name} adicionado · agenda sincronizada`, 'success')
+          } else {
+            showToast(`${patient.name} adicionado com sucesso`, 'success')
+          }
           setCurrentView('pacientes')
         }}
       />
