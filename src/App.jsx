@@ -829,12 +829,35 @@ export default function App() {
             onAnalyze={handleAnalyze}
             onAutosave={(id, data) => api.autosaveSession?.(id, data)}
             onFetchSession={async (id) => {
+              // Função auxiliar: converte sessão backend em página de texto
+              const sessionToPage = (s) => {
+                if (!s) return null
+                if (s.canvasData || s.canvasDataJson) {
+                  try {
+                    const parsed = JSON.parse(s.canvasData || s.canvasDataJson)
+                    if (Array.isArray(parsed) && parsed.length > 0)
+                      return parsed.map(p => ({ ...p, sessionId: s.id }))
+                  } catch {}
+                }
+                const html = s.htmlContent ||
+                  (s.textContent ? s.textContent.split('\n').map(l => `<p>${l || '<br>'}</p>`).join('') : '')
+                if (html) return [{ id: `p-${s.id}`, pageType: 'text', textHtml: html, dataUrl: null, sessionId: s.id }]
+                return null
+              }
               try {
-                const s = await api.getSession(id)
-                if (s?.canvasData) return s.canvasData
-                // Fallback: reconstrói página de texto a partir de htmlContent
-                const html = s?.htmlContent || (s?.textContent ? s.textContent.split('\n').map(l => `<p>${l || '<br>'}</p>`).join('') : '')
-                if (html) return JSON.stringify([{ id: 'p0', pageType: 'text', textHtml: html, dataUrl: null }])
+                // 1. Tenta a sessão específica
+                if (id) {
+                  const s = await api.getSession(id)
+                  const pages = sessionToPage(s)
+                  if (pages?.length) return JSON.stringify(pages)
+                }
+                // 2. Fallback: agrega TODAS as sessões do paciente (caso localStorage vazio)
+                if (currentPatient?.id) {
+                  const all = await api.getPatientSessions(currentPatient.id)
+                  const list = ([...(all?.content || all || [])]).reverse() // oldest first
+                  const pages = list.flatMap(s => sessionToPage(s) || [])
+                  if (pages.length > 0) return JSON.stringify(pages)
+                }
                 return null
               } catch { return null }
             }}
