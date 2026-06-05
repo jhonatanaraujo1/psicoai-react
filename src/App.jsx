@@ -330,6 +330,8 @@ export default function App() {
   // Modo visualização de sessão histórica — não cria sessão ativa, sem badge
   const [canvasViewOnly, setCanvasViewOnly] = useState(false)
   const [viewOnlySessionId, setViewOnlySessionId] = useState(null)
+  // Sessão alvo para scroll automático ao abrir o caderno
+  const [scrollToSessionId, setScrollToSessionId] = useState(null)
 
   // ── AI Drawer ─────────────────────────────────────────────────────────────
   const [aiDrawerOpen, setAiDrawerOpen] = useState(false)
@@ -792,8 +794,9 @@ export default function App() {
     }
   }
 
-  // Clique em qualquer anotação → abre o caderno completo do paciente (todas as páginas juntas)
-  const handleReopenSession = (_session) => {
+  // Clique numa anotação → abre o caderno completo e scrolla até a página daquela sessão
+  const handleReopenSession = (session) => {
+    setScrollToSessionId(session?.id || null)
     _openExistingAnnotation(currentPatient)
   }
 
@@ -807,6 +810,7 @@ export default function App() {
     setCanvasOpen(false)
     setCanvasViewOnly(false)
     setViewOnlySessionId(null)
+    setScrollToSessionId(null)
     setCurrentView('paciente')
 
     // Finish session in background — skip for view-only (sessão histórica já encerrada)
@@ -875,6 +879,7 @@ export default function App() {
             initialPageType={canvasInitialPageType}
             initialCanvasData={canvasInitialData}
             sessionId={canvasViewOnly ? viewOnlySessionId : activeSessionId}
+            scrollToSessionId={scrollToSessionId}
             viewOnly={canvasViewOnly}
             onClose={handleSessionClose}
             onMinimize={handleMinimizeCanvas}

@@ -173,6 +173,7 @@ function saveCanvasPages(sessionId, patientId, pages) {
       pageType: p.pageType || 'draw',
       dataUrl: p.dataUrl || null,
       textHtml: p.textHtml || null,
+      sessionId: p.sessionId || null,   // rastreia a qual sessão a página pertence
     })))
     if (data.length >= 4 * 1024 * 1024) return // muito grande
     const encrypted = AES.encrypt(data, getEncKey()).toString()
@@ -717,6 +718,7 @@ export default function AnnotationSession({
   onAutosave,
   onFetchSession,           // async (sessionId) => canvasData string | null — fallback quando localStorage vazio
   sessionId,
+  scrollToSessionId = null, // após carregar, scrolla até a primeira página desta sessão
   viewOnly = false,         // true → visualização histórica: sem autosave, sem badge
 }) {
   // Sempre canvas — texto é apenas um tipo de página dentro do canvas
@@ -844,12 +846,12 @@ export default function AnnotationSession({
       }
 
       const restored = saved
-        ? saved.map(p => ({ id: p.id, pageType: p.pageType || 'draw', canvasRef: { current: null }, dataUrl: p.dataUrl || null, textHtml: p.textHtml || null }))
+        ? saved.map(p => ({ id: p.id, pageType: p.pageType || 'draw', canvasRef: { current: null }, dataUrl: p.dataUrl || null, textHtml: p.textHtml || null, sessionId: p.sessionId || null }))
         : []
 
       if (initialPageType && restored.length > 0) {
-        // Nova anotação sobre histórico existente: adiciona nova página ao final
-        const nova = { id: newPageId(), pageType: initialPageType, canvasRef: { current: null }, dataUrl: null, textHtml: null }
+        // Nova anotação sobre histórico existente: adiciona nova página ao final (marcada com sessão atual)
+        const nova = { id: newPageId(), pageType: initialPageType, canvasRef: { current: null }, dataUrl: null, textHtml: null, sessionId: sessionId || null }
         const all = [...restored, nova]
         setPages(all)
         setActivePage(all.length - 1)
@@ -859,10 +861,22 @@ export default function AnnotationSession({
         }, 200)
       } else if (restored.length > 0) {
         setPages(restored)
-        setActivePage(0)
+        // Se há sessão alvo, scrolla até a primeira página dela; senão vai pro início
+        if (scrollToSessionId) {
+          const idx = restored.findIndex(p => p.sessionId === scrollToSessionId)
+          const target = idx >= 0 ? idx : 0
+          setActivePage(target)
+          setTimeout(() => {
+            const el = document.getElementById(`page-${restored[target]?.id}`)
+            const c  = mainScrollRef.current
+            if (el && c) c.scrollTo({ top: el.offsetTop - 32, behavior: 'smooth' })
+          }, 250)
+        } else {
+          setActivePage(0)
+        }
       } else {
         // Primeiro acesso ou sem dados recuperáveis: nova página de texto (padrão clínico)
-        const nova = { id: newPageId(), pageType: initialPageType || 'text', canvasRef: { current: null }, dataUrl: null, textHtml: null }
+        const nova = { id: newPageId(), pageType: initialPageType || 'text', canvasRef: { current: null }, dataUrl: null, textHtml: null, sessionId: sessionId || null }
         setPages([nova])
         setActivePage(0)
       }
@@ -987,7 +1001,7 @@ export default function AnnotationSession({
 
   // ── Canvas: nova página ────────────────────────────────────────────────────
   const addPage = useCallback((pageType = 'draw') => {
-    const newPage = { id: newPageId(), pageType, canvasRef: { current: null }, dataUrl: null, textHtml: null }
+    const newPage = { id: newPageId(), pageType, canvasRef: { current: null }, dataUrl: null, textHtml: null, sessionId: sessionIdRef.current || null }
     setPages(prev => {
       const next = [...prev, newPage]
       if (patient?.id) saveCanvasPages(sessionIdRef.current, patient.id, next)
