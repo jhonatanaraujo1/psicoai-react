@@ -20,7 +20,6 @@ import SessionTypePicker from './components/SessionTypePicker'
 import PatientPicker from './components/PatientPicker'
 import CadastroModal from './components/CadastroModal'
 import AnalyzeSessionsModal from './components/AnalyzeSessionsModal'
-import QuickNoteModal from './components/QuickNoteModal'
 
 import Login from './views/Login'
 import Dashboard from './views/Dashboard'
@@ -266,47 +265,10 @@ export default function App() {
   }, [activeSessionId, activeSessionType]) // eslint-disable-line react-hooks/exhaustive-deps
 
 
-  // ── QuickNote persistence — localStorage + URL ?nota=<patientId> ─────────
-  // DECLARADO ANTES do useEffect para evitar TDZ na dependency array [quickNoteOpen]
-  // Inicializa do localStorage/URL — sobrevive refresh igual ao canvas
-  const [quickNoteOpen, setQuickNoteOpen] = useState(() => {
-    try {
-      const params = new URLSearchParams(window.location.search)
-      if (params.has('nota')) return true
-      const qn = JSON.parse(localStorage.getItem('psicoai_quicknote_state') || 'null')
-      return qn?.open === true && !!qn?.patientId
-    } catch { return false }
-  })
-
-  // Mesmo padrão do canvas: sobrevive refresh, fechar aba e redeploy do Vercel.
-  // O rascunho do texto já é persistido por psicoai_quicknote_<id> no próprio modal.
-  useEffect(() => {
-    if (quickNoteOpen && currentPatient?.id) {
-      localStorage.setItem('psicoai_quicknote_state', JSON.stringify({
-        open: true,
-        patientId:   currentPatient.id,
-        patientName: currentPatient.name,
-        savedAt:     Date.now(),
-      }))
-      const params = new URLSearchParams(window.location.search)
-      params.set('nota', currentPatient.id)
-      window.history.replaceState({}, '', `${window.location.pathname}?${params}`)
-    } else {
-      localStorage.removeItem('psicoai_quicknote_state')
-      const params = new URLSearchParams(window.location.search)
-      if (params.has('nota')) {
-        params.delete('nota')
-        const q = params.toString()
-        window.history.replaceState({}, '', q ? `${window.location.pathname}?${q}` : window.location.pathname)
-      }
-    }
-  }, [quickNoteOpen, currentPatient?.id]) // eslint-disable-line react-hooks/exhaustive-deps
-
   // ── Session modals ────────────────────────────────────────────────────────
   const [briefingOpen, setBriefingOpen] = useState(false)
   const [pickerOpen, setPickerOpen] = useState(false)
-  // quickNoteOpen foi movido para antes do useEffect de persistência (evitar TDZ)
-  const [pickerMode, setPickerMode] = useState('live') // 'live' | 'quicknote'
+  const [pickerMode, setPickerMode] = useState('live')
   // textOpen mantido como alias para não quebrar referências internas — sempre false
   const [textOpen, setTextOpen] = useState(false)
   const [canvasInitialPageType, setCanvasInitialPageType] = useState(null)
@@ -526,52 +488,6 @@ export default function App() {
     } else {
       _openTextSession(patient) // nova página de texto — sem picker de tipo
     }
-  }
-
-  // ── QuickNote handlers ────────────────────────────────────────────────────
-
-  const handleQuickNoteSave = async ({ textContent, htmlContent, noteType }) => {
-    try {
-      const session = await api.createSession({ patientId: currentPatient?.id, type: 'text', noteType })
-      await api.finishSession(session.id, { textContent, htmlContent, durationSeconds: 0 })
-      setQuickNoteOpen(false)
-      const name = currentPatient?.name || 'paciente'
-      showToast('Anotação salva', 'success', {
-        description: `Prontuário de ${name} atualizado.`,
-        action: { label: 'Ver prontuário →', onClick: () => { setCurrentView('paciente') } },
-        duration: 5000,
-      })
-    } catch (e) {
-      showToast('Erro ao salvar anotação', 'error', { description: e.message, duration: 5000 })
-    }
-  }
-
-  const handleQuickNoteAnalyze = async ({ textContent, htmlContent, noteType }) => {
-    try {
-      const session = await api.createSession({ patientId: currentPatient?.id, type: 'text', noteType })
-      setQuickNoteOpen(false)
-      // Reutiliza o fluxo de análise existente — AnalyzeSessionsModal + AiDrawer
-      setPendingAnalysis({ textContent, htmlContent, imageBase64: null, duration: 0, sessionId: session.id })
-    } catch (e) {
-      showToast('Erro ao iniciar análise', 'error', { description: e.message, duration: 5000 })
-    }
-  }
-
-  // QuickNote → canvas: pula o briefing, abre canvas direto (sem timer)
-  const handleQuickNoteCanvas = () => {
-    setQuickNoteOpen(false)
-    activeSessionRef.current = null
-    setActiveSessionType('canvas')
-    if (currentPatient) {
-      localStorage.setItem('psicoai_active_session', JSON.stringify({
-        sessionId: null, sessionType: 'canvas',
-        patient: { id: currentPatient.id, name: currentPatient.name },
-        startedAt: Date.now(),
-      }))
-    }
-    // QuickNote → canvas: reutiliza sessão aberta se já existir
-    _getOrCreateSessionId(currentPatient?.id, 'canvas').then(id => { if (id) setSession(id) })
-    setCanvasOpen(true)
   }
 
   const handleBriefingStart = ({ meetLink, type }) => {
@@ -1072,16 +988,6 @@ export default function App() {
         patient={currentPatient}
         result={analysisResult}
         loading={analysisLoading}
-      />
-
-      {/* QuickNote — anotação rápida sem timer */}
-      <QuickNoteModal
-        isOpen={quickNoteOpen}
-        patient={currentPatient}
-        onClose={() => setQuickNoteOpen(false)}
-        onSave={handleQuickNoteSave}
-        onAnalyze={handleQuickNoteAnalyze}
-        onOpenCanvas={handleQuickNoteCanvas}
       />
 
       {/* Onboarding */}

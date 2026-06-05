@@ -357,7 +357,7 @@ export default function Paciente({ patient: propPatient, setCurrentView, onSessa
                         textTransform: 'uppercase', letterSpacing: '0.5px',
                         display: 'inline-block',
                       }}>
-                        {isCanvas ? 'Anotação' : 'Nota rápida'}
+                        Anotação
                       </span>
                     </div>
                     <div style={{ fontSize: '12px', color: 'var(--gr5)', lineHeight: 1.4, paddingRight: '16px', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
