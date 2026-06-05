@@ -58,7 +58,6 @@ export default function Paciente({ patient: propPatient, setCurrentView, onSessa
   const [notesSaving, setNotesSaving] = useState(false)
   const [notesSaved, setNotesSaved] = useState(false)
   const [reportOpen, setReportOpen] = useState(false)
-  const [expandedSessionId, setExpandedSessionId] = useState(null)
   const [exportingPdf, setExportingPdf] = useState(false)
 
   const patientId = propPatient?.id
@@ -291,7 +290,7 @@ export default function Paciente({ patient: propPatient, setCurrentView, onSessa
         <div className="card-header">
           <div>
             <div className="card-title">Histórico de Anotações</div>
-            <div className="card-sub">{sessions.length} anotações registradas · clique para ver detalhes</div>
+            <div className="card-sub">{sessions.length} anotações registradas · clique para abrir</div>
           </div>
           <div style={{ display: 'flex', gap: '6px' }}>
             {onViewProntuario && (
@@ -329,8 +328,8 @@ export default function Paciente({ patient: propPatient, setCurrentView, onSessa
         ) : (
           <div className="sess-tbl-outer">
             {/* Colunas: Nº · Tipo · Resumo · Criado · Última alteração · Status · ações */}
-            <div className="sess-tbl-hdr" style={{ display: 'grid', gridTemplateColumns: '52px 58px 1fr 88px 110px 110px 28px 28px', borderBottom: '2px solid var(--gr2)', padding: '8px 20px', background: 'var(--ow)' }}>
-              {['Nº', 'Tipo', 'Resumo / Anotações', 'Criado', 'Última alt.', 'Status', '', ''].map((h, i) => (
+            <div className="sess-tbl-hdr" style={{ display: 'grid', gridTemplateColumns: '52px 58px 1fr 88px 110px 110px 28px', borderBottom: '2px solid var(--gr2)', padding: '8px 20px', background: 'var(--ow)' }}>
+              {['Nº', 'Tipo', 'Resumo / Anotações', 'Criado', 'Última alt.', 'Status', ''].map((h, i) => (
                 <div key={i} style={{ fontSize: '10px', fontWeight: 600, letterSpacing: '0.8px', textTransform: 'uppercase', color: 'var(--gr4)' }}>{h}</div>
               ))}
             </div>
@@ -339,7 +338,6 @@ export default function Paciente({ patient: propPatient, setCurrentView, onSessa
               const evColor = { green: '#27AE60', yellow: '#F39C12', red: '#E74C3C' }[s.evolution] || null
               const bs = badgeStyle(s.statusLabel)
               const isConfirmingDelete = sessionDeleteId === s.id
-              const isExpanded = expandedSessionId === s.id
               const isCanvas = s.type === 'canvas'
               // Última alteração: prefere finishedAt, depois updatedAt, depois createdAt
               const lastModified = s.finishedAt || s.updatedAt || s.createdAt
@@ -348,10 +346,10 @@ export default function Paciente({ patient: propPatient, setCurrentView, onSessa
                   {/* Row */}
                   <div
                     className="sess-tbl-row"
-                    onClick={() => setExpandedSessionId(isExpanded ? null : s.id)}
-                    style={{ display: 'grid', gridTemplateColumns: '52px 58px 1fr 88px 110px 110px 28px 28px', padding: '12px 20px', alignItems: 'center', cursor: 'pointer', transition: 'background 0.12s', background: isExpanded ? 'var(--g50)' : '' }}
-                    onMouseEnter={e => { if (!isExpanded) e.currentTarget.style.background = 'var(--ow)' }}
-                    onMouseLeave={e => { if (!isExpanded) e.currentTarget.style.background = '' }}
+                    onClick={() => onReopenSession && onReopenSession(s)}
+                    style={{ display: 'grid', gridTemplateColumns: '52px 58px 1fr 88px 110px 110px 28px', padding: '12px 20px', alignItems: 'center', cursor: 'pointer', transition: 'background 0.12s' }}
+                    onMouseEnter={e => e.currentTarget.style.background = 'var(--ow)'}
+                    onMouseLeave={e => e.currentTarget.style.background = ''}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
                       {evColor && <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: evColor, flexShrink: 0, display: 'inline-block' }} />}
@@ -390,9 +388,6 @@ export default function Paciente({ patient: propPatient, setCurrentView, onSessa
                         {s.statusLabel}
                       </span>
                     </div>
-                    <div style={{ color: isExpanded ? 'var(--g500)' : 'var(--gr3)', transition: 'transform 0.2s', transform: isExpanded ? 'rotate(90deg)' : 'none' }}>
-                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="9 18 15 12 9 6"/></svg>
-                    </div>
                     <div>
                       <button
                         onClick={e => { e.stopPropagation(); setSessionDeleteId(isConfirmingDelete ? null : s.id) }}
@@ -403,85 +398,6 @@ export default function Paciente({ patient: propPatient, setCurrentView, onSessa
                       </button>
                     </div>
                   </div>
-
-                  {/* Expanded notes panel */}
-                  {isExpanded && (
-                    <div style={{ background: 'var(--ow)', borderTop: '1px solid var(--g100)', padding: '20px 24px' }}>
-                      {/* Dates row */}
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '14px', flexWrap: 'wrap' }}>
-                        <span style={{ fontSize: '11px', color: 'var(--gr4)', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                          Criado: {fmtDate(s.createdAt)}
-                        </span>
-                        {s.finishedAt && (
-                          <span style={{ fontSize: '11px', color: 'var(--gr4)', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-                            Encerrado: {fmtDate(s.finishedAt)}
-                          </span>
-                        )}
-                        {s.updatedAt && s.updatedAt !== s.finishedAt && s.updatedAt !== s.createdAt && (
-                          <span style={{ fontSize: '11px', color: 'var(--gr4)', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                            Editado: {fmtDate(s.updatedAt)}
-                          </span>
-                        )}
-                        <span style={{ fontSize: '11px', color: 'var(--gr4)', marginLeft: 'auto' }}>{fmtDuration(s.durationSeconds)}</span>
-                      </div>
-
-                      {/* Content */}
-                      {s.textContent ? (
-                        <div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
-                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--g600)" strokeWidth="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
-                            <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--g700)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Anotações desta sessão</span>
-                          </div>
-                          <div style={{
-                            fontSize: '13.5px', lineHeight: '1.8', color: 'var(--d)',
-                            fontFamily: "'DM Sans', sans-serif",
-                            whiteSpace: 'pre-wrap', wordBreak: 'break-word',
-                            background: 'var(--w)', border: '1px solid var(--gr2)',
-                            borderRadius: 'var(--r)', padding: '16px 20px',
-                            maxHeight: '320px', overflowY: 'auto',
-                          }}>
-                            {s.textContent}
-                          </div>
-                        </div>
-                      ) : s.type === 'canvas' ? (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '14px 16px', background: 'var(--w)', borderRadius: 'var(--r)', border: '1px solid var(--gr2)' }}>
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--g500)" strokeWidth="1.8"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
-                          <span style={{ fontSize: '13px', color: 'var(--gr5)' }}>Anotação feita no Canvas. Clique em "Continuar anotando" para reabrir.</span>
-                        </div>
-                      ) : (
-                        <div style={{ fontSize: '13px', color: 'var(--gr4)', textAlign: 'center', padding: '16px' }}>
-                          Nenhuma anotação registrada nesta sessão.
-                        </div>
-                      )}
-
-                      {/* Painel IA da sessão */}
-                      {s.hasAnalysis && (
-                        <div style={{ marginTop: '16px' }}>
-                          <AiAnalysisPanel
-                            sessionId={s.id}
-                            analysis={null}
-                            createdAt={analyses.find(a => a.sessionId === s.id)?.createdAt}
-                          />
-                        </div>
-                      )}
-
-                      {/* Reopen button */}
-                      {onReopenSession && (
-                        <div style={{ marginTop: '14px', paddingTop: '14px', borderTop: '1px solid var(--gr2)', display: 'flex', justifyContent: 'flex-end' }}>
-                          <button
-                            onClick={e => { e.stopPropagation(); onReopenSession(s) }}
-                            style={{ ...btnSt, background: 'var(--g50)', border: '1px solid var(--g200)', color: 'var(--g700)', fontSize: '12px', padding: '8px 16px' }}
-                          >
-                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                            Continuar anotando nesta sessão
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  )}
 
                   {isConfirmingDelete && (
                     <div style={{ background: 'var(--danger-l)', border: '1px solid #E8B4B0', borderRadius: 'var(--r)', margin: '0 20px 8px', padding: '10px 14px', display: 'flex', alignItems: 'center', gap: '10px' }}>
