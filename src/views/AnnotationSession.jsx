@@ -662,14 +662,8 @@ function TextPage({ page, isActive, onTextChange, onClick, sessionDate, onDateCh
           </span>
         </div>
 
-        {/* Centro: DatePill proeminente */}
-        {onDateChange ? (
-          <div style={{ display: 'flex', justifyContent: 'center' }}>
-            <DatePill value={sessionDate} onChange={onDateChange} />
-          </div>
-        ) : (
-          <div />
-        )}
+        {/* Centro: espaçador */}
+        <div />
 
         {/* Direita: espaçador */}
         <div />
@@ -1852,6 +1846,13 @@ export default function AnnotationSession({
             </span>
           )}
         </div>
+
+        {/* Data da sessão — sempre visível no header, independente do tipo de página */}
+        {!viewOnly && (
+          <div style={{ flexShrink: 0 }}>
+            <DatePill value={sessionDate} onChange={handleDateChange} />
+          </div>
+        )}
 
         {/* Auto-save indicator — sempre visível no header */}
         {onAutosave && backendSyncStatus !== 'idle' ? (
