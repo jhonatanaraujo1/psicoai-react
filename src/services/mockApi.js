@@ -642,6 +642,11 @@ export const api = {
     const patient = PATIENTS.find(p => p.id === data.patientId)
     if (!patient) throw new Error('Paciente não encontrado')
     const sessions = SESSIONS_BY_PATIENT[data.patientId] || []
+    // 1 paciente = 1 caderno = 1 sessão. Reutiliza a existente em vez de multiplicar.
+    if (sessions.length > 0) {
+      const open = sessions.find(s => s.status === 'open')
+      return open || sessions[0]
+    }
     const newSession = {
       id: 's-' + Date.now(),
       patientId: data.patientId,

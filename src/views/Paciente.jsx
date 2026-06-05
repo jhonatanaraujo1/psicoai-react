@@ -319,7 +319,7 @@ export default function Paciente({ patient: propPatient, setCurrentView, onSessa
         <div className="card-header">
           <div>
             <div className="card-title">Histórico de Anotações</div>
-            <div className="card-sub">{sessions.length} anotações registradas · clique para abrir</div>
+            <div className="card-sub">{sessions.length === 1 ? '1 caderno · clique para abrir' : `${sessions.length} cadernos · clique para abrir`}</div>
           </div>
           <div style={{ display: 'flex', gap: '6px' }}>
             {onViewProntuario && (
@@ -400,7 +400,7 @@ export default function Paciente({ patient: propPatient, setCurrentView, onSessa
                           IA
                         </span>
                       )}
-                      {s.summary || s.notePreview || (isCanvas ? 'Anotação em canvas — abra para ver' : 'Sem conteúdo registrado')}
+                      {s.summary || s.notePreview || 'Caderno de anotações — clique para abrir'}
                     </div>
                     <div style={{ fontSize: '11px', color: 'var(--gr5)' }}>
                       {fmtDate(s.sessionDate || s.createdAt)}
@@ -431,6 +431,18 @@ export default function Paciente({ patient: propPatient, setCurrentView, onSessa
                       <button onClick={async () => {
                         try {
                           await api.deleteSession(s.id)
+                          // Limpa o caderno local também — senão ele "ressuscita" do localStorage
+                          try {
+                            localStorage.removeItem(`psicoai_canvas2_s${s.id}`)
+                            // Se esta era a única sessão do paciente, limpa o caderno-mestre
+                            if (patientId && sessions.length <= 1) {
+                              localStorage.removeItem(`psicoai_canvas2_p${patientId}`)
+                            }
+                            const active = JSON.parse(localStorage.getItem('psicoai_active_session') || 'null')
+                            if (active?.sessionId === s.id || (active?.patientId === patientId && sessions.length <= 1)) {
+                              localStorage.removeItem('psicoai_active_session')
+                            }
+                          } catch { /* localStorage indisponível — ignora */ }
                           setSessions(prev => prev.filter(x => x.id !== s.id))
                           setSessionDeleteId(null)
                         } catch (e) {

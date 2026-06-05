@@ -312,21 +312,38 @@ export default function App() {
   const [typePickerPatient, setTypePickerPatient] = useState(null)
 
   // ── Sessão: get-or-create ─────────────────────────────────────────────────────
-  // Backend rejeita criação se já há sessão aberta para o mesmo paciente (422).
-  // Esta função verifica se existe e reutiliza, evitando o canvas abrir sem ID.
+  // REGRA: 1 paciente = 1 caderno = 1 sessão. NUNCA multiplica.
+  // Sempre reutiliza a sessão existente do paciente (aberta OU finalizada).
+  // Só cria uma sessão nova se o paciente nunca teve nenhuma.
   const _getOrCreateSessionId = async (patientId, type = 'canvas') => {
     if (!patientId) return null
+    // 1. Procura o caderno existente do paciente e reutiliza
+    try {
+      const res = await api.getPatientSessions(patientId, { size: 100 })
+      const list = res?.content || res || []
+      if (Array.isArray(list) && list.length > 0) {
+        // Prioriza sessão aberta; senão, a mais recente (o caderno)
+        const open = list.find(s => s.status === 'open')
+        const notebook = open || [...list].sort(
+          (a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0)
+        )[0]
+        if (notebook?.id) {
+          console.info('[PsicoNotes] Reutilizando caderno do paciente:', notebook.id)
+          return notebook.id
+        }
+      }
+    } catch { /* sem listagem acessível → tenta criar */ }
+    // 2. Nenhuma sessão existente → cria o caderno do paciente
     try {
       const session = await api.createSession({ patientId, type })
       return session.id
     } catch (e) {
-      // 422 = "Já existe uma sessão aberta para este paciente"
-      // Busca a sessão aberta existente e reutiliza o ID
+      // 422 = "Já existe uma sessão aberta" → busca e reutiliza
       if (e.message?.includes('sessão aberta') || e.message?.includes('422') || e.message?.includes('Unprocessable')) {
         try {
           const openSessions = await api.getOpenSessions()
           const existing = Array.isArray(openSessions)
-            ? openSessions.find(s => s.patientId === patientId && s.status === 'open')
+            ? openSessions.find(s => s.patientId === patientId)
             : null
           if (existing?.id) {
             console.info('[PsicoNotes] Reutilizando sessão aberta:', existing.id)
