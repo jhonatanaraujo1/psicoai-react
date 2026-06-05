@@ -770,6 +770,7 @@ export default function AnnotationSession({
   const addMenuRef = useRef(null)
   const [sidebarTab, setSidebarTab] = useState('pages') // 'pages' | 'guide'
   const [hoveredPageIdx, setHoveredPageIdx] = useState(-1)
+  const [confirmDeletePageId, setConfirmDeletePageId] = useState(null)
 
   // ── Estado do fluxo de análise ─────────────────────────────────────────────
   const [analysisStep, setAnalysisStep]         = useState('idle') // 'idle' | 'picker' | 'destination'
@@ -1295,7 +1296,7 @@ export default function AnnotationSession({
                   key={p.id}
                   data-thumb={i}
                   onMouseEnter={() => setHoveredPageIdx(i)}
-                  onMouseLeave={() => setHoveredPageIdx(-1)}
+                  onMouseLeave={() => { setHoveredPageIdx(-1); if (confirmDeletePageId === p.id) setConfirmDeletePageId(null) }}
                   onClick={() => { scrollToPage(i); if (isOverlaySidebar) setSidebarOpen(false) }}
                   style={{
                     width: '100%', cursor: 'pointer',
@@ -1329,9 +1330,9 @@ export default function AnnotationSession({
                       }
                     </div>
                     {/* Botão apagar — aparece no hover, oculto se só 1 página */}
-                    {hoveredPageIdx === i && pages.length > 1 && (
+                    {hoveredPageIdx === i && pages.length > 1 && confirmDeletePageId !== p.id && (
                       <button
-                        onClick={e => { e.stopPropagation(); deletePage(p.id) }}
+                        onClick={e => { e.stopPropagation(); setConfirmDeletePageId(p.id) }}
                         title="Apagar página"
                         style={{
                           position: 'absolute', top: 3, right: 3,
@@ -1352,6 +1353,41 @@ export default function AnnotationSession({
                           <path d="M10 11v6M14 11v6"/>
                         </svg>
                       </button>
+                    )}
+                    {/* Confirmação de exclusão — overlay sobre o thumbnail */}
+                    {confirmDeletePageId === p.id && (
+                      <div
+                        onClick={e => e.stopPropagation()}
+                        style={{
+                          position: 'absolute', inset: 0, borderRadius: 6,
+                          background: 'rgba(20,12,12,0.93)',
+                          display: 'flex', flexDirection: 'column',
+                          alignItems: 'center', justifyContent: 'center', gap: 6,
+                          zIndex: 10,
+                        }}
+                      >
+                        <span style={{ color: '#fff', fontSize: 10, fontWeight: 600, textAlign: 'center', lineHeight: 1.3 }}>
+                          Apagar<br/>página?
+                        </span>
+                        <div style={{ display: 'flex', gap: 5 }}>
+                          <button
+                            onClick={e => { e.stopPropagation(); deletePage(p.id); setConfirmDeletePageId(null) }}
+                            style={{
+                              padding: '3px 8px', borderRadius: 4, border: 'none',
+                              background: 'rgba(192,57,43,0.95)', color: '#fff',
+                              fontSize: 10, fontWeight: 700, cursor: 'pointer',
+                            }}
+                          >Sim</button>
+                          <button
+                            onClick={e => { e.stopPropagation(); setConfirmDeletePageId(null) }}
+                            style={{
+                              padding: '3px 8px', borderRadius: 4, border: 'none',
+                              background: 'rgba(255,255,255,0.15)', color: '#fff',
+                              fontSize: 10, fontWeight: 700, cursor: 'pointer',
+                            }}
+                          >Não</button>
+                        </div>
+                      </div>
                     )}
                   </div>
                   <span style={{ fontSize: 10, color: activePage === i ? '#9DC4A8' : 'rgba(255,255,255,0.35)' }}>
