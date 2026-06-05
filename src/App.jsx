@@ -347,6 +347,34 @@ export default function App() {
   // Aparece depois de selecionar paciente — permite escolher o modo da sessão
   const [typePickerPatient, setTypePickerPatient] = useState(null)
 
+  // ── Sessão: get-or-create ─────────────────────────────────────────────────────
+  // Backend rejeita criação se já há sessão aberta para o mesmo paciente (422).
+  // Esta função verifica se existe e reutiliza, evitando o canvas abrir sem ID.
+  const _getOrCreateSessionId = async (patientId, type = 'canvas') => {
+    if (!patientId) return null
+    try {
+      const session = await api.createSession({ patientId, type })
+      return session.id
+    } catch (e) {
+      // 422 = "Já existe uma sessão aberta para este paciente"
+      // Busca a sessão aberta existente e reutiliza o ID
+      if (e.message?.includes('sessão aberta') || e.message?.includes('422') || e.message?.includes('Unprocessable')) {
+        try {
+          const openSessions = await api.getOpenSessions()
+          const existing = Array.isArray(openSessions)
+            ? openSessions.find(s => s.patientId === patientId && s.status === 'open')
+            : null
+          if (existing?.id) {
+            console.info('[PsicoNotes] Reutilizando sessão aberta:', existing.id)
+            return existing.id
+          }
+        } catch { /* sem sessões abertas acessíveis → continua sem ID */ }
+      }
+      console.warn('[PsicoNotes] createSession failed:', e.message)
+      return null
+    }
+  }
+
   // Abre AnnotationSession com nova página de TEXTO.
   // O histórico de páginas do paciente é carregado automaticamente — a nova página é adicionada ao final.
   const _openTextSession = (patient) => {
@@ -367,11 +395,8 @@ export default function App() {
       }))
     }
     // Toda anotação vai para AnnotationSession (canvas unificado).
-    // O tipo de página (texto vs desenho) é controlado por canvasInitialPageType='text'.
-    // Usar type:'canvas' garante exibição correta no histórico do paciente.
-    api.createSession({ patientId: pat?.id, type: 'canvas' })
-      .then(session => setSession(session.id))
-      .catch(e => console.warn('[PsicoNotes] createSession failed:', e))
+    // _getOrCreateSessionId reutiliza sessão aberta se já existir no backend.
+    _getOrCreateSessionId(pat?.id, 'canvas').then(id => { if (id) setSession(id) })
     setCanvasOpen(true)
   }
 
@@ -393,9 +418,7 @@ export default function App() {
         startedAt:   Date.now(),
       }))
     }
-    api.createSession({ patientId: pat?.id, type: 'canvas' })
-      .then(session => setSession(session.id))
-      .catch(e => console.warn('[PsicoNotes] createSession (canvas) failed:', e))
+    _getOrCreateSessionId(pat?.id, 'canvas').then(id => { if (id) setSession(id) })
     setCanvasOpen(true)
   }
 
@@ -424,9 +447,8 @@ export default function App() {
         patient: { id: pat.id, name: pat.name }, startedAt: Date.now(),
       }))
     }
-    api.createSession({ patientId: pat?.id, type: 'canvas' })
-      .then(s => setSession(s.id))
-      .catch(e => console.warn('[PsicoNotes] createSession failed:', e))
+    // Reutiliza sessão aberta se já existir (evita 422 do backend)
+    _getOrCreateSessionId(pat?.id, 'canvas').then(id => { if (id) setSession(id) })
     setCanvasOpen(true)
   }
 
@@ -517,20 +539,8 @@ export default function App() {
         startedAt: Date.now(),
       }))
     }
-    api.createSession({ patientId: currentPatient?.id, type: 'canvas' })
-      .then(s => setSession(s.id))
-      .catch(e => {
-        const isOpenSession = e.message?.includes('sessão aberta')
-        if (isOpenSession) {
-          showToast('Anotação em andamento', 'warning', {
-            description: `${currentPatient?.name || 'Este paciente'} já tem uma anotação em aberto. As novas anotações serão salvas localmente.`,
-            action: { label: 'Ver em aberto →', onClick: () => setSessionsPanelOpen(true) },
-            duration: 8000,
-          })
-        } else {
-          console.warn('[PsicoNotes] createSession (canvas) failed:', e)
-        }
-      })
+    // QuickNote → canvas: reutiliza sessão aberta se já existir
+    _getOrCreateSessionId(currentPatient?.id, 'canvas').then(id => { if (id) setSession(id) })
     setCanvasOpen(true)
   }
 
@@ -552,21 +562,8 @@ export default function App() {
     setCanvasInitialPageType(type === 'canvas' ? 'draw' : 'text')
 
     // Open the session view immediately (no wait) and create the backend record in background.
-    // autosaveSession only fires after 30s, so the ID will be ready well before it's needed.
-    api.createSession({ patientId: currentPatient?.id, type, meetLink })
-      .then(session => setSession(session.id))
-      .catch(e => {
-        const isOpenSession = e.message?.includes('sessão aberta')
-        if (isOpenSession) {
-          showToast('Anotação em andamento', 'warning', {
-            description: `${currentPatient?.name || 'Este paciente'} já tem uma anotação em aberto. As novas anotações serão salvas localmente.`,
-            action: { label: 'Ver em aberto →', onClick: () => setSessionsPanelOpen(true) },
-            duration: 8000,
-          })
-        } else {
-          console.warn('[PsicoNotes] createSession failed, session will not be persisted:', e)
-        }
-      })
+    // _getOrCreateSessionId reutiliza sessão aberta se já existir no backend.
+    _getOrCreateSessionId(currentPatient?.id, type).then(id => { if (id) setSession(id) })
 
     setCanvasOpen(true)
   }
@@ -802,9 +799,7 @@ export default function App() {
     const html = session.htmlContent ||
       (session.textContent ? session.textContent.split('\n').map(l => `<p>${l}</p>`).join('') : '')
     // Create new session record in background
-    api.createSession({ patientId: currentPatient?.id, type: session.type || 'canvas' })
-      .then(s => setSession(s.id))
-      .catch(e => console.warn('[PsicoNotes] createSession (reopen) failed:', e))
+    _getOrCreateSessionId(currentPatient?.id, session.type || 'canvas').then(id => { if (id) setSession(id) })
 
     setCanvasInitialPageType(null) // recovery mode: não adiciona nova página
     setCanvasOpen(true)
