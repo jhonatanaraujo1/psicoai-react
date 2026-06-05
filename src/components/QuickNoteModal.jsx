@@ -1,4 +1,11 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
+import DOMPurify from 'dompurify'
+
+// FE-002: sanitizar draft do localStorage antes de usar como innerHTML
+const sanitizeQN = (html) => DOMPurify.sanitize(html || '', {
+  ALLOWED_TAGS: ['p', 'br', 'b', 'strong', 'em', 'i', 'u', 'ul', 'ol', 'li', 'span'],
+  ALLOWED_ATTR: [],
+})
 
 const NOTE_TYPES = [
   { id: 'post', label: 'Pós-atendimento', hint: 'Reflexões após a sessão' },
@@ -91,7 +98,7 @@ export default function QuickNoteModal({ isOpen, patient, onClose, onSave, onAna
     const id = setTimeout(() => {
       if (cancelled || !editorRef.current) return
       const draft = key ? localStorage.getItem(key) : null
-      editorRef.current.innerHTML = draft || ''
+      editorRef.current.innerHTML = sanitizeQN(draft) // FE-002 FIX
       setWordCount(editorRef.current.innerText.trim().split(/\s+/).filter(Boolean).length || 0)
       // Em touch NÃO auto-focamos: abre o teclado virtual imediatamente no Android/iOS
       if (!isTouchDevice.current) editorRef.current.focus()

@@ -5,7 +5,7 @@
  */
 
 import { useState } from 'react'
-import { api } from '../services'
+import { api, assertSafeRedirectUrl } from '../services'
 
 const PLANS = [
   {
@@ -66,6 +66,7 @@ export default function PaymentModal({ onLogout }) {
         cancelUrl:  `${origin}/?payment=canceled`,
         couponCode: appliedCoupon,
       })
+      assertSafeRedirectUrl(url)  // FE-004 FIX
       window.location.href = url
     } catch (e) {
       console.error('Checkout error:', e)
@@ -79,6 +80,7 @@ export default function PaymentModal({ onLogout }) {
       const { url } = await api.createBillingPortalSession({
         returnUrl: window.location.origin,
       })
+      assertSafeRedirectUrl(url)  // FE-004 FIX
       window.location.href = url
     } catch (e) {
       console.error('Portal error:', e)

@@ -23,6 +23,14 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { AES, enc as CryptoEnc } from 'crypto-js'
+import DOMPurify from 'dompurify'
+
+// FE-002: sanitização para editor de anotação clínica — permite formatação, bloqueia scripts
+const ANNOT_SANITIZE = {
+  ALLOWED_TAGS: ['p', 'br', 'b', 'strong', 'em', 'i', 'u', 'ul', 'ol', 'li', 'h3', 'h4', 'span', 'div'],
+  ALLOWED_ATTR: [],
+}
+const sanitizeAnnotHtml = (html) => DOMPurify.sanitize(html || '', ANNOT_SANITIZE)
 
 // ── A4 dimensions ─────────────────────────────────────────────────────────────
 const PAGE_W = 794
@@ -612,8 +620,9 @@ function TextPage({ page, isActive, onTextChange, onClick, sessionDate, onDateCh
   const editorRef = useRef(null)
 
   useEffect(() => {
+    // FE-002 FIX: sanitizar HTML antes de injetar — page.textHtml vem do localStorage/backend
     if (editorRef.current)
-      editorRef.current.innerHTML = page.textHtml || ''
+      editorRef.current.innerHTML = sanitizeAnnotHtml(page.textHtml)
   }, [page.id]) // só na montagem
 
   return (

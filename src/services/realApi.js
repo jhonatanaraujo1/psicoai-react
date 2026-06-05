@@ -141,6 +141,29 @@ async function req(method, path, body, opts = {}) {
   return json
 }
 
+// FE-004: validação de redirect URLs — previne open redirect via backend comprometido
+const ALLOWED_REDIRECT_ORIGINS = new Set([
+  'https://checkout.stripe.com',
+  'https://billing.stripe.com',
+  'https://accounts.google.com',
+  'https://oauth2.googleapis.com',
+])
+
+export function assertSafeRedirectUrl(url) {
+  try {
+    const parsed = new URL(url)
+    if (!ALLOWED_REDIRECT_ORIGINS.has(parsed.origin)) {
+      throw new Error(`Redirect bloqueado: domínio não autorizado (${parsed.origin})`)
+    }
+    if (parsed.protocol !== 'https:') {
+      throw new Error('Redirect bloqueado: apenas HTTPS é permitido')
+    }
+  } catch (e) {
+    if (e.message.startsWith('Redirect bloqueado')) throw e
+    throw new Error('Redirect bloqueado: URL inválida')
+  }
+}
+
 const get    = (path, params) => {
   const qs = params ? '?' + new URLSearchParams(Object.fromEntries(
     Object.entries(params).filter(([, v]) => v !== undefined && v !== null && v !== '')

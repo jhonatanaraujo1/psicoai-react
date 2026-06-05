@@ -1,6 +1,15 @@
 import { useState } from 'react'
+import DOMPurify from 'dompurify'
 import { api } from '../services'
 import { showToast } from './Toast'
+
+// FE-001: config de sanitização para impressão — permite formatação básica, bloqueia scripts
+const PRINT_SANITIZE = {
+  ALLOWED_TAGS: ['p', 'br', 'b', 'strong', 'em', 'i', 'u', 'ul', 'ol', 'li', 'h3', 'h4', 'span'],
+  ALLOWED_ATTR: [],  // zero atributos — sem style, href, on*
+}
+
+const sanitizeText = (text) => DOMPurify.sanitize(String(text ?? ''), PRINT_SANITIZE)
 
 // ── Report type definitions ──────────────────────────────────────────────────
 const REPORT_TYPES = [
@@ -251,18 +260,39 @@ export default function ReportModal({ isOpen, onClose, patient }) {
   }
 
   const print = () => {
-    const printWindow = window.open('', '_blank')
+    // FE-001 FIX: abrir sem window.opener (FE-006) + sanitizar TODOS os dados do backend
+    const printWindow = window.open('', '_blank', 'noopener,noreferrer')
     if (!printWindow) return
-    const html = report.sections.map(s =>
-      `${s.label ? `<h3 style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:#2D4A38;margin:20px 0 8px;border-bottom:1px solid #D4E8DA;padding-bottom:4px">${s.label}</h3>` : ''}
-       <p style="white-space:pre-line;margin:0 0 12px;font-size:13px;line-height:1.7;${s.isSignature ? 'margin-top:32px;border-top:1px solid #ddd;padding-top:20px' : ''}">${s.text}</p>`
-    ).join('')
+
+    // Sanitizar todos os campos antes de interpolar no HTML da janela
+    const safeTitle    = sanitizeText(report.typeLabel)
+    const safeName     = sanitizeText(patient.name)
+    const safeAudience = sanitizeText(report.audience)
+
+    const html = report.sections.map(s => {
+      const safeLabel = s.label ? `<h3>${sanitizeText(s.label)}</h3>` : ''
+      const safeText  = `<p class="${s.isSignature ? 'sig' : ''}">${sanitizeText(s.text)}</p>`
+      return safeLabel + safeText
+    }).join('')
+
     printWindow.document.write(`
-      <html><head><title>${report.typeLabel} — ${patient.name}</title>
-      <style>body{font-family:Georgia,serif;color:#1a1a1a;max-width:680px;margin:32px auto;padding:0 24px}h2{font-family:serif;color:#1E3328;border-bottom:2px solid #2D4A38;padding-bottom:12px}@media print{body{margin:0}}</style>
+      <!DOCTYPE html><html lang="pt-BR"><head>
+      <meta charset="UTF-8">
+      <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'">
+      <title>${safeTitle} — ${safeName}</title>
+      <style>
+        body{font-family:Georgia,serif;color:#1a1a1a;max-width:680px;margin:32px auto;padding:0 24px}
+        h2{font-family:serif;color:#1E3328;border-bottom:2px solid #2D4A38;padding-bottom:12px}
+        h3{font-size:11px;text-transform:uppercase;letter-spacing:1px;color:#2D4A38;margin:20px 0 8px;border-bottom:1px solid #D4E8DA;padding-bottom:4px}
+        p{white-space:pre-line;margin:0 0 12px;font-size:13px;line-height:1.7}
+        .sig{margin-top:32px;border-top:1px solid #ddd;padding-top:20px}
+        @media print{body{margin:0}}
+      </style>
       </head><body>
-      <h2>${report.typeLabel}</h2>
-      <p style="font-size:11px;color:#666;font-family:sans-serif">Paciente: ${patient.name} · ${report.audience} · Gerado em ${new Date().toLocaleDateString('pt-BR')}</p>
+      <h2>${safeTitle}</h2>
+      <p style="font-size:11px;color:#666;font-family:sans-serif">
+        Paciente: ${safeName} · ${safeAudience} · Gerado em ${new Date().toLocaleDateString('pt-BR')}
+      </p>
       ${html}
       </body></html>
     `)

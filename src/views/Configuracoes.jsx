@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { api } from '../services'
+import { api, assertSafeRedirectUrl } from '../services'
 import { showToast } from '../components/Toast'
 import { CustomSelect } from '../components/DateTimePickers'
 
@@ -145,6 +145,7 @@ function TabPlano({ profile }) {
       const cancelUrl = window.location.href
       const appliedCoupon = couponState?.valid ? coupon.trim() : null
       const { url } = await api.createCheckoutSession({ planId: 'clinico', successUrl, cancelUrl, couponCode: appliedCoupon })
+      assertSafeRedirectUrl(url)  // FE-004 FIX
       window.location.href = url
     } catch (e) {
       showToast('Erro ao iniciar checkout. Tente novamente.', 'error')
@@ -157,6 +158,7 @@ function TabPlano({ profile }) {
     try {
       const returnUrl = window.location.href
       const { url } = await api.createBillingPortalSession({ returnUrl })
+      assertSafeRedirectUrl(url)  // FE-004 FIX
       window.location.href = url
     } catch (e) {
       showToast('Erro ao abrir portal de cobrança. Tente novamente.', 'error')
@@ -566,7 +568,8 @@ function TabIntegracoes() {
         setStatus({ connected: true, email: 'demo@gmail.com', calendarSync: false })
         showToast('Google conectado com sucesso!', 'success')
       } else if (res.url) {
-        // Real: redirect to Google OAuth
+        // FE-004 FIX: validar que URL é do Google OAuth antes de redirecionar
+        assertSafeRedirectUrl(res.url)
         window.location.href = res.url
       }
     } catch (e) {

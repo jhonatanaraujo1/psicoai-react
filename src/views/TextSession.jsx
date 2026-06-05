@@ -1,4 +1,12 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
+import DOMPurify from 'dompurify'
+
+// FE-002: config de sanitização para editor clínico — formatação básica, zero scripts/eventos
+const EDITOR_SANITIZE = {
+  ALLOWED_TAGS: ['p', 'br', 'b', 'strong', 'em', 'i', 'u', 'ul', 'ol', 'li', 'h3', 'h4', 'span', 'div'],
+  ALLOWED_ATTR: [],
+}
+const sanitizeHtml = (html) => DOMPurify.sanitize(html || '', EDITOR_SANITIZE)
 
 const TOOLS = [
   { cmd: 'bold',          icon: <strong>B</strong>,  title: 'Negrito' },
@@ -63,10 +71,11 @@ export default function TextSession({ patient, isOpen, onClose, onMinimize, onAn
       setTimeout(() => {
         if (!editorRef.current) return
         const draft = patient?.id ? localStorage.getItem(textDraftKey(patient.id)) : null
+        // FE-002 FIX: sanitizar antes de injetar — draft e initialHtml podem conter XSS
         if (draft) {
-          editorRef.current.innerHTML = draft
+          editorRef.current.innerHTML = sanitizeHtml(draft)
         } else if (initialHtml) {
-          editorRef.current.innerHTML = initialHtml
+          editorRef.current.innerHTML = sanitizeHtml(initialHtml)
         } else {
           editorRef.current.innerHTML = ''
         }

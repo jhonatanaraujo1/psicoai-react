@@ -20,6 +20,9 @@ const HAS_RAILWAY = Boolean(import.meta.env.VITE_API_BASE_URL)
 export const auth = HAS_RAILWAY ? realModule.auth : mockModule.auth
 export const api  = HAS_RAILWAY ? realModule.api  : mockModule.api
 
+// FE-004: validação de redirect URLs — sempre exportada (mesma fn, independe de mock/real)
+export { assertSafeRedirectUrl } from './realApi.js'
+
 export const API_MODE = HAS_RAILWAY ? 'railway' : 'mock'
 
 if (import.meta.env.DEV) {
