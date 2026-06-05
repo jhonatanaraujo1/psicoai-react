@@ -139,26 +139,27 @@ function tryParse(raw, key) {
   try { return JSON.parse(raw) } catch { return null }
 }
 
-// sessionId como chave primária — evita múltiplas sessões do mesmo paciente colidirem
+// Um caderno por paciente — chave por paciente é a primária.
+// Chave por sessão é salva como espelho para recuperação cross-device via backend.
 function loadCanvasPages(sessionId, patientId) {
   try {
     const key = getEncKey()
-    // 1. Tenta chave por sessão (formato novo)
-    const rawSession = sessionId ? localStorage.getItem(canvasKey(sessionId)) : null
-    if (rawSession) {
-      const parsed = tryParse(rawSession, key)
-      if (Array.isArray(parsed) && parsed.length > 0) return parsed
-    }
-    // 2. Fallback: chave legada por paciente (migração de dados existentes)
+    // 1. Chave por paciente (primária — documento único por paciente)
     if (patientId) {
       const rawPat = localStorage.getItem(canvasKeyPat(patientId))
       if (rawPat) {
         const parsed = tryParse(rawPat, key)
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          // Migra para chave por sessão imediatamente (se sessionId disponível)
-          if (sessionId) saveCanvasPages(sessionId, patientId, parsed)
-          return parsed
-        }
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed
+      }
+    }
+    // 2. Fallback: chave por sessão (dados legados ou cross-device)
+    const rawSession = sessionId ? localStorage.getItem(canvasKey(sessionId)) : null
+    if (rawSession) {
+      const parsed = tryParse(rawSession, key)
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        // Migra para chave por paciente
+        if (patientId) saveCanvasPages(sessionId, patientId, parsed)
+        return parsed
       }
     }
     return null
@@ -175,9 +176,10 @@ function saveCanvasPages(sessionId, patientId, pages) {
     })))
     if (data.length >= 4 * 1024 * 1024) return // muito grande
     const encrypted = AES.encrypt(data, getEncKey()).toString()
-    // Salva sempre na chave por sessão (primária)
-    const key = sessionId ? canvasKey(sessionId) : canvasKeyPat(patientId)
-    localStorage.setItem(key, encrypted)
+    // Salva sempre na chave por paciente (documento único)
+    if (patientId) localStorage.setItem(canvasKeyPat(patientId), encrypted)
+    // Espelho na chave por sessão (para autosave backend / cross-device)
+    if (sessionId) localStorage.setItem(canvasKey(sessionId), encrypted)
   } catch { /* quota */ }
 }
 

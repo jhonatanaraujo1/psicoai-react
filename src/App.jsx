@@ -792,23 +792,9 @@ export default function App() {
     }
   }
 
-  // Abre sessão histórica existente — VIEW mode
-  const handleReopenSession = (session) => {
-    // Reconstrói canvasData a partir de canvasData (canvas) ou htmlContent/textContent (nota rápida/texto)
-    let initialData = session.canvasData || session.canvasDataJson || null
-    if (!initialData) {
-      const html = session.htmlContent ||
-        (session.textContent ? session.textContent.split('\n').map(l => `<p>${l || '<br>'}</p>`).join('') : '')
-      if (html) {
-        initialData = JSON.stringify([{ id: 'p0', pageType: 'text', textHtml: html, dataUrl: null }])
-      }
-    }
-    setCanvasInitialData(initialData)
-    setViewOnlySessionId(session.id)
-    setCanvasViewOnly(true)
-    setCanvasInitialPageType(null)
-    setActiveSessionType('canvas')
-    setCanvasOpen(true)
+  // Clique em qualquer anotação → abre o caderno completo do paciente (todas as páginas juntas)
+  const handleReopenSession = (_session) => {
+    _openExistingAnnotation(currentPatient)
   }
 
   // Called when the user closes the session without requesting AI analysis
