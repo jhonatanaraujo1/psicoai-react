@@ -129,6 +129,46 @@ function drawShape(ctx, shape, x1, y1, x2, y2, color, lineWidth) {
   ctx.restore()
 }
 
+// ── Replay vetorial: desenha UM traço a partir do modelo JSON ────────────────
+// Traço livre/borracha: { tool, color, size, points:[[x,y],…] }
+// Forma:               { tool, color, size, from:[x,y], to:[x,y] }
+function drawStrokeVector(ctx, s) {
+  if (!s) return
+  const size = (s.size || 3) * SCALE
+  ctx.save()
+  if (s.tool === 'eraser') {
+    ctx.globalCompositeOperation = 'destination-out'
+    ctx.strokeStyle = 'rgba(0,0,0,1)'; ctx.fillStyle = 'rgba(0,0,0,1)'
+  } else {
+    ctx.globalCompositeOperation = 'source-over'
+    ctx.strokeStyle = s.color || '#1A1F1C'; ctx.fillStyle = s.color || '#1A1F1C'
+  }
+  ctx.lineCap = 'round'; ctx.lineJoin = 'round'
+  if (SHAPE_TOOLS.includes(s.tool) && s.from && s.to) {
+    drawShape(ctx, s.tool, s.from[0], s.from[1], s.to[0], s.to[1], s.color || '#1A1F1C', size * 1.5)
+  } else if (Array.isArray(s.points) && s.points.length) {
+    ctx.lineWidth = size
+    if (s.points.length === 1) {
+      ctx.beginPath(); ctx.arc(s.points[0][0], s.points[0][1], size / 2, 0, Math.PI * 2); ctx.fill()
+    } else {
+      ctx.beginPath(); ctx.moveTo(s.points[0][0], s.points[0][1])
+      for (let i = 1; i < s.points.length; i++) ctx.lineTo(s.points[i][0], s.points[i][1])
+      ctx.stroke()
+    }
+  }
+  ctx.restore()
+}
+
+// Limpa (branco) e reproduz todos os traços. Fonte de verdade do desenho.
+function redrawStrokes(canvas, strokes) {
+  if (!canvas) return
+  const ctx = canvas.getContext('2d')
+  ctx.globalCompositeOperation = 'source-over'
+  ctx.fillStyle = '#fff'
+  ctx.fillRect(0, 0, canvas.width, canvas.height)
+  ;(strokes || []).forEach(s => drawStrokeVector(ctx, s))
+}
+
 // Tenta descriptografar com a chave atual; se falhar, tenta JSON puro (dados legados)
 function tryParse(raw, key) {
   try {
@@ -171,7 +211,8 @@ function saveCanvasPages(sessionId, patientId, pages) {
     const data = JSON.stringify(pages.map(p => ({
       id: p.id,
       pageType: p.pageType || 'draw',
-      dataUrl: p.dataUrl || null,
+      strokes: Array.isArray(p.strokes) ? p.strokes : null,  // desenho vetorial (JSON)
+      dataUrl: p.dataUrl || null,       // thumbnail PNG p/ a barra lateral (derivado)
       textHtml: p.textHtml || null,
       sessionId: p.sessionId || null,   // = noteId da página (modelo página-por-nota)
       noteDate: p.noteDate || null,     // data clínica própria da página
@@ -246,22 +287,27 @@ function CanvasPage({ page, isActive, toolRef, colorRef, sizeRef, onStrokeEnd, o
   const canvasRef        = useRef(null)
   const isDrawing        = useRef(false)
   const lastPos          = useRef({ x: 0, y: 0 })
-  const prevDataUrl      = useRef(null) // snapshot antes do traço comecar
-  const shapeStartRef    = useRef(null) // {x,y} — início do shape drag
-  const shapeSnapshotRef = useRef(null) // ImageData — canvas antes do preview
+  // Modelo vetorial: traços são a fonte de verdade (JSON), não o bitmap.
+  const strokesRef       = useRef(Array.isArray(page.strokes) ? [...page.strokes] : [])
+  const currentStrokeRef = useRef(null) // traço em andamento
 
   useEffect(() => { page.canvasRef.current = canvasRef.current })
 
+  // Render inicial: reproduz os traços (JSON). Legado: se só houver dataUrl (PNG), desenha a imagem.
   useEffect(() => {
     const canvas = canvasRef.current
     if (!canvas) return
-    const ctx = canvas.getContext('2d')
-    ctx.fillStyle = '#ffffff'
-    ctx.fillRect(0, 0, canvas.width, canvas.height)
-    if (page.dataUrl) {
-      const img = new Image()
-      img.onload = () => ctx.drawImage(img, 0, 0)
-      img.src = page.dataUrl
+    strokesRef.current = Array.isArray(page.strokes) ? [...page.strokes] : []
+    if (strokesRef.current.length) {
+      redrawStrokes(canvas, strokesRef.current)
+    } else {
+      const ctx = canvas.getContext('2d')
+      ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, canvas.width, canvas.height)
+      if (page.dataUrl) {              // compat: caderno antigo salvo como PNG
+        const img = new Image()
+        img.onload = () => ctx.drawImage(img, 0, 0)
+        img.src = page.dataUrl
+      }
     }
   }, [page.id]) // eslint-disable-line
 
@@ -281,25 +327,18 @@ function CanvasPage({ page, isActive, toolRef, colorRef, sizeRef, onStrokeEnd, o
     e.preventDefault()
     canvasRef.current?.setPointerCapture(e.pointerId)
     isDrawing.current = true
-    prevDataUrl.current = canvasRef.current?.toDataURL('image/png') || null
-    const pos = getPos(e)
+    const pos  = getPos(e)
     lastPos.current = pos
-    const canvas = canvasRef.current
-    const ctx    = canvas?.getContext('2d')
-    if (!ctx) return
-    if (SHAPE_TOOLS.includes(toolRef.current)) {
-      // Shape mode: record start position + take ImageData snapshot for live preview
-      shapeStartRef.current    = pos
-      shapeSnapshotRef.current = ctx.getImageData(0, 0, canvas.width, canvas.height)
+    const tool = toolRef.current
+    const size = sizeRef.current
+    const color = colorRef.current
+    if (SHAPE_TOOLS.includes(tool)) {
+      currentStrokeRef.current = { tool, color, size, from: [pos.x, pos.y], to: [pos.x, pos.y] }
     } else {
-      // Freehand: draw initial dot
-      ctx.save()
-      ctx.globalCompositeOperation = toolRef.current === 'eraser' ? 'destination-out' : 'source-over'
-      ctx.fillStyle = toolRef.current === 'eraser' ? 'rgba(0,0,0,1)' : colorRef.current
-      ctx.beginPath()
-      ctx.arc(pos.x, pos.y, (sizeRef.current * SCALE) / 2, 0, Math.PI * 2)
-      ctx.fill()
-      ctx.restore()
+      // Traço livre/borracha: começa a coletar pontos + desenha ponto inicial (live)
+      currentStrokeRef.current = { tool, color, size, points: [[pos.x, pos.y]] }
+      const ctx = canvasRef.current?.getContext('2d')
+      if (ctx) drawStrokeVector(ctx, { tool, color, size, points: [[pos.x, pos.y]] })
     }
   }, []) // eslint-disable-line
 
@@ -309,21 +348,21 @@ function CanvasPage({ page, isActive, toolRef, colorRef, sizeRef, onStrokeEnd, o
     e.preventDefault()
     const canvas = canvasRef.current
     const ctx    = canvas?.getContext('2d')
-    if (!ctx) return
+    const cur    = currentStrokeRef.current
+    if (!ctx || !cur) return
     const pos = getPos(e)
-    if (SHAPE_TOOLS.includes(toolRef.current)) {
-      if (!shapeStartRef.current || !shapeSnapshotRef.current) return
-      // Restore to pre-drag state, then draw live preview
-      ctx.putImageData(shapeSnapshotRef.current, 0, 0)
-      const lineW = sizeRef.current * SCALE * 1.5
-      drawShape(ctx, toolRef.current, shapeStartRef.current.x, shapeStartRef.current.y, pos.x, pos.y, colorRef.current, lineW)
+    if (SHAPE_TOOLS.includes(cur.tool)) {
+      // Preview: redesenha os traços confirmados + a forma em andamento
+      cur.to = [pos.x, pos.y]
+      redrawStrokes(canvas, strokesRef.current)
+      drawStrokeVector(ctx, cur)
     } else {
-      const pressure = (e.pointerType === 'pen' && e.pressure > 0) ? e.pressure : 0.5
-      const lineW    = (sizeRef.current * SCALE) * (0.4 + pressure * 1.2)
+      // Traço livre: acumula ponto e desenha o segmento (live = replay)
+      cur.points.push([pos.x, pos.y])
       ctx.save()
-      ctx.globalCompositeOperation = toolRef.current === 'eraser' ? 'destination-out' : 'source-over'
-      ctx.strokeStyle = toolRef.current === 'eraser' ? 'rgba(0,0,0,1)' : colorRef.current
-      ctx.lineWidth = lineW; ctx.lineCap = 'round'; ctx.lineJoin = 'round'
+      ctx.globalCompositeOperation = cur.tool === 'eraser' ? 'destination-out' : 'source-over'
+      ctx.strokeStyle = cur.tool === 'eraser' ? 'rgba(0,0,0,1)' : cur.color
+      ctx.lineWidth = (cur.size || 3) * SCALE; ctx.lineCap = 'round'; ctx.lineJoin = 'round'
       ctx.beginPath()
       ctx.moveTo(lastPos.current.x, lastPos.current.y)
       ctx.lineTo(pos.x, pos.y)
@@ -337,10 +376,17 @@ function CanvasPage({ page, isActive, toolRef, colorRef, sizeRef, onStrokeEnd, o
     if (!isDrawing.current) return
     isDrawing.current = false
     e.preventDefault()
-    shapeStartRef.current    = null
-    shapeSnapshotRef.current = null
-    onStrokeEnd(page.id, prevDataUrl.current)
-    prevDataUrl.current = null
+    const cur = currentStrokeRef.current
+    currentStrokeRef.current = null
+    if (!cur) return
+    // Descarta forma sem arrasto (clique único em modo shape)
+    const isShape = SHAPE_TOOLS.includes(cur.tool)
+    if (isShape && cur.from[0] === cur.to[0] && cur.from[1] === cur.to[1]) return
+    strokesRef.current = [...strokesRef.current, cur]
+    const canvas = canvasRef.current
+    if (canvas) redrawStrokes(canvas, strokesRef.current)
+    const dataUrl = canvas?.toDataURL('image/png') || null
+    onStrokeEnd(page.id, strokesRef.current, dataUrl)
   }, [page.id, onStrokeEnd])
 
   return (
@@ -828,8 +874,7 @@ export default function AnnotationSession({
   const [tool, setTool]             = useState('pen')
   const [color, setColor]           = useState('#1C1C1C')
   const [size, setSize]             = useState(3)
-  // Undo stack: { [pageId]: string[] } — array de dataUrls
-  const undoStackRef = useRef({})
+  // Redo stack por página: { [pageId]: stroke[] } — traços removidos via undo
   const redoStackRef = useRef({})
 
   const [zoom, setZoom] = useState(1.0)
@@ -910,7 +955,7 @@ export default function AnnotationSession({
       }
 
       const restored = saved
-        ? saved.map(p => ({ id: p.id, pageType: p.pageType || 'draw', canvasRef: { current: null }, dataUrl: p.dataUrl || null, textHtml: p.textHtml || null, sessionId: p.sessionId || null, noteDate: p.noteDate || defaultDate }))
+        ? saved.map(p => ({ id: p.id, pageType: p.pageType || 'draw', canvasRef: { current: null }, strokes: Array.isArray(p.strokes) ? p.strokes : null, dataUrl: p.dataUrl || null, textHtml: p.textHtml || null, sessionId: p.sessionId || null, noteDate: p.noteDate || defaultDate }))
         : []
 
       // Semeia o mapa pageId→noteId a partir das páginas já com nota (dedup robusto)
@@ -974,11 +1019,13 @@ export default function AnnotationSession({
           ? (new DOMParser().parseFromString(h, 'text/html').body.textContent || '').slice(0, 80_000)
           : null
         let createdAny = false
+        const stripPrefix = (u) => (typeof u === 'string' && u.includes(',')) ? u.split(',')[1] : (u || null)
         for (const p of pagesSnapshot) {
           const isText = p.pageType === 'text'
           const html = isText ? (p.textHtml || null) : null
           const text = stripHtml(html)
-          const hasContent = !!(html || p.dataUrl)
+          const hasStrokes = Array.isArray(p.strokes) && p.strokes.length > 0
+          const hasContent = !!(html || hasStrokes || p.dataUrl)
           // Fonte de verdade do noteId: mapa síncrono > sessionId da página
           let noteId = map[p.id] || p.sessionId || null
           if (noteId && !map[p.id]) map[p.id] = noteId
@@ -993,10 +1040,14 @@ export default function AnnotationSession({
             p.sessionId = noteId
             createdAny = true
           }
-          const canvasData = (!isText && p.dataUrl) ? JSON.stringify({ dataUrl: p.dataUrl }) : null
+          // Canvas = JSON vetorial de traços (não bitmap). imageBase64 = thumbnail
+          // PNG em base64 PURO (sem prefixo data:) para a visão da IA.
+          const canvasData = (!isText && (hasStrokes || p.dataUrl))
+            ? JSON.stringify({ v: 1, w: PAGE_W * SCALE, h: PAGE_H * SCALE, strokes: p.strokes || [] })
+            : null
           await onAutosaveNote(noteId, {
             textContent: text, htmlContent: html,
-            canvasData, imageBase64: !isText ? p.dataUrl : null,
+            canvasData, imageBase64: !isText ? stripPrefix(p.dataUrl) : null,
           })
         }
         if (createdAny) {
@@ -1118,29 +1169,35 @@ export default function AnnotationSession({
     document.execCommand('insertText', false, (editor.innerText.trim() ? '\n\n' : '') + label + ': ')
   }
 
-  // ── Undo/Redo por página — declarado ANTES de handleStrokeEnd para evitar TDZ na dep array ──
-  const pushUndo = useCallback((pageId, dataUrl) => {
-    const stack = undoStackRef.current
-    if (!stack[pageId]) stack[pageId] = []
-    stack[pageId].push(dataUrl)
-    if (stack[pageId].length > 15) stack[pageId].shift() // SEC-023: 15 itens ≈ 30MB max vs 80MB com 40
-    redoStackRef.current[pageId] = [] // ação nova limpa redo
-  }, [])
-
-  // ── Canvas: thumbnail após traço ──────────────────────────────────────────
-  const handleStrokeEnd = useCallback((pageId, prevDataUrl) => {
+  // ── Canvas: traço finalizado (modelo vetorial) ─────────────────────────────
+  // Recebe os traços (JSON) + thumbnail PNG. Os traços são a fonte de verdade.
+  const handleStrokeEnd = useCallback((pageId, strokes, dataUrl) => {
     setIsDirty(true)
-    pushUndo(pageId, prevDataUrl || 'blank')
+    redoStackRef.current[pageId] = []   // ação nova limpa o redo
+    setPages(prev => {
+      const updated = prev.map(p => p.id === pageId ? { ...p, strokes: [...strokes], dataUrl } : p)
+      if (patient?.id) saveCanvasPages(sessionIdRef.current, patient.id, updated)
+      scheduleBackendSave(updated)
+      return updated
+    })
+  }, [patient?.id, scheduleBackendSave])
+
+  // Aplica um conjunto de traços a uma página: redesenha o canvas + persiste.
+  const applyStrokes = useCallback((pageId, strokes) => {
     setPages(prev => {
       const updated = prev.map(p => {
         if (p.id !== pageId) return p
-        return { ...p, dataUrl: p.canvasRef.current?.toDataURL('image/png') || p.dataUrl }
+        const canvas = p.canvasRef.current
+        let dataUrl = p.dataUrl
+        if (canvas) { redrawStrokes(canvas, strokes); dataUrl = canvas.toDataURL('image/png') }
+        return { ...p, strokes, dataUrl }
       })
       if (patient?.id) saveCanvasPages(sessionIdRef.current, patient.id, updated)
       scheduleBackendSave(updated)
       return updated
     })
-  }, [patient?.id, pushUndo, scheduleBackendSave])
+    setIsDirty(true)
+  }, [patient?.id, scheduleBackendSave])
 
   // ── Canvas: nova página ────────────────────────────────────────────────────
   const addPage = useCallback((pageType = 'draw') => {
@@ -1239,60 +1296,28 @@ export default function AnnotationSession({
     return () => document.removeEventListener('pointerdown', handler, true)
   }, [showAddMenu])
 
-  // M-1: version counter previne race condition — stale onload de imagem anterior não sobrescreve nova
-  const undoVersionRef = useRef(0)
-
   const handleUndo = useCallback(() => {
     const page = pages[activePage]
     if (!page || page.pageType !== 'draw') return
-    const stack = undoStackRef.current[page.id] || []
-    if (stack.length === 0) return
-    const prev = stack.pop()
-    const canvas = page.canvasRef.current
-    if (!canvas) return
-    const ctx = canvas.getContext('2d')
+    const strokes = Array.isArray(page.strokes) ? page.strokes : []
+    if (strokes.length === 0) return
+    const removed = strokes[strokes.length - 1]
     const rStack = redoStackRef.current
     if (!rStack[page.id]) rStack[page.id] = []
-    rStack[page.id].push(canvas.toDataURL('image/png'))
-    if (prev === 'blank') {
-      ctx.fillStyle = '#fff'
-      ctx.fillRect(0, 0, canvas.width, canvas.height)
-    } else {
-      undoVersionRef.current += 1
-      const myVersion = undoVersionRef.current
-      const img = new Image()
-      img.onload = () => {
-        if (undoVersionRef.current !== myVersion) return // stale — descarta
-        ctx.clearRect(0, 0, canvas.width, canvas.height)
-        ctx.drawImage(img, 0, 0)
-      }
-      img.src = prev
-    }
-    setPages(pr => pr.map(p => p.id === page.id ? { ...p, dataUrl: prev === 'blank' ? null : prev } : p))
-    setIsDirty(true)
-  }, [pages, activePage])
+    rStack[page.id].push(removed)              // permite refazer
+    if (rStack[page.id].length > 30) rStack[page.id].shift()
+    applyStrokes(page.id, strokes.slice(0, -1))
+  }, [pages, activePage, applyStrokes])
 
   const handleRedo = useCallback(() => {
     const page = pages[activePage]
     if (!page || page.pageType !== 'draw') return
     const rStack = redoStackRef.current[page.id] || []
     if (rStack.length === 0) return
-    const next = rStack.pop()
-    const canvas = page.canvasRef.current
-    if (!canvas) return
-    const ctx = canvas.getContext('2d')
-    const stack = undoStackRef.current
-    if (!stack[page.id]) stack[page.id] = []
-    stack[page.id].push(canvas.toDataURL('image/png'))
-    const img = new Image()
-    img.onload = () => {
-      ctx.clearRect(0, 0, canvas.width, canvas.height)
-      ctx.drawImage(img, 0, 0)
-    }
-    img.src = next
-    setPages(pr => pr.map(p => p.id === page.id ? { ...p, dataUrl: next } : p))
-    setIsDirty(true)
-  }, [pages, activePage])
+    const restored = rStack.pop()
+    const strokes = Array.isArray(page.strokes) ? page.strokes : []
+    applyStrokes(page.id, [...strokes, restored])
+  }, [pages, activePage, applyStrokes])
 
   // Keyboard shortcuts: Undo/Redo + Cmd+S (save modal) + Cmd+Enter (finish)
   useEffect(() => {

@@ -416,6 +416,8 @@ export default function App() {
               const parsed = JSON.parse(cd)
               if (Array.isArray(parsed) && parsed.length > 0)
                 return parsed.map(p => ({ ...p, sessionId: s.id }))
+              if (parsed && Array.isArray(parsed.strokes))
+                return [{ id: `p-${s.id}`, pageType: 'draw', strokes: parsed.strokes, dataUrl: null, textHtml: null, sessionId: s.id }]
               if (parsed && parsed.dataUrl)
                 return [{ id: `p-${s.id}`, pageType: 'draw', dataUrl: parsed.dataUrl, textHtml: null, sessionId: s.id }]
             } catch {}
@@ -848,7 +850,10 @@ export default function App() {
                     // Legado: caderno inteiro como array de páginas
                     if (Array.isArray(parsed) && parsed.length > 0)
                       return parsed.map(p => ({ ...p, sessionId: s.id }))
-                    // Página-por-nota: canvas único { dataUrl }
+                    // Página-por-nota: canvas vetorial { v, strokes }
+                    if (parsed && Array.isArray(parsed.strokes))
+                      return [{ id: `p-${s.id}`, pageType: 'draw', strokes: parsed.strokes, dataUrl: null, textHtml: null, sessionId: s.id }]
+                    // Legado: canvas único como PNG { dataUrl }
                     if (parsed && parsed.dataUrl)
                       return [{ id: `p-${s.id}`, pageType: 'draw', dataUrl: parsed.dataUrl, textHtml: null, sessionId: s.id }]
                   } catch {}
