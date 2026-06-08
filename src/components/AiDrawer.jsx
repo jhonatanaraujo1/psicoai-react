@@ -43,7 +43,7 @@ function LoadingState() {
   return (
     <div className="ai-loading-wrap">
       <div className="ai-spinner" />
-      <div className="ai-loading-text">Claude está analisando a sessão…</div>
+      <div className="ai-loading-text">Claude está analisando as anotações…</div>
       <div className="ai-loading-steps">
         {STEP_LABELS.map((s, i) => (
           <div key={i} className="ai-step" style={{ opacity: i <= step ? 1 : 0.35, transition: 'opacity 0.4s' }}>
@@ -169,12 +169,12 @@ export default function AiDrawer({ isOpen, onClose, onSave, patient, result, loa
                 </div>
               )}
 
-              {/* Resumo da sessão */}
+              {/* Resumo da análise */}
               {result.summary && (
                 <div className="ai-section">
                   <div className="ai-sec-header">
                     <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-                    Resumo da Sessão
+                    Resumo da Análise
                   </div>
                   <div className="ai-sec-body">
                     <p style={{ fontSize: '13px', color: 'var(--d)', lineHeight: 1.65 }}>{result.summary}</p>
@@ -249,7 +249,7 @@ export default function AiDrawer({ isOpen, onClose, onSave, patient, result, loa
                           </div>
                           {(h.sessionCount != null) && (
                             <div style={{ fontFamily: "'Fraunces', serif", fontSize: '13px', color: 'var(--g600)', fontWeight: 600, flexShrink: 0, marginLeft: '8px', background: 'var(--g50)', padding: '3px 8px', borderRadius: '12px' }}>
-                              {h.sessionCount} {h.sessionCount === 1 ? 'sessão' : 'sessões'}
+                              {h.sessionCount} {h.sessionCount === 1 ? 'anotação' : 'anotações'}
                             </div>
                           )}
                         </div>
@@ -310,11 +310,11 @@ export default function AiDrawer({ isOpen, onClose, onSave, patient, result, loa
                 </div>
               )}
 
-              {/* Quantas sessões foram analisadas */}
+              {/* Quantas anotações foram analisadas */}
               {result.sessionCount > 1 && (
                 <div style={{ background: 'var(--g50)', border: '1px solid var(--g100)', borderRadius: 'var(--r)', padding: '8px 12px', marginBottom: '8px', fontSize: '11px', color: 'var(--g700)', display: 'flex', alignItems: 'center', gap: '6px' }}>
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-                  Reflexão baseada em <strong>{result.sessionCount} sessões</strong> — análise longitudinal
+                  Reflexão baseada em <strong>{result.sessionCount} anotações</strong> — análise longitudinal
                 </div>
               )}
 
@@ -415,7 +415,7 @@ export default function AiDrawer({ isOpen, onClose, onSave, patient, result, loa
               )}
               {(result.refineCount ?? 0) >= 3 && (
                 <div style={{ marginTop: '8px', fontSize: '11px', color: 'var(--gr4)', textAlign: 'center', padding: '6px' }}>
-                  Limite de 3 refinamentos atingido para esta sessão.
+                  Limite de 3 refinamentos atingido para esta análise.
                 </div>
               )}
 

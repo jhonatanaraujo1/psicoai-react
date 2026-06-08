@@ -446,7 +446,7 @@ export default function Paciente({ patient: propPatient, setCurrentView, onSessa
                           setSessions(prev => prev.filter(x => x.id !== s.id))
                           setSessionDeleteId(null)
                         } catch (e) {
-                          showToast('Não foi possível excluir a sessão: ' + (e.message || 'Erro desconhecido'), 'error')
+                          showToast('Não foi possível excluir a anotação: ' + (e.message || 'Erro desconhecido'), 'error')
                           setSessionDeleteId(null)
                         }
                       }} style={{ ...btnSt, background: 'var(--danger)', color: '#fff', fontSize: '11px', padding: '5px 10px' }}>Confirmar</button>

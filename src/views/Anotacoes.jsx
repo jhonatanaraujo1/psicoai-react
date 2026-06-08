@@ -138,7 +138,7 @@ function AnotacaoCard({ s, query, onPatientClick, onOpenCanvas, expanded, onTogg
                 : <span>{hl.plain}{hl.plain?.length === 200 ? '…' : ''}</span>
             ) : (
               <span style={{ color: 'var(--gr3)', fontStyle: 'italic' }}>
-                {isCanvas ? 'Sessão registrada em canvas' : 'Sem conteúdo de texto'}
+                {isCanvas ? 'Anotação registrada em canvas' : 'Sem conteúdo de texto'}
               </span>
             )}
           </div>
@@ -190,7 +190,7 @@ function AnotacaoCard({ s, query, onPatientClick, onOpenCanvas, expanded, onTogg
                 )}
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 16px', color: 'var(--gr4)', fontSize: 12 }}>
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/></svg>
-                  Sessão registrada em canvas
+                  Anotação registrada em canvas
                   {onOpenCanvas && (
                     <button
                       onClick={e => { e.stopPropagation(); onOpenCanvas(s) }}
@@ -203,7 +203,7 @@ function AnotacaoCard({ s, query, onPatientClick, onOpenCanvas, expanded, onTogg
               </div>
             ) : (
               <div style={{ color: 'var(--gr4)', fontSize: 13, textAlign: 'center', padding: '12px' }}>
-                Nenhum conteúdo de texto nesta sessão.
+                Nenhum conteúdo de texto nesta anotação.
               </div>
             )}
           </div>
@@ -399,7 +399,7 @@ export default function Anotacoes({ setCurrentView, onOpenCanvas }) {
             {search || filterPatient || filterEv ? 'Nenhuma anotação encontrada' : 'Nenhuma anotação ainda'}
           </div>
           <div style={{ fontSize: 13, color: 'var(--gr4)', lineHeight: 1.6, maxWidth: 300, margin: '0 auto' }}>
-            {search || filterPatient || filterEv ? 'Tente outros filtros.' : 'Suas anotações aparecem aqui após salvar uma sessão.'}
+            {search || filterPatient || filterEv ? 'Tente outros filtros.' : 'Suas anotações aparecem aqui após salvar uma anotação.'}
           </div>
         </div>
       ) : (() => {

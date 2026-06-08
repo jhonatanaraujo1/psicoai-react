@@ -65,7 +65,7 @@ const TEMPLATES = [
     id: 'evolucao_longitudinal',
     icon: '↑',
     label: 'Evolução',
-    desc: 'O que mudou entre as sessões — requer análise multi-sessão',
+    desc: 'O que mudou entre as anotações — requer múltiplas anotações',
     color: 'var(--g600)',
     bg: 'var(--g50)',
     border: 'var(--g300)',
@@ -178,7 +178,7 @@ export default function AnalyzeSessionsModal({ pendingData, patient, currentSess
             Análise clínica com IA
           </div>
           <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.55)' }}>
-            {patientName} · Escolha o foco da análise e as sessões a incluir
+            {patientName} · Escolha o foco da análise e as anotações a incluir
           </div>
         </div>
 
@@ -234,7 +234,7 @@ export default function AnalyzeSessionsModal({ pendingData, patient, currentSess
           {/* ── Sessão atual — sempre incluída ───────────────────────────── */}
           <div style={{ marginBottom: '16px' }}>
             <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.8px', textTransform: 'uppercase', color: 'var(--gr4)', marginBottom: '8px' }}>
-              Sessão atual — sempre incluída
+              Anotação atual — sempre incluída
             </div>
             <div style={{
               border: '2px solid var(--g400)', borderRadius: 'var(--r2)',
@@ -274,7 +274,7 @@ export default function AnalyzeSessionsModal({ pendingData, patient, currentSess
               )}
               {!currentPreview && !pendingData?.imageBase64 && (
                 <div style={{ fontSize: '11px', color: 'var(--warn)', paddingLeft: '26px' }}>
-                  Sessão sem anotações — feche e registre as notas antes de analisar para obter um resultado mais preciso
+                  Anotação vazia — feche e registre as notas antes de analisar para obter um resultado mais preciso
                 </div>
               )}
             </div>
@@ -299,7 +299,7 @@ export default function AnalyzeSessionsModal({ pendingData, patient, currentSess
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--g600)" strokeWidth="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
                   <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--d)' }}>
-                    Adicionar sessões anteriores
+                    Adicionar anotações anteriores
                   </span>
                   <span style={{ fontSize: '10px', color: 'var(--g600)', background: 'var(--g50)', padding: '1px 7px', borderRadius: '20px', fontWeight: 600 }}>
                     opcional · revela padrões ao longo do tempo
@@ -375,7 +375,7 @@ export default function AnalyzeSessionsModal({ pendingData, patient, currentSess
 
                   {pastSessions.length > 10 && (
                     <div style={{ fontSize: '11px', color: 'var(--gr4)', textAlign: 'center', padding: '4px' }}>
-                      + {pastSessions.length - 10} sessões mais antigas não exibidas
+                      + {pastSessions.length - 10} anotações mais antigas não exibidas
                     </div>
                   )}
                 </div>
@@ -385,13 +385,13 @@ export default function AnalyzeSessionsModal({ pendingData, patient, currentSess
 
           {!loading && pastSessions.length === 0 && (
             <div style={{ fontSize: '12px', color: 'var(--gr5)', textAlign: 'center', padding: '8px', background: 'var(--ow)', borderRadius: 'var(--r)' }}>
-              Nenhuma sessão anterior concluída para este paciente
+              Nenhuma anotação anterior registrada para este paciente
             </div>
           )}
 
           {loading && (
             <div style={{ fontSize: '12px', color: 'var(--gr4)', padding: '8px', textAlign: 'center' }}>
-              Carregando histórico de sessões…
+              Carregando histórico de anotações…
             </div>
           )}
         </div>
@@ -444,10 +444,10 @@ export default function AnalyzeSessionsModal({ pendingData, patient, currentSess
               }}>
                 <span>
                   {pricing.tier === 'muito-alto'
-                    ? '⚠ Volume muito extenso — considere selecionar menos sessões ou fazer upgrade'
+                    ? '⚠ Volume muito extenso — considere selecionar menos anotações ou fazer upgrade'
                     : pricing.tier === 'alto'
                     ? '⚠ Volume alto — pacotes de análise disponíveis nos planos'
-                    : '↑ Volume médio — analise com mais sessões em planos superiores'}
+                    : '↑ Volume médio — analise com mais anotações em planos superiores'}
                 </span>
                 <a href="#planos" onClick={e => { e.preventDefault(); window.open('/#precos', '_blank') }}
                   style={{ fontSize: '11px', fontWeight: 700, color: pricing.color, textDecoration: 'none', whiteSpace: 'nowrap', borderBottom: `1px solid ${pricing.color}` }}>
@@ -459,7 +459,7 @@ export default function AnalyzeSessionsModal({ pendingData, patient, currentSess
             {/* Hint longitudinal */}
             {selected.size > 0 && !pricing.label && (
               <div style={{ marginTop: '6px', fontSize: '11px', color: 'var(--g700)', background: 'var(--g50)', border: '1px solid var(--g100)', borderRadius: '6px', padding: '6px 10px', lineHeight: 1.4 }}>
-                ✦ Análise longitudinal: padrões <strong>entre {totalSelected} sessões</strong> detectados
+                ✦ Análise longitudinal: padrões <strong>entre {totalSelected} anotações</strong> detectados
               </div>
             )}
           </div>
@@ -486,7 +486,7 @@ export default function AnalyzeSessionsModal({ pendingData, patient, currentSess
               onMouseOut={e => e.currentTarget.style.opacity = '1'}
             >
               <span style={{ fontSize: '13px' }}>{currentTpl.icon}</span>
-              Gerar análise: {currentTpl.label} · {totalSelected} {totalSelected === 1 ? 'sessão' : 'sessões'}
+              Gerar análise: {currentTpl.label} · {totalSelected} {totalSelected === 1 ? 'anotação' : 'anotações'}
             </button>
           </div>
 
