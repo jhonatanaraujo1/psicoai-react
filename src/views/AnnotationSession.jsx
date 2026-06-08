@@ -51,8 +51,8 @@ const GUIDE = [
 
 // ── Canvas localStorage ───────────────────────────────────────────────────────
 // Chave por sessionId (preferencial) ou patientId (fallback para sessões antigas)
-const canvasKey    = (sessionId) => `psicoai_canvas2_s${sessionId}`
-const canvasKeyPat = (patientId) => `psicoai_canvas2_p${patientId}` // legado
+const canvasKey    = (sessionId) => `psicoai_canvas3_s${sessionId}`
+const canvasKeyPat = (patientId) => `psicoai_canvas3_p${patientId}` // v3: modelo página-por-nota
 
 let _pid = 0
 const newPageId = () => `pg-${Date.now()}-${_pid++}`
@@ -722,7 +722,14 @@ export default function AnnotationSession({
   sessionId,
   scrollToSessionId = null, // após carregar, scrolla até a primeira página desta sessão
   viewOnly = false,         // true → visualização histórica: sem autosave, sem badge
+  // ── Modo página-por-nota (caderno): cada página vira uma Note própria ──────
+  // Se onCreateNote + onAutosaveNote forem fornecidos, cada página sincroniza
+  // como uma anotação independente (page.sessionId = noteId). Senão, modo legado.
+  onCreateNote,             // async ({ contentType }) => noteId
+  onAutosaveNote,           // async (noteId, { textContent, htmlContent, canvasData, imageBase64 })
+  onDeleteNote,             // async (noteId)
 }) {
+  const perPageNotes = !!(onCreateNote && onAutosaveNote)
   // Sempre canvas — texto é apenas um tipo de página dentro do canvas
   const isCanvas = true
   const isText   = false
@@ -904,8 +911,54 @@ export default function AnnotationSession({
   //   3. beforeunload + visibilitychange → força flush antes de sair
 
   const flushToBackend = useCallback(async (pagesSnapshot) => {
-    if (!onAutosave || !sessionIdRef.current || !pagesSnapshot) return
+    if (!pagesSnapshot) return
     if (!isDirtyForBackend.current) return  // nada mudou desde o último save — não bate na API
+
+    // ── Modo página-por-nota: cada página = uma anotação independente ─────────
+    if (perPageNotes && patient?.id) {
+      try {
+        const stripHtml = (h) => h
+          ? (new DOMParser().parseFromString(h, 'text/html').body.textContent || '').slice(0, 80_000)
+          : null
+        let createdAny = false
+        for (const p of pagesSnapshot) {
+          const isText = p.pageType === 'text'
+          const html = isText ? (p.textHtml || null) : null
+          const text = stripHtml(html)
+          const hasContent = !!(html || p.dataUrl)
+          let noteId = p.sessionId
+          if (!noteId) {
+            if (!hasContent) continue                  // não cria nota para página vazia
+            noteId = await onCreateNote({ contentType: isText ? 'text' : 'canvas' })
+            if (!noteId) continue
+            p.sessionId = noteId                        // grava no snapshot
+            createdAny = true
+          }
+          const canvasData = (!isText && p.dataUrl) ? JSON.stringify({ dataUrl: p.dataUrl }) : null
+          await onAutosaveNote(noteId, {
+            textContent: text, htmlContent: html,
+            canvasData, imageBase64: !isText ? p.dataUrl : null,
+          })
+        }
+        if (createdAny) {
+          // Propaga os noteIds recém-criados para o estado + localStorage
+          setPages(prev => prev.map(pg => {
+            const m = pagesSnapshot.find(s => s.id === pg.id)
+            return (m?.sessionId && !pg.sessionId) ? { ...pg, sessionId: m.sessionId } : pg
+          }))
+          if (patient?.id) saveCanvasPages(sessionIdRef.current, patient.id, pagesSnapshot)
+        }
+        isDirtyForBackend.current = false
+        setBackendSyncStatus('saved')
+        setTimeout(() => setBackendSyncStatus('idle'), 2000)
+      } catch {
+        setBackendSyncStatus('error')
+      }
+      return
+    }
+
+    // ── Modo legado: caderno inteiro em uma sessão ────────────────────────────
+    if (!onAutosave || !sessionIdRef.current) return
     try {
       // Coleta textContent + htmlContent das páginas de texto
       const textPages = pagesSnapshot.filter(p => p.pageType === 'text' && p.textHtml)
@@ -932,7 +985,7 @@ export default function AnnotationSession({
       setBackendSyncStatus('error')
       // isDirtyForBackend permanece true — próximo flush tentará de novo
     }
-  }, [onAutosave])
+  }, [onAutosave, perPageNotes, patient?.id, onCreateNote, onAutosaveNote])
 
   // Mantém ref atualizado com pages atuais para o flush síncrono no unload
   useEffect(() => { pagesRef2.current = pages }, [pages])
@@ -951,8 +1004,9 @@ export default function AnnotationSession({
     if (!isOpen) return
     const handleUnload = () => {
       clearTimeout(autosaveRef.current)
-      // Só flush se: há sessão, há dados e conteúdo realmente mudou desde o último save
-      if (onAutosave && sessionIdRef.current && pagesRef2.current && isDirtyForBackend.current) {
+      // Só flush se: há dados pendentes (per-page) ou sessão+dados (legado)
+      const canFlush = perPageNotes ? !!patient?.id : (onAutosave && sessionIdRef.current)
+      if (canFlush && pagesRef2.current && isDirtyForBackend.current) {
         flushToBackend(pagesRef2.current).catch(() => {})
       }
     }
@@ -1034,9 +1088,15 @@ export default function AnnotationSession({
       if (prev.length <= 1) return prev
       const deletedIdx = prev.findIndex(p => p.id === pageId)
       if (deletedIdx === -1) return prev
+      const removed = prev[deletedIdx]
       const next = prev.filter(p => p.id !== pageId)
       if (patient?.id) saveCanvasPages(sessionIdRef.current, patient.id, next)
-      scheduleBackendSave(next)
+      // Modo página-por-nota: apaga a anotação correspondente no backend
+      if (perPageNotes && removed?.sessionId && onDeleteNote) {
+        Promise.resolve(onDeleteNote(removed.sessionId)).catch(() => {})
+      } else {
+        scheduleBackendSave(next)
+      }
       setActivePage(ap => {
         if (ap > deletedIdx) return ap - 1
         if (ap === deletedIdx) return Math.min(ap, next.length - 1)
@@ -1045,7 +1105,7 @@ export default function AnnotationSession({
       return next
     })
     setIsDirty(true)
-  }, [patient?.id, scheduleBackendSave])
+  }, [patient?.id, scheduleBackendSave, perPageNotes, onDeleteNote])
 
   // ── Contador de palavras (todas as páginas de texto) ─────────────────────
   const [wordCount, setWordCount] = useState(0)
@@ -1247,6 +1307,11 @@ export default function AnnotationSession({
 
   const handleSave = async () => {
     setSaving(true)
+    // Modo página-por-nota: garante o flush per-page antes de fechar
+    if (perPageNotes && !viewOnly) {
+      isDirtyForBackend.current = true
+      try { await flushToBackend(pagesRef2.current || pages) } catch {}
+    }
     const data = await exportData()
     setSaving(false); setShowEndModal(false); setIsDirty(false)
     onClose({ duration: 0, ...data })

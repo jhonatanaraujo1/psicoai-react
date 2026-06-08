@@ -433,10 +433,10 @@ export default function Paciente({ patient: propPatient, setCurrentView, onSessa
                           await api.deleteSession(s.id)
                           // Limpa o caderno local também — senão ele "ressuscita" do localStorage
                           try {
-                            localStorage.removeItem(`psicoai_canvas2_s${s.id}`)
-                            // Se esta era a única sessão do paciente, limpa o caderno-mestre
-                            if (patientId && sessions.length <= 1) {
-                              localStorage.removeItem(`psicoai_canvas2_p${patientId}`)
+                            localStorage.removeItem(`psicoai_canvas3_s${s.id}`)
+                            // Apaga 1 página apaga a nota; limpa o cache-mestre p/ reconstruir do backend
+                            if (patientId) {
+                              localStorage.removeItem(`psicoai_canvas3_p${patientId}`)
                             }
                             const active = JSON.parse(localStorage.getItem('psicoai_active_session') || 'null')
                             if (active?.sessionId === s.id || (active?.patientId === patientId && sessions.length <= 1)) {

@@ -984,11 +984,50 @@ export const api = {
     return null
   },
 
-  // ── Notes (caderno) — aliases sobre o store de anotações ───────────────────
+  // ── Notes (caderno) — cada página é uma anotação própria ───────────────────
   async getPatientNotes(patientId, opts) { return this.getPatientSessions(patientId, opts) },
   async getNote(noteId) { return this.getSession(noteId) },
-  async createNote(patientId, data = {}) { return this.createSession({ patientId, ...data }) },
-  async autosaveNote(noteId, data) { return this.autosaveSession(noteId, data) },
+
+  // Sempre cria uma NOVA anotação (página). Não reutiliza — caderno = N páginas.
+  async createNote(patientId, data = {}) {
+    await delay(180)
+    const patient = PATIENTS.find(p => p.id === patientId)
+    if (!patient) throw new Error('Paciente não encontrado')
+    const sessions = SESSIONS_BY_PATIENT[patientId] || []
+    const note = {
+      id: 'n-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6),
+      patientId, patientName: patient.name,
+      type: data.contentType || data.type || 'text',
+      status: 'finished',
+      textContent: null, htmlContent: null, canvasData: null, canvasDataJson: null,
+      imageBase64: null,
+      sessionDate: data.noteDate || new Date().toISOString().slice(0, 10),
+      position: sessions.length,
+      num: `P${sessions.length + 1}`,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    }
+    sessions.push(note)               // append → ordem = ordem das páginas
+    SESSIONS_BY_PATIENT[patientId] = sessions
+    return note
+  },
+
+  // Persiste o conteúdo da página (diferente do autosaveSession legado, que é no-op)
+  async autosaveNote(noteId, data) {
+    await delay(60)
+    for (const sessions of Object.values(SESSIONS_BY_PATIENT)) {
+      const s = sessions.find(x => x.id === noteId)
+      if (s) {
+        if (data.textContent !== undefined) s.textContent = data.textContent
+        if (data.htmlContent !== undefined) s.htmlContent = data.htmlContent
+        if (data.canvasData !== undefined) { s.canvasData = data.canvasData; s.canvasDataJson = data.canvasData }
+        if (data.imageBase64 !== undefined) s.imageBase64 = data.imageBase64
+        s.updatedAt = new Date().toISOString()
+        return s
+      }
+    }
+    return null
+  },
   async updateNote(noteId, data) {
     await delay(120)
     for (const sessions of Object.values(SESSIONS_BY_PATIENT)) {

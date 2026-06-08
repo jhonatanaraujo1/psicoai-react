@@ -293,51 +293,6 @@ export default function App() {
   // Aparece depois de selecionar paciente — permite escolher o modo da sessão
   const [typePickerPatient, setTypePickerPatient] = useState(null)
 
-  // ── Sessão: get-or-create ─────────────────────────────────────────────────────
-  // REGRA: 1 paciente = 1 caderno = 1 sessão. NUNCA multiplica.
-  // Sempre reutiliza a sessão existente do paciente (aberta OU finalizada).
-  // Só cria uma sessão nova se o paciente nunca teve nenhuma.
-  const _getOrCreateSessionId = async (patientId, type = 'canvas') => {
-    if (!patientId) return null
-    // 1. Procura o caderno existente do paciente e reutiliza
-    try {
-      const res = await api.getPatientSessions(patientId, { size: 100 })
-      const list = res?.content || res || []
-      if (Array.isArray(list) && list.length > 0) {
-        // Prioriza sessão aberta; senão, a mais recente (o caderno)
-        const open = list.find(s => s.status === 'open')
-        const notebook = open || [...list].sort(
-          (a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0)
-        )[0]
-        if (notebook?.id) {
-          console.info('[PsicoNotes] Reutilizando caderno do paciente:', notebook.id)
-          return notebook.id
-        }
-      }
-    } catch { /* sem listagem acessível → tenta criar */ }
-    // 2. Nenhuma sessão existente → cria o caderno do paciente
-    try {
-      const session = await api.createSession({ patientId, type })
-      return session.id
-    } catch (e) {
-      // 422 = "Já existe uma sessão aberta" → busca e reutiliza
-      if (e.message?.includes('sessão aberta') || e.message?.includes('422') || e.message?.includes('Unprocessable')) {
-        try {
-          const openSessions = await api.getOpenSessions()
-          const existing = Array.isArray(openSessions)
-            ? openSessions.find(s => s.patientId === patientId)
-            : null
-          if (existing?.id) {
-            console.info('[PsicoNotes] Reutilizando sessão aberta:', existing.id)
-            return existing.id
-          }
-        } catch { /* sem sessões abertas acessíveis → continua sem ID */ }
-      }
-      console.warn('[PsicoNotes] createSession failed:', e.message)
-      return null
-    }
-  }
-
   // Abre AnnotationSession com nova página de TEXTO.
   // O histórico de páginas do paciente é carregado automaticamente — a nova página é adicionada ao final.
   const _openTextSession = (patient) => {
@@ -357,9 +312,8 @@ export default function App() {
         startedAt:   Date.now(),
       }))
     }
-    // Toda anotação vai para AnnotationSession (canvas unificado).
-    // _getOrCreateSessionId reutiliza sessão aberta se já existir no backend.
-    _getOrCreateSessionId(pat?.id, 'canvas').then(id => { if (id) setSession(id) })
+    // Caderno página-por-nota: cada página vira uma anotação própria no autosave.
+    setSession(null)
     setCanvasOpen(true)
   }
 
@@ -381,7 +335,7 @@ export default function App() {
         startedAt:   Date.now(),
       }))
     }
-    _getOrCreateSessionId(pat?.id, 'canvas').then(id => { if (id) setSession(id) })
+    setSession(null)  // caderno página-por-nota: anotações criadas sob demanda (sem sessão-fantasma)
     setCanvasOpen(true)
   }
 
@@ -431,10 +385,8 @@ export default function App() {
   // Verifica se paciente já tem anotações salvas no localStorage
   const _hasAnnotations = (patientId) => {
     try {
-      const raw = localStorage.getItem(`psicoai_canvas2_p${patientId}`)
-      if (!raw) return false
-      const parsed = JSON.parse(raw)
-      return Array.isArray(parsed) && parsed.length > 0
+      const raw = localStorage.getItem(`psicoai_canvas3_p${patientId}`)
+      return !!raw  // dados criptografados — só verifica existência
     } catch { return false }
   }
 
@@ -451,22 +403,23 @@ export default function App() {
     setCanvasInitialPageType(null)
 
     // Se localStorage do paciente está vazio, reconstrói do backend
-    const patKey = `psicoai_canvas2_p${pat?.id}`
+    const patKey = `psicoai_canvas3_p${pat?.id}`
     const hasLocal = pat?.id && !!localStorage.getItem(patKey)
     if (!hasLocal && pat?.id) {
       try {
         const sessions = await api.getPatientSessions(pat.id)
-        const list = ([...(sessions?.content || sessions || [])]).reverse() // oldest first
+        const list = [...(sessions?.content || sessions || [])].sort((a, b) => (a.position ?? 0) - (b.position ?? 0))
         const pages = list.flatMap(s => {
-          // Sessão com canvas salvo
-          if (s.canvasData || s.canvasDataJson) {
+          const cd = s.canvasData || s.canvasDataJson
+          if (cd) {
             try {
-              const parsed = JSON.parse(s.canvasData || s.canvasDataJson)
+              const parsed = JSON.parse(cd)
               if (Array.isArray(parsed) && parsed.length > 0)
                 return parsed.map(p => ({ ...p, sessionId: s.id }))
+              if (parsed && parsed.dataUrl)
+                return [{ id: `p-${s.id}`, pageType: 'draw', dataUrl: parsed.dataUrl, textHtml: null, sessionId: s.id }]
             } catch {}
           }
-          // Sessão de texto / nota rápida → monta página de texto
           const html = s.htmlContent ||
             (s.textContent ? s.textContent.split('\n').map(l => `<p>${l || '<br>'}</p>`).join('') : '')
           if (html) return [{ id: `p-${s.id}`, pageType: 'text', textHtml: html, dataUrl: null, sessionId: s.id }]
@@ -482,7 +435,7 @@ export default function App() {
         patient: { id: pat.id, name: pat.name }, startedAt: Date.now(),
       }))
     }
-    _getOrCreateSessionId(pat?.id, 'canvas').then(id => { if (id) setSession(id) })
+    setSession(null)  // caderno página-por-nota: anotações criadas sob demanda (sem sessão-fantasma)
     setCanvasOpen(true)
   }
 
@@ -549,9 +502,8 @@ export default function App() {
     // Define o tipo de página inicial: canvas livre → draw, texto → text
     setCanvasInitialPageType(type === 'canvas' ? 'draw' : 'text')
 
-    // Open the session view immediately (no wait) and create the backend record in background.
-    // _getOrCreateSessionId reutiliza sessão aberta se já existir no backend.
-    _getOrCreateSessionId(currentPatient?.id, type).then(id => { if (id) setSession(id) })
+    // Caderno página-por-nota: abre direto, anotações criadas sob demanda no autosave.
+    setSession(null)
 
     setCanvasOpen(true)
   }
@@ -674,11 +626,8 @@ export default function App() {
     showToast('Análise iniciada em segundo plano…', 'info', { duration: 4000 })
     startProgress()
     try {
-      if (sessionId) {
-        await api.finishSession(sessionId, { textContent, htmlContent, imageBase64, canvasDataJson, canvasTextContent, durationSeconds: duration, sessionDate })
-      }
-      const effectiveId = sessionId || ('s-mock-' + Date.now())
-      const data = await api.createAnalysis({ sessionId: effectiveId, additionalSessionIds: [], template: null, patientId: currentPatient?.id })
+      // Conteúdo já autosalvo por página — análise sobre o caderno do paciente
+      const data = await api.createAnalysis({ patientId: currentPatient?.id, noteIds: [], template: null })
       setAnalysisResult(data)
       finishProgress()
       showToast('✓ Análise pronta!', 'success', {
@@ -732,11 +681,13 @@ export default function App() {
     const loadingId = showToast('Gerando análise clínica…', 'loading', { persistent: true })
 
     try {
-      if (sessionId) {
-        await api.finishSession(sessionId, { textContent, htmlContent, imageBase64, canvasDataJson, canvasTextContent, durationSeconds: duration, sessionDate })
-      }
-      const effectiveSessionId = sessionId || ('s-mock-' + Date.now())
-      const data = await api.createAnalysis({ sessionId: effectiveSessionId, additionalSessionIds, template, patientId: currentPatient?.id })
+      // Conteúdo já é autosalvo por página (modo caderno). Análise opera sobre
+      // as anotações: noteIds selecionados ou [] = caderno inteiro (longitudinal).
+      const data = await api.createAnalysis({
+        patientId: currentPatient?.id,
+        noteIds: additionalSessionIds,
+        template,
+      })
       setAnalysisResult(data)
       finishProgress()
       dismissToast(loadingId)
@@ -870,15 +821,28 @@ export default function App() {
             onMinimize={handleMinimizeCanvas}
             onAnalyze={handleAnalyze}
             onAutosave={(id, data) => api.autosaveSession?.(id, data)}
+            // ── Modo página-por-nota: cada página vira uma anotação própria ──
+            onCreateNote={async ({ contentType }) => {
+              if (!currentPatient?.id) return null
+              try { const n = await api.createNote(currentPatient.id, { contentType }); return n?.id || null }
+              catch { return null }
+            }}
+            onAutosaveNote={(noteId, data) => api.autosaveNote?.(noteId, data)}
+            onDeleteNote={(noteId) => api.deleteNote?.(noteId)}
             onFetchSession={async (id) => {
               // Função auxiliar: converte sessão backend em página de texto
               const sessionToPage = (s) => {
                 if (!s) return null
-                if (s.canvasData || s.canvasDataJson) {
+                const cd = s.canvasData || s.canvasDataJson
+                if (cd) {
                   try {
-                    const parsed = JSON.parse(s.canvasData || s.canvasDataJson)
+                    const parsed = JSON.parse(cd)
+                    // Legado: caderno inteiro como array de páginas
                     if (Array.isArray(parsed) && parsed.length > 0)
                       return parsed.map(p => ({ ...p, sessionId: s.id }))
+                    // Página-por-nota: canvas único { dataUrl }
+                    if (parsed && parsed.dataUrl)
+                      return [{ id: `p-${s.id}`, pageType: 'draw', dataUrl: parsed.dataUrl, textHtml: null, sessionId: s.id }]
                   } catch {}
                 }
                 const html = s.htmlContent ||
@@ -896,7 +860,7 @@ export default function App() {
                 // 2. Fallback: agrega TODAS as sessões do paciente (caso localStorage vazio)
                 if (currentPatient?.id) {
                   const all = await api.getPatientSessions(currentPatient.id)
-                  const list = ([...(all?.content || all || [])]).reverse() // oldest first
+                  const list = [...(all?.content || all || [])].sort((a, b) => (a.position ?? 0) - (b.position ?? 0))
                   const pages = list.flatMap(s => sessionToPage(s) || [])
                   if (pages.length > 0) return JSON.stringify(pages)
                 }
