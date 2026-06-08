@@ -385,67 +385,77 @@ export const api = {
     return del(`/api/v1/patients/${id}`)
   },
 
-  // Sessions
-  async getPatientSessions(patientId, { page = 0, size = 20 } = {}) {
-    const res = await get(`/api/v1/patients/${patientId}/sessions`, { page, size })
-    // Normalize: backend uses `canvasData`, frontend (Anotacoes) checks `canvasDataJson`
-    if (res?.content) {
-      res.content = res.content.map(s => ({
-        ...s,
-        canvasDataJson: s.type === 'canvas' ? (s.canvasData ?? null) : null,
-      }))
+  // ── Notes (caderno do paciente) ───────────────────────────────────────────
+  // Modelo "1 caderno por paciente": cada página é uma Note. As funções com
+  // nome "*Session" são adaptadores legados que apontam para /notes — a UI
+  // continua chamando os nomes antigos enquanto migra para os nomes "*Note".
+
+  // Normaliza uma Note do backend para o formato que a UI espera (compat sessão)
+  _noteToSession(n) {
+    if (!n) return n
+    return {
+      ...n,
+      type: n.contentType ?? n.type ?? 'text',
+      sessionDate: n.noteDate ?? n.sessionDate ?? null,
+      canvasDataJson: (n.contentType === 'canvas' || n.type === 'canvas') ? (n.canvasData ?? null) : null,
+      notePreview: n.preview ?? n.notePreview ?? null,
+      num: n.position != null ? `P${n.position + 1}` : (n.num ?? null),
+      status: 'finished',
+      statusLabel: 'Anotação',
     }
+  },
+
+  async getPatientNotes(patientId, { page = 0, size = 100 } = {}) {
+    const res = await get(`/api/v1/patients/${patientId}/notes`, { page, size })
+    if (res?.content) res.content = res.content.map(n => this._noteToSession(n))
     return res
   },
-
-  async getSession(sessionId) {
-    return get(`/api/v1/sessions/${sessionId}`)
+  async getNote(noteId) { return this._noteToSession(await get(`/api/v1/notes/${noteId}`)) },
+  async createNote(patientId, data = {}) {
+    return this._noteToSession(await post(`/api/v1/patients/${patientId}/notes`, {
+      contentType: data.contentType ?? data.type ?? 'text',
+      noteDate: data.noteDate ?? data.sessionDate ?? null,
+      title: data.title ?? null,
+    }))
   },
-
-  async getTodaySessions() {
-    return get('/api/v1/sessions/today')
-  },
-
-  async createSession(data) {
-    return post('/api/v1/sessions', data)
-  },
-
-  async finishSession(sessionId, data) {
-    const payload = { ...data }
-    // Backend field is `canvasData`; frontend sessions send `canvasDataJson` — normalize before POST
-    if (payload.canvasDataJson !== undefined) {
-      payload.canvasData = payload.canvasDataJson
-      delete payload.canvasDataJson
+  async autosaveNote(noteId, data) {
+    const payload = {
+      textContent: data.textContent,
+      htmlContent: data.htmlContent,
+      canvasData: data.canvasData ?? data.canvasDataJson,
+      imageBase64: data.imageBase64,
     }
-    // Canvas text content — backend expects it as `textContent`
-    if (payload.canvasTextContent !== undefined) {
-      if (!payload.textContent) payload.textContent = payload.canvasTextContent
-      delete payload.canvasTextContent
+    return this._noteToSession(await patch(`/api/v1/notes/${noteId}/autosave`, payload))
+  },
+  async updateNote(noteId, data) {
+    return this._noteToSession(await patch(`/api/v1/notes/${noteId}`, {
+      noteDate: data.noteDate ?? data.sessionDate,
+      title: data.title,
+    }))
+  },
+  async deleteNote(noteId) { return del(`/api/v1/notes/${noteId}`) },
+  async reorderNotes(patientId, items) {
+    return patch(`/api/v1/patients/${patientId}/notes/reorder`, { items })
+  },
+  async getNoteAnalysis(noteId) { return get(`/api/v1/notes/${noteId}/analysis`) },
+
+  // ── Adaptadores legados (nome "*Session" → endpoints /notes) ───────────────
+  async getPatientSessions(patientId, opts) { return this.getPatientNotes(patientId, opts) },
+  async getSession(noteId) { return this.getNote(noteId) },
+  async getTodaySessions() { return [] },             // conceito não existe mais (usar agenda)
+  async getOpenSessions() { return [] },              // sem open/finished em anotações
+  async createSession(data) { return this.createNote(data.patientId, data) },
+  async finishSession(noteId, data) {
+    // Anotação é sempre viva — "finish" vira autosave; data clínica via updateNote
+    const saved = await this.autosaveNote(noteId, data)
+    if (data?.sessionDate || data?.noteDate) {
+      try { await this.updateNote(noteId, { noteDate: data.sessionDate ?? data.noteDate }) } catch {}
     }
-    return post(`/api/v1/sessions/${sessionId}/finish`, payload)
+    return saved
   },
-
-  async autosaveSession(sessionId, data) {
-    // Same normalization as finishSession
-    const payload = { ...data }
-    if (payload.canvasDataJson !== undefined) {
-      payload.canvasData = payload.canvasDataJson
-      delete payload.canvasDataJson
-    }
-    return patch(`/api/v1/sessions/${sessionId}/autosave`, payload)
-  },
-
-  async deleteSession(sessionId) {
-    return del(`/api/v1/sessions/${sessionId}`)
-  },
-
-  async getSessionAnalysis(sessionId) {
-    return get(`/api/v1/sessions/${sessionId}/analysis`)
-  },
-
-  async getOpenSessions() {
-    return get('/api/v1/sessions/open')
-  },
+  async autosaveSession(noteId, data) { return this.autosaveNote(noteId, data) },
+  async deleteSession(noteId) { return this.deleteNote(noteId) },
+  async getSessionAnalysis(noteId) { return this.getNoteAnalysis(noteId) },
 
   // Analyses
   async getAnalysis(analysisId) {
@@ -456,9 +466,12 @@ export const api = {
     return get(`/api/v1/patients/${patientId}/analyses`, { page, size })
   },
 
-  async createAnalysis({ sessionId, additionalSessionIds = [], template = null }) {
+  async createAnalysis({ sessionId, noteIds, patientId, additionalSessionIds = [], scope = null, template = null }) {
+    // Novo contrato: análise por anotações. Mapeia chamadas legadas (sessionId)
+    // para noteIds, mantendo compatibilidade com call sites antigos.
+    const ids = noteIds ?? [sessionId, ...additionalSessionIds].filter(Boolean)
     // POST retorna 202 imediatamente com { id, status: "processing" }
-    const initial = await post('/api/v1/analyses', { sessionId, additionalSessionIds, template })
+    const initial = await post('/api/v1/analyses', { patientId, noteIds: ids, scope, template })
 
     // Se já veio completo (análise muito rápida ou resposta legada), retorna direto
     if (!initial?.id || initial.status === 'completed' || !initial.status) return initial

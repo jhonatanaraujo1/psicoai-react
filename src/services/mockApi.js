@@ -709,13 +709,17 @@ export const api = {
     }
   },
 
-  async createAnalysis({ sessionId, patientId, additionalSessionIds = [], template = null }) {
+  async createAnalysis({ sessionId, noteIds, patientId, additionalSessionIds = [], template = null }) {
     await delay(2800) // simula chamada à IA
 
-    // Busca sessão atual para extrair todo conteúdo disponível
+    // Novo contrato: noteIds[]. Compat: sessionId legado.
+    const ids = (noteIds && noteIds.length) ? noteIds : [sessionId, ...additionalSessionIds].filter(Boolean)
+    const primaryId = ids[0] ?? sessionId
+
+    // Busca anotação primária para extrair todo conteúdo disponível
     let currentSession = null
     for (const sessions of Object.values(SESSIONS_BY_PATIENT)) {
-      const found = sessions.find(s => s.id === sessionId)
+      const found = sessions.find(s => s.id === primaryId)
       if (found) { currentSession = found; break }
     }
 
@@ -727,14 +731,15 @@ export const api = {
     //  4. sessões anteriores → contexto longitudinal
     const hasCanvas    = !!(currentSession?.imageBase64)
     const hasText      = !!(currentSession?.textContent || currentSession?.canvasTextContent)
-    const sessionCount = 1 + (additionalSessionIds?.length || 0)
+    const sessionCount = ids.length || 1
 
     // Usa análise de Lucas como template realista
     const baseTemplate = ANALYSES['p-001'][0]
     const analysis = {
       ...baseTemplate,
       id: 'a-' + Date.now(),
-      sessionId,
+      sessionId: primaryId,
+      noteId: primaryId,
       sessionCount,
       template: template || 'reflexao_clinica',
       refineCount: 0,
@@ -968,6 +973,37 @@ export const api = {
       if (idx !== -1) { sessions.splice(idx, 1); return }
     }
   },
+
+  // Busca uma "página/anotação" individual pelo id (compat getSession)
+  async getSession(sessionId) {
+    await delay(150)
+    for (const sessions of Object.values(SESSIONS_BY_PATIENT)) {
+      const found = sessions.find(s => s.id === sessionId)
+      if (found) return { ...found, canvasDataJson: found.type === 'canvas' ? (found.canvasData ?? found.canvasDataJson ?? null) : null }
+    }
+    return null
+  },
+
+  // ── Notes (caderno) — aliases sobre o store de anotações ───────────────────
+  async getPatientNotes(patientId, opts) { return this.getPatientSessions(patientId, opts) },
+  async getNote(noteId) { return this.getSession(noteId) },
+  async createNote(patientId, data = {}) { return this.createSession({ patientId, ...data }) },
+  async autosaveNote(noteId, data) { return this.autosaveSession(noteId, data) },
+  async updateNote(noteId, data) {
+    await delay(120)
+    for (const sessions of Object.values(SESSIONS_BY_PATIENT)) {
+      const s = sessions.find(x => x.id === noteId)
+      if (s) {
+        if (data.noteDate ?? data.sessionDate) s.sessionDate = data.noteDate ?? data.sessionDate
+        if (data.title !== undefined) s.title = data.title
+        return s
+      }
+    }
+    return null
+  },
+  async deleteNote(noteId) { return this.deleteSession(noteId) },
+  async reorderNotes(_patientId, _items) { await delay(80); return { ok: true } },
+  async getNoteAnalysis(noteId) { return this.getSessionAnalysis(noteId) },
 
   async deleteFinancialEvent(id) {
     await delay(300)
