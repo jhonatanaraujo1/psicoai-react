@@ -709,7 +709,7 @@ export const api = {
     }
   },
 
-  async createAnalysis({ sessionId, noteIds, patientId, additionalSessionIds = [], template = null }) {
+  async createAnalysis({ sessionId, noteIds, patientId, additionalSessionIds = [], template = null, imageBase64 = null }) {
     await delay(2800) // simula chamada à IA
 
     // Novo contrato: noteIds[]. Compat: sessionId legado.
@@ -729,7 +729,7 @@ export const api = {
     //  2. imageBase64       → imagem do canvas (IA usa visão para estrutura, setas, diagramas)
     //  3. textContent       → notas de texto da sessão
     //  4. sessões anteriores → contexto longitudinal
-    const hasCanvas    = !!(currentSession?.imageBase64)
+    const hasCanvas    = !!(imageBase64 || currentSession?.imageBase64)
     const hasText      = !!(currentSession?.textContent || currentSession?.canvasTextContent)
     const sessionCount = ids.length || 1
 

@@ -1019,7 +1019,6 @@ export default function AnnotationSession({
           ? (new DOMParser().parseFromString(h, 'text/html').body.textContent || '').slice(0, 80_000)
           : null
         let createdAny = false
-        const stripPrefix = (u) => (typeof u === 'string' && u.includes(',')) ? u.split(',')[1] : (u || null)
         for (const p of pagesSnapshot) {
           const isText = p.pageType === 'text'
           const html = isText ? (p.textHtml || null) : null
@@ -1040,14 +1039,14 @@ export default function AnnotationSession({
             p.sessionId = noteId
             createdAny = true
           }
-          // Canvas = JSON vetorial de traços (não bitmap). imageBase64 = thumbnail
-          // PNG em base64 PURO (sem prefixo data:) para a visão da IA.
+          // Canvas = JSON vetorial de traços (não bitmap). NÃO salvamos imagem:
+          // ela é dado derivado, gerada do JSON sob demanda na análise (sem peso no banco).
           const canvasData = (!isText && (hasStrokes || p.dataUrl))
             ? JSON.stringify({ v: 1, w: PAGE_W * SCALE, h: PAGE_H * SCALE, strokes: p.strokes || [] })
             : null
           await onAutosaveNote(noteId, {
             textContent: text, htmlContent: html,
-            canvasData, imageBase64: !isText ? stripPrefix(p.dataUrl) : null,
+            canvasData, imageBase64: null,   // imagem não é persistida — gerada na análise
           })
         }
         if (createdAny) {

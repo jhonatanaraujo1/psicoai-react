@@ -471,12 +471,13 @@ export const api = {
     return get(`/api/v1/patients/${patientId}/analyses`, { page, size })
   },
 
-  async createAnalysis({ sessionId, noteIds, patientId, additionalSessionIds = [], scope = null, template = null }) {
+  async createAnalysis({ sessionId, noteIds, patientId, additionalSessionIds = [], scope = null, template = null, imageBase64 = null }) {
     // Novo contrato: análise por anotações. Mapeia chamadas legadas (sessionId)
     // para noteIds, mantendo compatibilidade com call sites antigos.
     const ids = noteIds ?? [sessionId, ...additionalSessionIds].filter(Boolean)
+    // imageBase64 = render do canvas gerado sob demanda (não persistido) p/ a IA.
     // POST retorna 202 imediatamente com { id, status: "processing" }
-    const initial = await post('/api/v1/analyses', { patientId, noteIds: ids, scope, template })
+    const initial = await post('/api/v1/analyses', { patientId, noteIds: ids, scope, template, imageBase64 })
 
     // Se já veio completo (análise muito rápida ou resposta legada), retorna direto
     if (!initial?.id || initial.status === 'completed' || !initial.status) return initial

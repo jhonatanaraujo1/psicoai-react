@@ -629,7 +629,7 @@ export default function App() {
     startProgress()
     try {
       // Conteúdo já autosalvo por página — análise sobre o caderno do paciente
-      const data = await api.createAnalysis({ patientId: currentPatient?.id, noteIds: [], template: null })
+      const data = await api.createAnalysis({ patientId: currentPatient?.id, noteIds: [], template: null, imageBase64 })
       setAnalysisResult(data)
       finishProgress()
       showToast('✓ Análise pronta!', 'success', {
@@ -685,10 +685,12 @@ export default function App() {
     try {
       // Conteúdo já é autosalvo por página (modo caderno). Análise opera sobre
       // as anotações: noteIds selecionados ou [] = caderno inteiro (longitudinal).
+      // imageBase64 = render do canvas gerado SOB DEMANDA (não persistido) p/ a visão da IA.
       const data = await api.createAnalysis({
         patientId: currentPatient?.id,
         noteIds: additionalSessionIds,
         template,
+        imageBase64,
       })
       setAnalysisResult(data)
       finishProgress()
