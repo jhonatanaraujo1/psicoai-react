@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { api } from '../services'
 import { showToast } from '../components/Toast'
-import CadastroModal from '../components/CadastroModal'
+import PatientFormModal from '../components/PatientFormModal'
 import ReportModal from '../components/ReportModal'
 import DocumentsPanel from '../components/DocumentsPanel'
 import AiAnalysisPanel from '../components/AiAnalysisPanel'
@@ -44,7 +44,7 @@ const STATUS_BADGE = {
   gray:   'badge-gray',
 }
 
-export default function Paciente({ patient: propPatient, setCurrentView, onSessao, onReopenSession, onViewProntuario, onSyncAgenda }) {
+export default function Patient({ patient: propPatient, setCurrentView, onSessao, onReopenSession, onViewProntuario, onSyncAgenda }) {
   const [summary, setSummary] = useState(null)
   const [sessions, setSessions] = useState([])
   const [forms, setForms] = useState([])
@@ -570,7 +570,7 @@ export default function Paciente({ patient: propPatient, setCurrentView, onSessa
       </div>
     </div>
 
-    <CadastroModal
+    <PatientFormModal
       isOpen={editOpen}
       onClose={() => setEditOpen(false)}
       initialData={summary?.patient || propPatient}

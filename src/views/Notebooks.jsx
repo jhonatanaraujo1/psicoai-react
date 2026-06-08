@@ -184,7 +184,7 @@ function CadernoCard({ patient, canvas, onOpen, onOpenPatient, isOpenSession }) 
 
 // ── Main view ──────────────────────────────────────────────────────────────────
 
-export default function Cadernos({ onOpenCanvas, onOpenPatient, openSessionPatientIds = new Set() }) {
+export default function Notebooks({ onOpenCanvas, onOpenPatient, openSessionPatientIds = new Set() }) {
   const [patients, setPatients] = useState([])
   const [loading, setLoading]   = useState(true)
   const [search, setSearch]     = useState('')

@@ -46,7 +46,7 @@ function Skeleton({ style }) {
 
 const LANC_FORM_DEFAULT = { patientId: '', patientName: '', description: '', amount: '', direction: 'credit', status: 'pending', dueDate: '', paymentMethod: 'pix', rescheduledDueDate: '' }
 
-export default function Financeiro() {
+export default function Finance() {
   const [events, setEvents] = useState([])
   const [summary, setSummary] = useState(null)
   const [loading, setLoading] = useState(true)

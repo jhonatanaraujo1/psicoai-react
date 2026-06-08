@@ -395,7 +395,7 @@ function EmptyState({ patientFirstName, onNewAnnotation }) {
 
 // ── Componente principal ───────────────────────────────────────────────────────
 
-export default function ProntuarioView({
+export default function MedicalRecordView({
   patient,
   onClose,
   onNewAnnotation,

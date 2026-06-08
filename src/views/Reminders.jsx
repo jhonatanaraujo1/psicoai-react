@@ -76,7 +76,7 @@ function Skel({ w, h = 12 }) {
 
 // ── Componente ────────────────────────────────────────────────────────────────
 
-export default function Lembretes() {
+export default function Reminders() {
   const [enabled, setEnabled]       = useState(DEFAULT_ENABLED)
   const [configSaving, setConfigSaving] = useState(false)
 

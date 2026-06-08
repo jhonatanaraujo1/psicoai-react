@@ -18,26 +18,26 @@ import AiDrawer from './components/AiDrawer'
 import PreSessionBriefing from './components/PreSessionBriefing'
 import SessionTypePicker from './components/SessionTypePicker'
 import PatientPicker from './components/PatientPicker'
-import CadastroModal from './components/CadastroModal'
+import PatientFormModal from './components/PatientFormModal'
 import AnalyzeSessionsModal from './components/AnalyzeSessionsModal'
 
 import Login from './views/Login'
 import Dashboard from './views/Dashboard'
-import Pacientes from './views/Pacientes'
-import Paciente from './views/Paciente'
-import ProntuarioView from './views/ProntuarioView'
+import Patients from './views/Patients'
+import Patient from './views/Patient'
+import MedicalRecordView from './views/MedicalRecordView'
 // Lazy: carrega apenas quando uma sessão é aberta
 const AnnotationSession = lazy(() => import('./views/AnnotationSession'))
 import Agenda from './views/Agenda'
 import Insights from './views/Insights'
-import Financeiro from './views/Financeiro'
-import Lembretes from './views/Lembretes'
-import Formularios from './views/Formularios'
-import Anotacoes from './views/Anotacoes'
-import Cadernos from './views/Cadernos'
-import Teleatendimento from './views/Teleatendimento'
-import Configuracoes from './views/Configuracoes'
-import TermosDeUso from './views/TermosDeUso'
+import Finance from './views/Finance'
+import Reminders from './views/Reminders'
+import Forms from './views/Forms'
+import Annotations from './views/Annotations'
+import Notebooks from './views/Notebooks'
+import Telehealth from './views/Telehealth'
+import Settings from './views/Settings'
+import TermsOfUse from './views/TermsOfUse'
 
 export default function App() {
   // ── Auth ──────────────────────────────────────────────────────────────────
@@ -760,16 +760,16 @@ export default function App() {
   const renderView = () => {
     switch (currentView) {
       case 'dashboard':    return <Dashboard setCurrentView={handleSetView} currentUser={currentUser} />
-      case 'pacientes':   return <Pacientes key={patientsRefreshKey} setCurrentView={handleSetView} onNovoCadastro={() => setCadastroOpen(true)} />
-      case 'paciente':    return <Paciente patient={currentPatient} setCurrentView={handleSetView} onSessao={() => handleSetView('sessao', currentPatient)} onReopenSession={handleReopenSession} onViewProntuario={() => setProntuarioOpen(true)} onSyncAgenda={_syncRecurringAgenda} />
+      case 'pacientes':   return <Patients key={patientsRefreshKey} setCurrentView={handleSetView} onNovoCadastro={() => setCadastroOpen(true)} />
+      case 'paciente':    return <Patient patient={currentPatient} setCurrentView={handleSetView} onSessao={() => handleSetView('sessao', currentPatient)} onReopenSession={handleReopenSession} onViewProntuario={() => setProntuarioOpen(true)} onSyncAgenda={_syncRecurringAgenda} />
       case 'agenda':      return <Agenda currentUser={currentUser} />
       case 'insights':    return <Insights onGoToPatient={(patient) => handleSetView('paciente', patient)} />
-      case 'financeiro':  return <Financeiro />
-      case 'lembretes':   return <Lembretes />
-      case 'formularios': return <Formularios />
+      case 'financeiro':  return <Finance />
+      case 'lembretes':   return <Reminders />
+      case 'formularios': return <Forms />
       // Cadernos: cada paciente é um caderno. Clicar abre o canvas diretamente.
       // Paciente com páginas → recovery mode. Sem páginas → nova página de texto.
-      case 'cadernos':    return <Cadernos
+      case 'cadernos':    return <Notebooks
         onOpenCanvas={(patient) => {
           setCurrentPatient(patient)
           if (_hasAnnotations(patient.id)) { _openExistingAnnotation(patient) }
@@ -784,10 +784,10 @@ export default function App() {
           ...backgroundSessions.map(s => s.patient?.id).filter(Boolean),
         ])}
       />
-      case 'anotacoes':   return <Anotacoes key={sessionsRefreshKey} setCurrentView={handleSetView} onOpenCanvas={handleOpenCanvasFromHistory} />
-      case 'teleatendimento': return <Teleatendimento />
-      case 'configuracoes': return <Configuracoes currentUser={currentUser} onProfileUpdate={(data) => setCurrentUser(u => ({ ...u, ...data }))} onOpenOnboarding={() => setOnboardingOpen(true)} onOpenTermos={() => setCurrentView('termos')} />
-      case 'termos':      return <TermosDeUso onClose={() => setCurrentView('configuracoes')} />
+      case 'anotacoes':   return <Annotations key={sessionsRefreshKey} setCurrentView={handleSetView} onOpenCanvas={handleOpenCanvasFromHistory} />
+      case 'teleatendimento': return <Telehealth />
+      case 'configuracoes': return <Settings currentUser={currentUser} onProfileUpdate={(data) => setCurrentUser(u => ({ ...u, ...data }))} onOpenOnboarding={() => setOnboardingOpen(true)} onOpenTermos={() => setCurrentView('termos')} />
+      case 'termos':      return <TermsOfUse onClose={() => setCurrentView('configuracoes')} />
       default:            return <Agenda currentUser={currentUser} />
     }
   }
@@ -980,7 +980,7 @@ export default function App() {
         isOpen={briefingOpen}
       />
 
-      <CadastroModal
+      <PatientFormModal
         isOpen={cadastroOpen}
         onClose={() => setCadastroOpen(false)}
         onSave={async (form) => {
@@ -1030,7 +1030,7 @@ export default function App() {
 
       {/* Prontuário A4 — overlay sobre o perfil do paciente */}
       {prontuarioOpen && currentView === 'paciente' && (
-        <ProntuarioView
+        <MedicalRecordView
           patient={currentPatient}
           onClose={() => setProntuarioOpen(false)}
           onNewAnnotation={() => { setProntuarioOpen(false); handleSetView('sessao', currentPatient) }}

@@ -86,7 +86,7 @@ function calcGrowth(all) {
   return Math.round(((current - avgPrev) / avgPrev) * 100)
 }
 
-export default function Pacientes({ setCurrentView, onNovoCadastro }) {
+export default function Patients({ setCurrentView, onNovoCadastro }) {
   const [patients, setPatients] = useState([])
   const [total, setTotal] = useState(0)
   const [loading, setLoading] = useState(true)

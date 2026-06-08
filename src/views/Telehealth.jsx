@@ -3,7 +3,7 @@ import { api } from '../services'
 import { DatePicker, TimePicker, CustomSelect } from '../components/DateTimePickers'
 import { showToast } from '../components/Toast'
 
-export default function Teleatendimento() {
+export default function Telehealth() {
   const [platform, setPlatform] = useState('whereby')
   const [teleModal, setTeleModal] = useState(false)
   const [teleForm, setTeleForm] = useState({ patientId: '', patientName: '', date: '', time: '', platform: 'whereby', notes: '' })

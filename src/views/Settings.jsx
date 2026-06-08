@@ -750,7 +750,7 @@ const TABS = [
   { id: 'ajuda',        label: 'Ajuda & Guia',       icon: <><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></> },
 ]
 
-export default function Configuracoes({ currentUser, onProfileUpdate, onOpenOnboarding, onOpenTermos }) {
+export default function Settings({ currentUser, onProfileUpdate, onOpenOnboarding, onOpenTermos }) {
   const [tab, setTab] = useState('perfil')
   const [profile, setProfile] = useState(null)
   const [loading, setLoading] = useState(true)

@@ -90,7 +90,7 @@ const s = {
   },
 }
 
-export default function TermosDeUso({ onClose }) {
+export default function TermsOfUse({ onClose }) {
   return (
     <div style={{ background: 'var(--bg)', minHeight: '100vh' }}>
       {/* Header fixo */}

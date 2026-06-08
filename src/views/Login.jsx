@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { auth, api } from '../services'
 import RegisterFlow from '../components/RegisterFlow'
-import TermosDeUso from './TermosDeUso'
+import TermsOfUse from './TermsOfUse'
 
 export default function Login({ onLogin }) {
   // 'login' | 'register' | 'termos' | 'forgot' | 'reset'
@@ -24,7 +24,7 @@ export default function Login({ onLogin }) {
   const [resetDone, setResetDone] = useState(false)
 
   if (mode === 'register') return <RegisterFlow onLogin={onLogin} onBack={() => setMode('login')} />
-  if (mode === 'termos')   return <TermosDeUso onClose={() => setMode('login')} />
+  if (mode === 'termos')   return <TermsOfUse onClose={() => setMode('login')} />
 
   // ── Esqueci minha senha ─────────────────────────────────────────────────────
   if (mode === 'forgot') {

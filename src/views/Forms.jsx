@@ -264,7 +264,7 @@ function fmtDate(iso) {
 
 const allPreviews = { ...formPreviews, ...formPreviews_extra }
 
-export default function Formularios() {
+export default function Forms() {
   const [preview, setPreview] = useState(null)
   const [allForms, setAllForms] = useState([])
   const [sendModal, setSendModal] = useState(false)

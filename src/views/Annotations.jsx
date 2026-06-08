@@ -244,7 +244,7 @@ function StatChip({ label, value, color }) {
 
 // ── Main view ─────────────────────────────────────────────────────────────────
 
-export default function Anotacoes({ setCurrentView, onOpenCanvas }) {
+export default function Annotations({ setCurrentView, onOpenCanvas }) {
   const [sessions,       setSessions]       = useState([])
   const [patients,       setPatients]       = useState([])
   const [loading,        setLoading]        = useState(true)

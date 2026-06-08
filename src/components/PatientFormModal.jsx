@@ -244,7 +244,7 @@ function formFromData(d) {
   }
 }
 
-export default function CadastroModal({ isOpen, onClose, onSave, initialData = null }) {
+export default function PatientFormModal({ isOpen, onClose, onSave, initialData = null }) {
   const [form, setForm] = useState(() => formFromData(initialData))
   const [errors, setErrors] = useState({})
 
