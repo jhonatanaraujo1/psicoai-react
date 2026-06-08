@@ -407,8 +407,8 @@ export default function App() {
     const hasLocal = pat?.id && !!localStorage.getItem(patKey)
     if (!hasLocal && pat?.id) {
       try {
-        const sessions = await api.getPatientSessions(pat.id)
-        const list = [...(sessions?.content || sessions || [])].sort((a, b) => (a.position ?? 0) - (b.position ?? 0))
+        const sessions = await api.getPatientNotebook(pat.id)
+        const list = [...(sessions || [])].sort((a, b) => (a.position ?? 0) - (b.position ?? 0))
         const pages = list.flatMap(s => {
           const cd = s.canvasData || s.canvasDataJson
           if (cd) {
@@ -865,10 +865,10 @@ export default function App() {
                   const pages = sessionToPage(s)
                   if (pages?.length) return JSON.stringify(pages)
                 }
-                // 2. Fallback: agrega TODAS as sessões do paciente (caso localStorage vazio)
+                // 2. Fallback: caderno completo (COM conteúdo) — reconstrói todas as páginas
                 if (currentPatient?.id) {
-                  const all = await api.getPatientSessions(currentPatient.id)
-                  const list = [...(all?.content || all || [])].sort((a, b) => (a.position ?? 0) - (b.position ?? 0))
+                  const all = await api.getPatientNotebook(currentPatient.id)
+                  const list = [...(all || [])].sort((a, b) => (a.position ?? 0) - (b.position ?? 0))
                   const pages = list.flatMap(s => sessionToPage(s) || [])
                   if (pages.length > 0) return JSON.stringify(pages)
                 }

@@ -411,6 +411,11 @@ export const api = {
     return res
   },
   async getNote(noteId) { return this._noteToSession(await get(`/api/v1/notes/${noteId}`)) },
+  // Caderno completo (todas as páginas COM conteúdo) — para reconstruir o canvas
+  async getPatientNotebook(patientId) {
+    const res = await get(`/api/v1/patients/${patientId}/notebook`)
+    return Array.isArray(res) ? res.map(n => this._noteToSession(n)) : []
+  },
   async createNote(patientId, data = {}) {
     return this._noteToSession(await post(`/api/v1/patients/${patientId}/notes`, {
       contentType: data.contentType ?? data.type ?? 'text',

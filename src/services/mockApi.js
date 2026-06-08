@@ -986,6 +986,14 @@ export const api = {
 
   // ── Notes (caderno) — cada página é uma anotação própria ───────────────────
   async getPatientNotes(patientId, opts) { return this.getPatientSessions(patientId, opts) },
+  // Caderno completo (com conteúdo, ordenado por position) — reconstrução do canvas
+  async getPatientNotebook(patientId) {
+    await delay(150)
+    const sessions = SESSIONS_BY_PATIENT[patientId] || []
+    return [...sessions]
+      .sort((a, b) => (a.position ?? 0) - (b.position ?? 0))
+      .map(s => ({ ...s, canvasDataJson: s.canvasData ?? s.canvasDataJson ?? null }))
+  },
   async getNote(noteId) { return this.getSession(noteId) },
 
   // Sempre cria uma NOVA anotação (página). Não reutiliza — caderno = N páginas.
