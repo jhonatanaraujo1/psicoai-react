@@ -755,13 +755,16 @@ export default function App() {
         .then(() => bumpSessions())  // atualiza lista de anotações
         .catch(() => {})
     }
+    // Modo página-por-nota: criar/editar/apagar páginas altera as anotações no
+    // backend mesmo sem "sessão" — sempre revalida a listagem ao voltar.
+    if (!wasViewOnly) bumpSessions()
   }
 
   const renderView = () => {
     switch (currentView) {
       case 'dashboard':    return <Dashboard setCurrentView={handleSetView} currentUser={currentUser} />
       case 'pacientes':   return <Patients key={patientsRefreshKey} setCurrentView={handleSetView} onNovoCadastro={() => setCadastroOpen(true)} />
-      case 'paciente':    return <Patient patient={currentPatient} setCurrentView={handleSetView} onSessao={() => handleSetView('sessao', currentPatient)} onReopenSession={handleReopenSession} onViewProntuario={() => setProntuarioOpen(true)} onSyncAgenda={_syncRecurringAgenda} />
+      case 'paciente':    return <Patient key={`${currentPatient?.id}-${sessionsRefreshKey}`} patient={currentPatient} setCurrentView={handleSetView} onSessao={() => handleSetView('sessao', currentPatient)} onReopenSession={handleReopenSession} onViewProntuario={() => setProntuarioOpen(true)} onSyncAgenda={_syncRecurringAgenda} />
       case 'agenda':      return <Agenda currentUser={currentUser} />
       case 'insights':    return <Insights onGoToPatient={(patient) => handleSetView('paciente', patient)} />
       case 'financeiro':  return <Finance />
