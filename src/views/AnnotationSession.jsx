@@ -173,7 +173,8 @@ function saveCanvasPages(sessionId, patientId, pages) {
       pageType: p.pageType || 'draw',
       dataUrl: p.dataUrl || null,
       textHtml: p.textHtml || null,
-      sessionId: p.sessionId || null,   // rastreia a qual sessão a página pertence
+      sessionId: p.sessionId || null,   // = noteId da página (modelo página-por-nota)
+      noteDate: p.noteDate || null,     // data clínica própria da página
     })))
     if (data.length >= 4 * 1024 * 1024) return // muito grande
     const encrypted = AES.encrypt(data, getEncKey()).toString()
@@ -725,9 +726,10 @@ export default function AnnotationSession({
   // ── Modo página-por-nota (caderno): cada página vira uma Note própria ──────
   // Se onCreateNote + onAutosaveNote forem fornecidos, cada página sincroniza
   // como uma anotação independente (page.sessionId = noteId). Senão, modo legado.
-  onCreateNote,             // async ({ contentType }) => noteId
+  onCreateNote,             // async ({ contentType, noteDate }) => noteId
   onAutosaveNote,           // async (noteId, { textContent, htmlContent, canvasData, imageBase64 })
   onDeleteNote,             // async (noteId)
+  onUpdateNote,             // async (noteId, { noteDate }) — atualiza data clínica da página
 }) {
   const perPageNotes = !!(onCreateNote && onAutosaveNote)
   // Sempre canvas — texto é apenas um tipo de página dentro do canvas
@@ -738,25 +740,34 @@ export default function AnnotationSession({
   // Chaveada por PACIENTE (disponível na montagem) — não por sessionId, que
   // chega assíncrono e fazia a data reverter para "hoje" após salvar.
   const todayIso = () => new Date().toISOString().slice(0, 10)
-  const metaKey  = patient?.id ? `psicoai_meta_p${patient.id}` : null
+  const metaKey  = patient?.id ? `psicoai_meta_p${patient.id}` : null   // lembra a última data usada (default p/ novas páginas)
 
-  const readStoredDate = () => {
+  const readDefaultDate = () => {
     if (!metaKey) return todayIso()
     try { const m = JSON.parse(localStorage.getItem(metaKey) || '{}'); return m.sessionDate || todayIso() }
     catch { return todayIso() }
   }
 
-  const [sessionDate, setSessionDate] = useState(readStoredDate)
+  // sessionDate = data clínica EXIBIDA no pill. No modo página-por-nota ela
+  // reflete a página ativa; serve também de default para a próxima página criada.
+  const [sessionDate, setSessionDate] = useState(readDefaultDate)
 
-  // Re-sincroniza se patient?.id chegar depois da montagem (evita reverter p/ hoje)
-  useEffect(() => {
-    if (metaKey) setSessionDate(readStoredDate())
-  }, [metaKey]) // eslint-disable-line
-
-  const handleDateChange = (iso) => {
+  // Altera a data clínica de UMA página (a alvo, ou a ativa). Persiste e, se a
+  // página já virou nota, atualiza a data no backend. Não é uma data global.
+  const handleDateChange = (iso, targetPageId = null) => {
     setSessionDate(iso)
-    if (metaKey) {
-      try { localStorage.setItem(metaKey, JSON.stringify({ sessionDate: iso })) } catch {}
+    sessionDateRef.current = iso
+    if (metaKey) { try { localStorage.setItem(metaKey, JSON.stringify({ sessionDate: iso })) } catch {} }
+    if (perPageNotes) {
+      setPages(prev => {
+        const updated = prev.map((p, i) =>
+          (targetPageId ? p.id === targetPageId : i === activePage) ? { ...p, noteDate: iso } : p)
+        if (patient?.id) saveCanvasPages(sessionIdRef.current, patient.id, updated)
+        const pg  = updated.find(p => targetPageId ? p.id === targetPageId : false) || updated[activePage]
+        const nid = noteIdByPageRef.current[pg?.id] || pg?.sessionId
+        if (nid && onUpdateNote) Promise.resolve(onUpdateNote(nid, { noteDate: iso })).catch(() => {})
+        return updated
+      })
     }
   }
 
@@ -819,6 +830,11 @@ export default function AnnotationSession({
   const patientIdRef    = useRef(patient?.id)
   const pagesRef2           = useRef(null)   // snapshot das pages para flush síncrono no unload
   const isDirtyForBackend   = useRef(false)  // true quando conteúdo mudou e backend ainda não foi atualizado
+  // ── Per-page notes: dedup + serialização (evita criar nota duplicada) ──────
+  const noteIdByPageRef = useRef({})         // pageId -> noteId (fonte de verdade síncrona)
+  const flushingRef     = useRef(false)      // true enquanto um flush per-page está em andamento
+  const pendingFlushRef = useRef(false)      // pedido de flush chegou durante outro flush
+  const sessionDateRef  = useRef(null)       // data padrão para novas páginas (picker atual)
   useEffect(() => { patientIdRef.current = patient?.id }, [patient?.id])
 
   // ── Refs compartilhados ────────────────────────────────────────────────────
@@ -835,6 +851,13 @@ export default function AnnotationSession({
     setIsDirty(false)
     setShowEndModal(false)
     penDetectedRef.current = false
+
+    // Reset do estado per-page a cada abertura (evita vazar mapa/lock entre cadernos)
+    noteIdByPageRef.current = {}
+    flushingRef.current = false
+    pendingFlushRef.current = false
+    const defaultDate = readDefaultDate()
+    sessionDateRef.current = defaultDate
 
     const init = async () => {
       // 1. Tenta localStorage primeiro (rápido, sem latência)
@@ -865,12 +888,15 @@ export default function AnnotationSession({
       }
 
       const restored = saved
-        ? saved.map(p => ({ id: p.id, pageType: p.pageType || 'draw', canvasRef: { current: null }, dataUrl: p.dataUrl || null, textHtml: p.textHtml || null, sessionId: p.sessionId || null }))
+        ? saved.map(p => ({ id: p.id, pageType: p.pageType || 'draw', canvasRef: { current: null }, dataUrl: p.dataUrl || null, textHtml: p.textHtml || null, sessionId: p.sessionId || null, noteDate: p.noteDate || defaultDate }))
         : []
 
+      // Semeia o mapa pageId→noteId a partir das páginas já com nota (dedup robusto)
+      restored.forEach(p => { if (p.sessionId) noteIdByPageRef.current[p.id] = p.sessionId })
+
       if (initialPageType && restored.length > 0) {
-        // Nova anotação sobre histórico existente: adiciona nova página ao final (marcada com sessão atual)
-        const nova = { id: newPageId(), pageType: initialPageType, canvasRef: { current: null }, dataUrl: null, textHtml: null, sessionId: sessionId || null }
+        // Nova anotação sobre histórico existente: adiciona nova página ao final
+        const nova = { id: newPageId(), pageType: initialPageType, canvasRef: { current: null }, dataUrl: null, textHtml: null, sessionId: null, noteDate: defaultDate }
         const all = [...restored, nova]
         setPages(all)
         setActivePage(all.length - 1)
@@ -895,7 +921,7 @@ export default function AnnotationSession({
         }
       } else {
         // Primeiro acesso ou sem dados recuperáveis: nova página de texto (padrão clínico)
-        const nova = { id: newPageId(), pageType: initialPageType || 'text', canvasRef: { current: null }, dataUrl: null, textHtml: null, sessionId: sessionId || null }
+        const nova = { id: newPageId(), pageType: initialPageType || 'text', canvasRef: { current: null }, dataUrl: null, textHtml: null, sessionId: null, noteDate: defaultDate }
         setPages([nova])
         setActivePage(0)
       }
@@ -916,6 +942,11 @@ export default function AnnotationSession({
 
     // ── Modo página-por-nota: cada página = uma anotação independente ─────────
     if (perPageNotes && patient?.id) {
+      // Serialização: nunca dois flushes em paralelo (evita criar nota duplicada).
+      if (flushingRef.current) { pendingFlushRef.current = true; return }
+      flushingRef.current = true
+      isDirtyForBackend.current = false   // otimista: novas edições remarcam via scheduleBackendSave
+      const map = noteIdByPageRef.current
       try {
         const stripHtml = (h) => h
           ? (new DOMParser().parseFromString(h, 'text/html').body.textContent || '').slice(0, 80_000)
@@ -926,12 +957,18 @@ export default function AnnotationSession({
           const html = isText ? (p.textHtml || null) : null
           const text = stripHtml(html)
           const hasContent = !!(html || p.dataUrl)
-          let noteId = p.sessionId
+          // Fonte de verdade do noteId: mapa síncrono > sessionId da página
+          let noteId = map[p.id] || p.sessionId || null
+          if (noteId && !map[p.id]) map[p.id] = noteId
           if (!noteId) {
-            if (!hasContent) continue                  // não cria nota para página vazia
-            noteId = await onCreateNote({ contentType: isText ? 'text' : 'canvas' })
+            if (!hasContent) continue                   // página vazia → não cria nota
+            noteId = await onCreateNote({
+              contentType: isText ? 'text' : 'canvas',
+              noteDate: p.noteDate || sessionDateRef.current || undefined,
+            })
             if (!noteId) continue
-            p.sessionId = noteId                        // grava no snapshot
+            map[p.id] = noteId                          // dedup SÍNCRONO — próximo flush já enxerga
+            p.sessionId = noteId
             createdAny = true
           }
           const canvasData = (!isText && p.dataUrl) ? JSON.stringify({ dataUrl: p.dataUrl }) : null
@@ -941,18 +978,24 @@ export default function AnnotationSession({
           })
         }
         if (createdAny) {
-          // Propaga os noteIds recém-criados para o estado + localStorage
           setPages(prev => prev.map(pg => {
-            const m = pagesSnapshot.find(s => s.id === pg.id)
-            return (m?.sessionId && !pg.sessionId) ? { ...pg, sessionId: m.sessionId } : pg
+            const nid = map[pg.id]
+            return (nid && pg.sessionId !== nid) ? { ...pg, sessionId: nid } : pg
           }))
           if (patient?.id) saveCanvasPages(sessionIdRef.current, patient.id, pagesSnapshot)
         }
-        isDirtyForBackend.current = false
         setBackendSyncStatus('saved')
         setTimeout(() => setBackendSyncStatus('idle'), 2000)
       } catch {
+        isDirtyForBackend.current = true   // falhou → mantém sujo p/ nova tentativa
         setBackendSyncStatus('error')
+      } finally {
+        flushingRef.current = false
+        if (pendingFlushRef.current) {     // houve pedido durante o flush → re-roda com o estado atual
+          pendingFlushRef.current = false
+          isDirtyForBackend.current = true
+          flushToBackend(pagesRef2.current)
+        }
       }
       return
     }
@@ -990,6 +1033,13 @@ export default function AnnotationSession({
   // Mantém ref atualizado com pages atuais para o flush síncrono no unload
   useEffect(() => { pagesRef2.current = pages }, [pages])
 
+  // Pill de data reflete a página ATIVA (modo página-por-nota)
+  useEffect(() => {
+    if (!perPageNotes) return
+    const d = pages[activePage]?.noteDate
+    if (d && d !== sessionDate) { setSessionDate(d); sessionDateRef.current = d }
+  }, [activePage, pages, perPageNotes]) // eslint-disable-line
+
   // Debounce: 6s após última mudança → flush backend
   const scheduleBackendSave = useCallback((pagesSnapshot) => {
     if (viewOnly) return  // modo visualização: nunca bate no backend
@@ -1018,6 +1068,11 @@ export default function AnnotationSession({
     return () => {
       window.removeEventListener('beforeunload', handleUnload)
       document.removeEventListener('visibilitychange', handleVisibility)
+      // Flush pendente ao fechar o caderno no app (isOpen→false) ou desmontar
+      const canFlush = perPageNotes ? !!patient?.id : (onAutosave && sessionIdRef.current)
+      if (canFlush && pagesRef2.current && isDirtyForBackend.current) {
+        flushToBackend(pagesRef2.current).catch(() => {})
+      }
     }
   }, [isOpen, flushToBackend, onAutosave])
 
@@ -1067,7 +1122,7 @@ export default function AnnotationSession({
 
   // ── Canvas: nova página ────────────────────────────────────────────────────
   const addPage = useCallback((pageType = 'draw') => {
-    const newPage = { id: newPageId(), pageType, canvasRef: { current: null }, dataUrl: null, textHtml: null, sessionId: sessionIdRef.current || null }
+    const newPage = { id: newPageId(), pageType, canvasRef: { current: null }, dataUrl: null, textHtml: null, sessionId: null, noteDate: sessionDateRef.current || todayIso() }
     setPages(prev => {
       const next = [...prev, newPage]
       if (patient?.id) saveCanvasPages(sessionIdRef.current, patient.id, next)
@@ -1092,8 +1147,10 @@ export default function AnnotationSession({
       const next = prev.filter(p => p.id !== pageId)
       if (patient?.id) saveCanvasPages(sessionIdRef.current, patient.id, next)
       // Modo página-por-nota: apaga a anotação correspondente no backend
-      if (perPageNotes && removed?.sessionId && onDeleteNote) {
-        Promise.resolve(onDeleteNote(removed.sessionId)).catch(() => {})
+      if (perPageNotes) {
+        const nid = noteIdByPageRef.current[pageId] || removed?.sessionId
+        delete noteIdByPageRef.current[pageId]
+        if (nid && onDeleteNote) Promise.resolve(onDeleteNote(nid)).catch(() => {})
       } else {
         scheduleBackendSave(next)
       }
@@ -2152,8 +2209,8 @@ export default function AnnotationSession({
                     isActive={activePage === i}
                     onTextChange={handlePageTextChange}
                     onClick={() => setActivePage(i)}
-                    sessionDate={sessionDate}
-                    onDateChange={handleDateChange}
+                    sessionDate={p.noteDate || sessionDate}
+                    onDateChange={(iso) => handleDateChange(iso, p.id)}
                   />
                 : <CanvasPage
                     key={p.id} page={p}

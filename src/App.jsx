@@ -822,13 +822,14 @@ export default function App() {
             onAnalyze={handleAnalyze}
             onAutosave={(id, data) => api.autosaveSession?.(id, data)}
             // ── Modo página-por-nota: cada página vira uma anotação própria ──
-            onCreateNote={async ({ contentType }) => {
+            onCreateNote={async ({ contentType, noteDate }) => {
               if (!currentPatient?.id) return null
-              try { const n = await api.createNote(currentPatient.id, { contentType }); return n?.id || null }
+              try { const n = await api.createNote(currentPatient.id, { contentType, noteDate }); return n?.id || null }
               catch { return null }
             }}
             onAutosaveNote={(noteId, data) => api.autosaveNote?.(noteId, data)}
             onDeleteNote={(noteId) => api.deleteNote?.(noteId)}
+            onUpdateNote={(noteId, data) => api.updateNote?.(noteId, data)}
             onFetchSession={async (id) => {
               // Função auxiliar: converte sessão backend em página de texto
               const sessionToPage = (s) => {

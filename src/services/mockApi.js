@@ -1018,7 +1018,11 @@ export const api = {
     for (const sessions of Object.values(SESSIONS_BY_PATIENT)) {
       const s = sessions.find(x => x.id === noteId)
       if (s) {
-        if (data.textContent !== undefined) s.textContent = data.textContent
+        if (data.textContent !== undefined) {
+          s.textContent = data.textContent
+          s.notePreview = data.textContent ? data.textContent.slice(0, 120) : null
+          s.summary = null  // preview vem do conteúdo, não de resumo IA
+        }
         if (data.htmlContent !== undefined) s.htmlContent = data.htmlContent
         if (data.canvasData !== undefined) { s.canvasData = data.canvasData; s.canvasDataJson = data.canvasData }
         if (data.imageBase64 !== undefined) s.imageBase64 = data.imageBase64
