@@ -829,7 +829,11 @@ export default function App() {
             }}
             onAutosaveNote={(noteId, data) => api.autosaveNote?.(noteId, data)}
             onDeleteNote={(noteId) => api.deleteNote?.(noteId)}
-            onUpdateNote={(noteId, data) => api.updateNote?.(noteId, data)}
+            onUpdateNote={async (noteId, data) => {
+              try { await api.updateNote?.(noteId, data) }
+              catch { showToast('Não foi possível atualizar a data da anotação', 'error'); return }
+              if (data?.noteDate) showToast('Data da anotação atualizada', 'success', { duration: 2500 })
+            }}
             onFetchSession={async (id) => {
               // Função auxiliar: converte sessão backend em página de texto
               const sessionToPage = (s) => {

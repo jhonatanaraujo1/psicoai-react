@@ -242,7 +242,7 @@ function AddPageMenu({ onAddPage }) {
 }
 
 // ── A4 canvas page (modo canvas) ──────────────────────────────────────────────
-function CanvasPage({ page, isActive, toolRef, colorRef, sizeRef, onStrokeEnd, onClick, penDetectedRef }) {
+function CanvasPage({ page, isActive, toolRef, colorRef, sizeRef, onStrokeEnd, onClick, penDetectedRef, sessionDate, onDateChange }) {
   const canvasRef        = useRef(null)
   const isDrawing        = useRef(false)
   const lastPos          = useRef({ x: 0, y: 0 })
@@ -355,8 +355,25 @@ function CanvasPage({ page, isActive, toolRef, colorRef, sizeRef, onStrokeEnd, o
           ? '0 0 0 2.5px #5C8F6A, 0 8px 40px rgba(0,0,0,0.22)'
           : '0 4px 32px rgba(0,0,0,0.18)',
         overflow: 'hidden', cursor: 'crosshair', touchAction: 'none',
+        position: 'relative',
       }}
     >
+      {/* Data clínica da página — flutuante, não reduz a área de desenho.
+          Isola o ponteiro para não iniciar traço ao tocar no pill. */}
+      {onDateChange && (
+        <div
+          onPointerDown={e => e.stopPropagation()}
+          onClick={e => e.stopPropagation()}
+          style={{ position: 'absolute', top: 10, left: 12, zIndex: 4, display: 'flex', flexDirection: 'column', gap: 3 }}
+        >
+          <DatePill value={sessionDate} onChange={onDateChange} />
+          {!page.dataUrl && isActive && (
+            <span style={{ fontSize: 9.5, color: '#8BB89A', fontFamily: "'DM Sans', sans-serif", fontWeight: 600, letterSpacing: '0.2px', paddingLeft: 4 }}>
+              data desta anotação
+            </span>
+          )}
+        </div>
+      )}
       <canvas
         ref={canvasRef}
         className="as-canvas"
@@ -662,14 +679,19 @@ function TextPage({ page, isActive, onTextChange, onClick, sessionDate, onDateCh
             <polyline points="14 2 14 8 20 8"/>
           </svg>
           <span style={{ fontSize: 9.5, color: '#C8C2BA', fontFamily: "'DM Sans', sans-serif", letterSpacing: '0.6px', textTransform: 'uppercase', fontWeight: 600 }}>
-            Sessão clínica
+            Anotação
           </span>
         </div>
 
-        {/* Centro: DatePill — data clínica visível no corpo do documento */}
+        {/* Centro: DatePill — data clínica da PÁGINA, visível no corpo do documento */}
         {onDateChange ? (
-          <div style={{ display: 'flex', justifyContent: 'center' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
             <DatePill value={sessionDate} onChange={onDateChange} />
+            {!(page.textHtml && page.textHtml.replace(/<[^>]*>/g, '').trim()) && isActive && (
+              <span style={{ fontSize: 9.5, color: '#8BB89A', fontFamily: "'DM Sans', sans-serif", fontWeight: 600, letterSpacing: '0.2px' }}>
+                data desta anotação
+              </span>
+            )}
           </div>
         ) : sessionDate ? (
           <div style={{ display: 'flex', justifyContent: 'center' }}>
@@ -2219,6 +2241,8 @@ export default function AnnotationSession({
                     onStrokeEnd={handleStrokeEnd}
                     onClick={() => setActivePage(i)}
                     penDetectedRef={penDetectedRef}
+                    sessionDate={p.noteDate || sessionDate}
+                    onDateChange={(iso) => handleDateChange(iso, p.id)}
                   />
             ))}
           </div>
