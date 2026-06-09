@@ -1281,8 +1281,10 @@ export default function AnnotationSession({
   useEffect(() => {
     const sb = sidebarRef.current
     if (!sb || !isCanvas) return
-    sb.querySelector(`[data-thumb="${activePage}"]`)?.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
-  }, [activePage, isCanvas])
+    // Usa data-pageid para encontrar o thumbnail mesmo quando a sidebar está ordenada por data
+    const pageId = pages[activePage]?.id
+    if (pageId) sb.querySelector(`[data-pageid="${pageId}"]`)?.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
+  }, [activePage, isCanvas, pages])
 
   // ── Click-outside fecha menu "+" ──────────────────────────────────────────
   useEffect(() => {
@@ -1468,110 +1470,147 @@ export default function AnnotationSession({
                   {pages.length} páginas
                 </div>
               )}
-              {pages.map((p, i) => (
-                <div
-                  key={p.id}
-                  data-thumb={i}
-                  onMouseEnter={() => setHoveredPageIdx(i)}
-                  onMouseLeave={() => { setHoveredPageIdx(-1); if (confirmDeletePageId === p.id) setConfirmDeletePageId(null) }}
-                  onClick={() => { scrollToPage(i); if (isOverlaySidebar) setSidebarOpen(false) }}
-                  style={{
-                    width: '100%', cursor: 'pointer',
-                    background: hoveredPageIdx === i && activePage !== i
-                      ? 'rgba(255,255,255,0.06)'
-                      : activePage === i ? 'rgba(74,124,89,0.3)' : 'transparent',
-                    borderLeft: `2px solid ${activePage === i ? '#5C8F6A' : 'transparent'}`,
-                    padding: '8px 0',
-                    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
-                    transition: 'background 0.15s',
-                    position: 'relative',
-                  }}
-                >
-                  {/* Thumbnail */}
-                  <div style={{ position: 'relative' }}>
-                    <div style={{
-                      width: 72, height: 102, background: '#fff', borderRadius: 2, overflow: 'hidden',
-                      border: `1.5px solid ${activePage === i ? '#5C8F6A' : 'rgba(255,255,255,0.15)'}`,
-                      flexShrink: 0,
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    }}>
-                      {p.pageType === 'text'
-                        ? <div style={{ display: 'flex', flexDirection: 'column', gap: 4, padding: 8, width: '100%' }}>
-                            {[60, 80, 70, 50].map((w, j) => (
-                              <div key={j} style={{ height: 3, borderRadius: 2, background: '#E8E5E0', width: `${w}%` }} />
-                            ))}
-                          </div>
-                        : p.dataUrl
-                          ? <img src={p.dataUrl} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="" />
-                          : <div style={{ width: '100%', height: '100%', background: '#fff' }} />
-                      }
-                    </div>
-                    {/* Botão apagar — aparece no hover, oculto se só 1 página */}
-                    {hoveredPageIdx === i && pages.length > 1 && confirmDeletePageId !== p.id && (
-                      <button
-                        onClick={e => { e.stopPropagation(); setConfirmDeletePageId(p.id) }}
-                        title="Apagar página"
-                        style={{
-                          position: 'absolute', top: 3, right: 3,
-                          width: 22, height: 22, borderRadius: 4,
-                          background: 'rgba(192,57,43,0.88)',
-                          border: 'none', cursor: 'pointer',
-                          display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          zIndex: 5,
-                          boxShadow: '0 2px 6px rgba(0,0,0,0.5)',
-                          transition: 'background 0.12s',
-                        }}
-                        onMouseEnter={e => { e.currentTarget.style.background = 'rgba(192,57,43,1)' }}
-                        onMouseLeave={e => { e.currentTarget.style.background = 'rgba(192,57,43,0.88)' }}
-                      >
-                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5">
-                          <polyline points="3 6 5 6 21 6"/>
-                          <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
-                          <path d="M10 11v6M14 11v6"/>
-                        </svg>
-                      </button>
-                    )}
-                    {/* Confirmação de exclusão — overlay sobre o thumbnail */}
-                    {confirmDeletePageId === p.id && (
-                      <div
-                        onClick={e => e.stopPropagation()}
-                        style={{
-                          position: 'absolute', inset: 0, borderRadius: 6,
-                          background: 'rgba(20,12,12,0.93)',
-                          display: 'flex', flexDirection: 'column',
-                          alignItems: 'center', justifyContent: 'center', gap: 6,
-                          zIndex: 10,
-                        }}
-                      >
-                        <span style={{ color: '#fff', fontSize: 10, fontWeight: 600, textAlign: 'center', lineHeight: 1.3 }}>
-                          Apagar<br/>página?
-                        </span>
-                        <div style={{ display: 'flex', gap: 5 }}>
-                          <button
-                            onClick={e => { e.stopPropagation(); deletePage(p.id); setConfirmDeletePageId(null) }}
-                            style={{
-                              padding: '3px 8px', borderRadius: 4, border: 'none',
-                              background: 'rgba(192,57,43,0.95)', color: '#fff',
-                              fontSize: 10, fontWeight: 700, cursor: 'pointer',
-                            }}
-                          >Sim</button>
-                          <button
-                            onClick={e => { e.stopPropagation(); setConfirmDeletePageId(null) }}
-                            style={{
-                              padding: '3px 8px', borderRadius: 4, border: 'none',
-                              background: 'rgba(255,255,255,0.15)', color: '#fff',
-                              fontSize: 10, fontWeight: 700, cursor: 'pointer',
-                            }}
-                          >Não</button>
-                        </div>
+              {(() => {
+                // ── Ordena thumbnails por data clínica (noteDate) — mais antigas primeiro
+                // Sem data → vai para o final. Empates preservam ordem de inserção.
+                const sortedIndices = [...pages.keys()].sort((a, b) => {
+                  const da = pages[a].noteDate || ''
+                  const db = pages[b].noteDate || ''
+                  if (!da && !db) return a - b
+                  if (!da) return 1
+                  if (!db) return -1
+                  return da < db ? -1 : da > db ? 1 : a - b
+                })
+
+                // Helper: data compacta para o thumbnail "05 jun"
+                const fmtThumb = (iso) => {
+                  if (!iso) return null
+                  const parts = iso.split('-')
+                  const m = parseInt(parts[1], 10)
+                  const d = parseInt(parts[2], 10)
+                  return `${String(d).padStart(2,'0')} ${MONTHS_SHORT[m-1]}`
+                }
+
+                return sortedIndices.map((i) => {
+                  const p = pages[i]
+                  return (
+                  <div
+                    key={p.id}
+                    data-pageid={p.id}
+                    onMouseEnter={() => setHoveredPageIdx(i)}
+                    onMouseLeave={() => { setHoveredPageIdx(-1); if (confirmDeletePageId === p.id) setConfirmDeletePageId(null) }}
+                    onClick={() => { scrollToPage(i); if (isOverlaySidebar) setSidebarOpen(false) }}
+                    style={{
+                      width: '100%', cursor: 'pointer',
+                      background: hoveredPageIdx === i && activePage !== i
+                        ? 'rgba(255,255,255,0.06)'
+                        : activePage === i ? 'rgba(74,124,89,0.3)' : 'transparent',
+                      borderLeft: `2px solid ${activePage === i ? '#5C8F6A' : 'transparent'}`,
+                      padding: '8px 0',
+                      display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
+                      transition: 'background 0.15s',
+                      position: 'relative',
+                    }}
+                  >
+                    {/* Thumbnail */}
+                    <div style={{ position: 'relative' }}>
+                      <div style={{
+                        width: 72, height: 102, background: '#fff', borderRadius: 2, overflow: 'hidden',
+                        border: `1.5px solid ${activePage === i ? '#5C8F6A' : 'rgba(255,255,255,0.15)'}`,
+                        flexShrink: 0,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      }}>
+                        {p.pageType === 'text'
+                          ? <div style={{ display: 'flex', flexDirection: 'column', gap: 4, padding: 8, width: '100%' }}>
+                              {[60, 80, 70, 50].map((w, j) => (
+                                <div key={j} style={{ height: 3, borderRadius: 2, background: '#E8E5E0', width: `${w}%` }} />
+                              ))}
+                            </div>
+                          : p.dataUrl
+                            ? <img src={p.dataUrl} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="" />
+                            : <div style={{ width: '100%', height: '100%', background: '#fff' }} />
+                        }
                       </div>
-                    )}
+                      {/* Botão apagar — aparece no hover, oculto se só 1 página */}
+                      {hoveredPageIdx === i && pages.length > 1 && confirmDeletePageId !== p.id && (
+                        <button
+                          onClick={e => { e.stopPropagation(); setConfirmDeletePageId(p.id) }}
+                          title="Apagar página"
+                          style={{
+                            position: 'absolute', top: 3, right: 3,
+                            width: 22, height: 22, borderRadius: 4,
+                            background: 'rgba(192,57,43,0.88)',
+                            border: 'none', cursor: 'pointer',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            zIndex: 5,
+                            boxShadow: '0 2px 6px rgba(0,0,0,0.5)',
+                            transition: 'background 0.12s',
+                          }}
+                          onMouseEnter={e => { e.currentTarget.style.background = 'rgba(192,57,43,1)' }}
+                          onMouseLeave={e => { e.currentTarget.style.background = 'rgba(192,57,43,0.88)' }}
+                        >
+                          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5">
+                            <polyline points="3 6 5 6 21 6"/>
+                            <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+                            <path d="M10 11v6M14 11v6"/>
+                          </svg>
+                        </button>
+                      )}
+                      {/* Confirmação de exclusão — overlay sobre o thumbnail */}
+                      {confirmDeletePageId === p.id && (
+                        <div
+                          onClick={e => e.stopPropagation()}
+                          style={{
+                            position: 'absolute', inset: 0, borderRadius: 6,
+                            background: 'rgba(20,12,12,0.93)',
+                            display: 'flex', flexDirection: 'column',
+                            alignItems: 'center', justifyContent: 'center', gap: 6,
+                            zIndex: 10,
+                          }}
+                        >
+                          <span style={{ color: '#fff', fontSize: 10, fontWeight: 600, textAlign: 'center', lineHeight: 1.3 }}>
+                            Apagar<br/>página?
+                          </span>
+                          <div style={{ display: 'flex', gap: 5 }}>
+                            <button
+                              onClick={e => { e.stopPropagation(); deletePage(p.id); setConfirmDeletePageId(null) }}
+                              style={{
+                                padding: '3px 8px', borderRadius: 4, border: 'none',
+                                background: 'rgba(192,57,43,0.95)', color: '#fff',
+                                fontSize: 10, fontWeight: 700, cursor: 'pointer',
+                              }}
+                            >Sim</button>
+                            <button
+                              onClick={e => { e.stopPropagation(); setConfirmDeletePageId(null) }}
+                              style={{
+                                padding: '3px 8px', borderRadius: 4, border: 'none',
+                                background: 'rgba(255,255,255,0.15)', color: '#fff',
+                                fontSize: 10, fontWeight: 700, cursor: 'pointer',
+                              }}
+                            >Não</button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                    {/* Data + número da página */}
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
+                      {fmtThumb(p.noteDate) && (
+                        <span style={{
+                          fontSize: 9, fontWeight: 700, letterSpacing: '0.2px',
+                          color: activePage === i ? '#9DC4A8' : 'rgba(255,255,255,0.45)',
+                          fontFamily: "'DM Sans', sans-serif",
+                        }}>
+                          {fmtThumb(p.noteDate)}
+                        </span>
+                      )}
+                      <span style={{ fontSize: 10, color: activePage === i ? '#9DC4A8' : 'rgba(255,255,255,0.35)' }}>
+                        {i + 1}
+                      </span>
+                    </div>
                   </div>
-                  <span style={{ fontSize: 10, color: activePage === i ? '#9DC4A8' : 'rgba(255,255,255,0.35)' }}>
-                    {i + 1}
-                  </span>
-                </div>
-              ))}
+                  )
+                })
+              })()}
 
               {/* Add page buttons */}
               <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>

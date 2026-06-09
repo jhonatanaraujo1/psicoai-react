@@ -33,18 +33,27 @@ function avatarColor(id = '') {
 
 // Lê dados do canvas do localStorage para um patientId.
 // Retorna null se não houver nenhuma página ainda.
+// NOTA: AnnotationSession salva na chave canvas3 (canvas2 era versão anterior).
 function readCanvasData(patientId) {
   try {
-    const raw = localStorage.getItem(`psicoai_canvas2_p${patientId}`)
+    // Tenta canvas3 primeiro (versão atual), fallback para canvas2 (legado)
+    const raw = localStorage.getItem(`psicoai_canvas3_p${patientId}`)
+              || localStorage.getItem(`psicoai_canvas2_p${patientId}`)
     if (!raw) return null
-    const pages = JSON.parse(raw)
+    // Pode ser JSON puro (legado) ou AES-encrypted (canvas3)
+    let pages
+    try { pages = JSON.parse(raw) } catch { return null }  // encrypted → não decodificável aqui
     if (!Array.isArray(pages) || pages.length === 0) return null
     const lastModified = pages.reduce((max, p) => {
       const t = p.updatedAt || p.createdAt || 0
       return t > max ? t : max
     }, 0)
-    const textPages = pages.filter(p => p.type === 'text').length
-    const drawPages = pages.filter(p => p.type === 'draw' || p.type === 'drawing').length
+    // canvas3 salva campo "pageType"; canvas2 usava "type"
+    const textPages = pages.filter(p => (p.pageType || p.type) === 'text').length
+    const drawPages = pages.filter(p => {
+      const t = p.pageType || p.type
+      return t === 'draw' || t === 'drawing' || t === 'canvas'
+    }).length
     return { pageCount: pages.length, textPages, drawPages, lastModified }
   } catch { return null }
 }

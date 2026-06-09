@@ -755,19 +755,15 @@ export const api = {
     return { success: true, sentAt: new Date().toISOString(), channels }
   },
 
-  // Anotações — listagem global (backend endpoint a ser implementado)
+  // Anotações — listagem global via /api/v1/notes (NoteController#listAll)
   async getRecentAnnotations({ search = '', patientId = '' } = {}) {
-    const normalize = (s) => ({
-      ...s,
-      canvasDataJson: s.type === 'canvas' ? (s.canvasData ?? null) : null,
-    })
     if (patientId) {
-      const res = await get(`/api/v1/patients/${patientId}/sessions`, { page: 0, size: 50 })
-      return (res.content || []).map(normalize)
+      const res = await get(`/api/v1/patients/${patientId}/notes`, { page: 0, size: 50 })
+      return (res?.content || []).map(n => this._noteToSession(n))
     }
-    // Global: usa o novo endpoint /api/v1/sessions/finished
-    const res = await get('/api/v1/sessions/finished', { page: 0, size: 100 })
-    return (res?.content || []).map(normalize)
+    // Global: GET /api/v1/notes — endpoint correto no backend
+    const res = await get('/api/v1/notes', { page: 0, size: 100 })
+    return (res?.content || []).map(n => this._noteToSession(n))
   },
 
   // Documents
