@@ -1226,6 +1226,19 @@ export const api = {
     return { url: `${window.location.origin}/?billing=demo` }
   },
 
+  async purchaseAnalysisPack({ quantity }) {
+    await delay(500)
+    // Mock: redireciona para página interna indicando compra demo
+    const unitCents = quantity >= 10 ? 349 : quantity >= 5 ? 398 : 490
+    const totalCents = unitCents * quantity
+    return {
+      url: `${window.location.origin}/?analyses_purchased=${quantity}&mock=true`,
+      quantity,
+      totalCents,
+      unitCents,
+    }
+  },
+
   async getOpenSessions() {
     await delay(150)
     // No mock, sessões abertas são gerenciadas apenas via estado local — retorna vazio

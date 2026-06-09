@@ -100,6 +100,22 @@ export default function App() {
       }).catch(() => {})
     }
 
+    const analysesPurchased = params.get('analyses_purchased')
+    if (analysesPurchased) {
+      const qty = parseInt(analysesPurchased, 10)
+      window.history.replaceState({}, '', window.location.pathname)
+      // Refresh do perfil para pegar o analysesRemaining atualizado pelo webhook
+      api.getUserProfile().then(updated => {
+        if (updated) setCurrentUser(prev => ({ ...prev, ...updated }))
+      }).catch(() => {})
+      if (!isNaN(qty) && qty > 0) {
+        showToast(`✓ ${qty} ${qty === 1 ? 'análise adicionada' : 'análises adicionadas'}!`, 'success', {
+          description: 'Os créditos já estão disponíveis na sua conta.',
+          duration: 7000,
+        })
+      }
+    }
+
     if (google === 'connected') {
       window.history.replaceState({}, '', window.location.pathname)
       showToast('✓ Google conectado com sucesso!', 'success')

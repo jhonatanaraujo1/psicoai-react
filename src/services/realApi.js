@@ -614,6 +614,10 @@ export const api = {
     return post('/api/v1/billing/portal', { returnUrl })
   },
 
+  async purchaseAnalysisPack({ quantity, successUrl, cancelUrl }) {
+    return post('/api/v1/billing/analyses/purchase', { quantity, successUrl, cancelUrl })
+  },
+
   async validateCoupon(code, planId) {
     return post('/api/v1/billing/coupon/validate', { code: code.trim().toUpperCase(), planId })
   },

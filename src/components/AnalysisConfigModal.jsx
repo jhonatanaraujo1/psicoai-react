@@ -88,9 +88,16 @@ function Skeleton() {
   )
 }
 
+// Pacotes de compra avulsa de análises
+const PACKS = [
+  { qty: 1,  label: '1 análise',   price: 'R$4,90',  unitLabel: 'R$4,90/un' },
+  { qty: 5,  label: '5 análises',  price: 'R$19,90', unitLabel: 'R$3,98/un' },
+  { qty: 10, label: '10 análises', price: 'R$34,90', unitLabel: 'R$3,49/un' },
+]
+
 // ── Credit pips ───────────────────────────────────────────────────────────────
 
-function CreditBlock({ remaining, plan }) {
+function CreditBlock({ remaining, plan, onBuyPack, purchasing }) {
   const isUnlimited = remaining >= UNLIMITED || !RESTRICTED_PLANS.includes(plan)
   if (isUnlimited) return null // Especialista — sem ruído visual
 
@@ -102,36 +109,69 @@ function CreditBlock({ remaining, plan }) {
     <div style={{
       padding: '12px 22px',
       borderTop: '1px solid rgba(255,255,255,0.06)',
-      display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap',
+      display: 'flex', flexDirection: 'column', gap: 10,
     }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        {/* Pips: verde = disponível, cinza = usado */}
-        <div style={{ display: 'flex', gap: 3 }}>
-          {Array.from({ length: TOTAL }).map((_, i) => (
-            <div key={i} style={{
-              width: 6, height: 6, borderRadius: '50%',
-              background: i < used
-                ? 'rgba(255,255,255,0.18)'
-                : isPPU ? 'rgba(251,191,36,0.5)' : '#4ade80',
-              transition: 'background 0.2s',
-            }} />
-          ))}
+      {/* Linha 1: pips + status */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          {/* Pips: verde = disponível, cinza = usado */}
+          <div style={{ display: 'flex', gap: 3 }}>
+            {Array.from({ length: TOTAL }).map((_, i) => (
+              <div key={i} style={{
+                width: 6, height: 6, borderRadius: '50%',
+                background: i < used
+                  ? 'rgba(255,255,255,0.18)'
+                  : isPPU ? 'rgba(251,191,36,0.4)' : '#4ade80',
+                transition: 'background 0.2s',
+              }} />
+            ))}
+          </div>
+          <span style={{ fontSize: 11, color: isPPU ? 'rgba(251,191,36,0.75)' : 'rgba(255,255,255,0.3)', fontFamily: "'DM Sans', sans-serif" }}>
+            {isPPU
+              ? 'Análises do plano esgotadas'
+              : `${remaining} análise${remaining !== 1 ? 's' : ''} restante${remaining !== 1 ? 's' : ''} este mês`}
+          </span>
         </div>
-        <span style={{ fontSize: 11, color: isPPU ? 'rgba(251,191,36,0.75)' : 'rgba(255,255,255,0.3)', fontFamily: "'DM Sans', sans-serif" }}>
-          {isPPU
-            ? 'Incluídas esgotadas · R$4,90 por análise'
-            : `${remaining} análise${remaining !== 1 ? 's' : ''} restante${remaining !== 1 ? 's' : ''} este mês`}
-        </span>
+        {!isPPU && (
+          <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.2)', fontFamily: "'DM Sans', sans-serif" }}>
+            Plano Consultório
+          </span>
+        )}
       </div>
+
+      {/* Linha 2 (só quando esgotado): pacotes de compra */}
       {isPPU && (
-        <a
-          href="https://psiconotes.com.br/planos"
-          target="_blank"
-          rel="noopener noreferrer"
-          style={{ fontSize: 11, color: 'rgba(74,222,128,0.7)', fontWeight: 600, fontFamily: "'DM Sans', sans-serif", textDecoration: 'none' }}
-        >
-          Upgrade para Especialista →
-        </a>
+        <div>
+          <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', fontFamily: "'DM Sans', sans-serif", marginBottom: 8 }}>
+            Adicionar créditos de análise:
+          </div>
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+            {PACKS.map(p => (
+              <button
+                key={p.qty}
+                onClick={() => onBuyPack(p.qty)}
+                disabled={purchasing}
+                style={{
+                  padding: '7px 13px', borderRadius: 8, cursor: purchasing ? 'not-allowed' : 'pointer',
+                  background: 'rgba(74,222,128,0.08)', border: '1px solid rgba(74,222,128,0.25)',
+                  color: '#4ade80', fontFamily: "'DM Sans', sans-serif", fontSize: 12, fontWeight: 600,
+                  display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 1,
+                  opacity: purchasing ? 0.6 : 1, transition: 'all 0.15s',
+                }}
+                onMouseEnter={e => { if (!purchasing) e.currentTarget.style.background = 'rgba(74,222,128,0.15)' }}
+                onMouseLeave={e => { if (!purchasing) e.currentTarget.style.background = 'rgba(74,222,128,0.08)' }}
+              >
+                <span>{p.label}</span>
+                <span style={{ fontSize: 10, color: 'rgba(74,222,128,0.6)', fontWeight: 500 }}>
+                  {p.price} · {p.unitLabel}
+                </span>
+              </button>
+            ))}
+          </div>
+          <div style={{ marginTop: 8, fontSize: 10, color: 'rgba(255,255,255,0.2)', fontFamily: "'DM Sans', sans-serif" }}>
+            Ou continue — cobrado automaticamente R$4,90 por análise
+          </div>
+        </div>
       )}
     </div>
   )
@@ -146,10 +186,29 @@ export default function AnalysisConfigModal({ patient, currentUser, onConfirm, o
   const [selectedIds, setSelectedIds]   = useState(new Set())
   const [template, setTemplate]         = useState(null)    // null | 'risk' | 'longitudinal'
   const [submitting, setSubmitting]     = useState(false)
+  const [purchasing, setPurchasing]     = useState(false)
 
   const plan      = currentUser?.plan ?? 'consultorio'
   const remaining = currentUser?.analysesRemaining ?? 0
   const isRestricted = RESTRICTED_PLANS.includes(plan)
+
+  const handleBuyPack = async (quantity) => {
+    if (purchasing) return
+    setPurchasing(true)
+    try {
+      const res = await api.purchaseAnalysisPack({
+        quantity,
+        successUrl: window.location.origin,
+        cancelUrl: window.location.href,
+      })
+      // Redireciona para o Stripe Checkout. Após pagamento, Stripe devolve para
+      // successUrl?analyses_purchased=N, onde App.jsx processa o retorno.
+      window.location.href = res.url
+    } catch {
+      // Erro de infra — nunca expor e.message (pode conter dados de billing)
+      setPurchasing(false)
+    }
+  }
 
   // Carrega anotações do paciente ao abrir
   useEffect(() => {
@@ -444,7 +503,7 @@ export default function AnalysisConfigModal({ patient, currentUser, onConfirm, o
         </div>
 
         {/* ── Bloco de créditos (só Consultório) ── */}
-        <CreditBlock remaining={remaining} plan={plan} />
+        <CreditBlock remaining={remaining} plan={plan} onBuyPack={handleBuyPack} purchasing={purchasing} />
 
         {/* ── Footer ── */}
         <div style={{
