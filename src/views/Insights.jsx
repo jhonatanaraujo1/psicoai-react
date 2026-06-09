@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react'
 import { api } from '../services'
 import AiAnalysisPanel from '../components/AiAnalysisPanel'
-import AnalysisConfigModal from '../components/AnalysisConfigModal'
 
 // Tradução dos padrões para linguagem acessível
 const PATTERN_INFO = {
@@ -199,28 +198,18 @@ function AnalysisDetailModal({ patient, onClose, onGoToProfile }) {
   )
 }
 
-export default function Insights({ onGoToPatient, onStartAnalysis }) {
+export default function Insights({ onGoToPatient, onOpenAnalysisHub }) {
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
-
-  // Estado do modal de análise detalhada (pacientes já analisados)
-  const [analysisModal, setAnalysisModal] = useState(null) // { id, name } | null
-
-  // Estado do modal de configuração pré-análise (pacientes ainda não analisados)
-  const [configModal, setConfigModal] = useState(null) // item completo | null
 
   useEffect(() => {
     api.getInsights().then(setData).finally(() => setLoading(false))
   }, [])
 
   const handlePatientClick = (item) => {
-    if (!item.analyzed) {
-      // Sem análise → abre modal de configuração pré-análise
-      setConfigModal(item)
-      return
-    }
-    // Com análise → abre modal de análise detalhada
-    setAnalysisModal({ id: item.id, name: item.name })
+    // Todos os pacientes vão para o PatientAnalysisHub
+    // (com análises → vê histórico; sem análises → vê empty state + botão "Nova análise")
+    onOpenAnalysisHub && onOpenAnalysisHub({ id: item.id, name: item.name })
   }
 
   const coveragePct = data?.coveragePercent ?? 0
@@ -353,7 +342,7 @@ export default function Insights({ onGoToPatient, onStartAnalysis }) {
                   </span>
                 ) : (
                   <button
-                    onClick={e => { e.stopPropagation(); setConfigModal(item) }}
+                    onClick={e => { e.stopPropagation(); handlePatientClick(item) }}
                     style={{ fontSize: '11px', fontWeight: 600, padding: '3px 10px', borderRadius: '20px', background: 'linear-gradient(135deg, #5C8F6A 0%, #4A7C59 100%)', color: '#fff', border: 'none', cursor: 'pointer', flexShrink: 0, whiteSpace: 'nowrap', fontFamily: "'DM Sans', sans-serif" }}
                   >
                     Analisar com IA →
@@ -533,30 +522,6 @@ export default function Insights({ onGoToPatient, onStartAnalysis }) {
         </>
       )}
 
-      {/* Modal de análise detalhada — o "ouro" do produto (pacientes já analisados) */}
-      {analysisModal && (
-        <AnalysisDetailModal
-          patient={analysisModal}
-          onClose={() => setAnalysisModal(null)}
-          onGoToProfile={() => {
-            setAnalysisModal(null)
-            onGoToPatient && onGoToPatient(analysisModal)
-          }}
-        />
-      )}
-
-      {/* Modal de configuração pré-análise (pacientes ainda não analisados) */}
-      {configModal && (
-        <AnalysisConfigModal
-          patient={{ id: configModal.id, name: configModal.name }}
-          onConfirm={({ noteIds, template }) => {
-            const patient = { id: configModal.id, name: configModal.name }
-            setConfigModal(null)
-            onStartAnalysis && onStartAnalysis(patient, { noteIds, template })
-          }}
-          onCancel={() => setConfigModal(null)}
-        />
-      )}
     </div>
   )
 }

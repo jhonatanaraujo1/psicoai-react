@@ -38,6 +38,11 @@ import Notebooks from './views/Notebooks'
 import Telehealth from './views/Telehealth'
 import Settings from './views/Settings'
 import TermsOfUse from './views/TermsOfUse'
+import PatientAnalysisHub from './views/PatientAnalysisHub'
+import AnalysisDetailView from './views/AnalysisDetailView'
+import AnalysisConfigModal from './components/AnalysisConfigModal'
+
+const UNLIMITED = 2147483647
 
 export default function App() {
   // ── Auth ──────────────────────────────────────────────────────────────────
@@ -113,8 +118,13 @@ export default function App() {
   // sessionStorage sobrevive reload mas não fechar aba — comportamento correto
   const [currentView, setCurrentViewRaw] = useState(() => {
     try {
+      // Priority 1: URL params (link compartilhado de análise)
+      const params = new URLSearchParams(window.location.search)
+      const urlView = params.get('view')
+      if (urlView === 'analise' && params.get('id')) return 'analise'
+
+      // Priority 2: sessionStorage (reload normal)
       const saved = sessionStorage.getItem('psicoai_nav_view')
-      // Vistas que requerem contexto de paciente — só restaura se houver paciente salvo
       const needsPatient = ['paciente']
       if (saved && needsPatient.includes(saved)) {
         const hasPat = !!sessionStorage.getItem('psicoai_nav_patient') ||
@@ -125,9 +135,40 @@ export default function App() {
     } catch { return 'agenda' }
   })
 
+  // ── Analysis context (hub + detail) ─────────────────────────────────────────
+  const [currentAnalysisId, setCurrentAnalysisId] = useState(() => {
+    try {
+      const params = new URLSearchParams(window.location.search)
+      if (params.get('view') === 'analise') return params.get('id') || null
+      return sessionStorage.getItem('psicoai_nav_analysis') || null
+    } catch { return null }
+  })
+
+  // Modal de configuração de análise disparado a partir de qualquer view
+  const [analysisConfigTarget, setAnalysisConfigTarget] = useState(null) // patient | null
+
   const setCurrentView = (view) => {
     setCurrentViewRaw(view)
     try { sessionStorage.setItem('psicoai_nav_view', view) } catch {}
+  }
+
+  // Navega para o hub de análises de um paciente
+  const handleOpenAnalysisHub = (patient) => {
+    setCurrentPatient(patient)
+    setCurrentView('analise-paciente')
+  }
+
+  // Navega para uma análise específica (com ID referenciável)
+  const handleOpenAnalysis = (analysisId, patient) => {
+    if (patient) setCurrentPatient(patient)
+    setCurrentAnalysisId(analysisId)
+    try { sessionStorage.setItem('psicoai_nav_analysis', analysisId) } catch {}
+    setCurrentView('analise')
+  }
+
+  // Abre modal de configuração de análise para um paciente
+  const handleOpenAnalysisConfig = (patient) => {
+    setAnalysisConfigTarget(patient)
   }
 
   // ── Título dinâmico da aba por tela ──────────────────────────────────────
@@ -696,6 +737,13 @@ export default function App() {
       setAnalysisResult(data)
       finishProgress()
       dismissToast(loadingId)
+      // Decremento local otimista — evita re-fetch; backend é a fonte de verdade
+      setCurrentUser(u => {
+        if (!u) return u
+        const rem = u.analysesRemaining ?? 0
+        if (rem >= UNLIMITED) return u   // ilimitado — não decrementar
+        return { ...u, analysesRemaining: Math.max(0, rem - 1) }
+      })
       showToast('Análise concluída', 'success', {
         description: `Hipóteses e padrões identificados para ${currentPatient?.name || 'o paciente'}.`,
         duration: 6000,
@@ -773,17 +821,21 @@ export default function App() {
       case 'agenda':      return <Agenda currentUser={currentUser} />
       case 'insights':    return <Insights
         onGoToPatient={(patient) => handleSetView('paciente', patient)}
-        onStartAnalysis={(patient, { noteIds, template }) => {
-          // Seta paciente e dispara análise com os parâmetros do AnalysisConfigModal.
-          // Usa patientIdOverride porque setCurrentPatient é async e não foi commitado ainda.
-          setCurrentPatient(patient)
-          handleAnalysisConfirm({
-            patientIdOverride: patient.id,
-            additionalSessionIds: noteIds,
-            template,
-            imageBase64: null,
-          })
-        }}
+        onOpenAnalysisHub={handleOpenAnalysisHub}
+      />
+      case 'analise-paciente': return <PatientAnalysisHub
+        patient={currentPatient}
+        currentUser={currentUser}
+        onBack={() => setCurrentView('insights')}
+        onOpenAnalysis={handleOpenAnalysis}
+        onNewAnalysis={handleOpenAnalysisConfig}
+      />
+      case 'analise': return <AnalysisDetailView
+        analysisId={currentAnalysisId}
+        patient={currentPatient}
+        currentUser={currentUser}
+        onBack={() => setCurrentView('analise-paciente')}
+        onNewAnalysis={handleOpenAnalysisConfig}
       />
       case 'financeiro':  return <Finance />
       case 'lembretes':   return <Reminders />
@@ -1039,6 +1091,26 @@ export default function App() {
             // Navigate to patient view so notes aren't silently discarded
             setCurrentView('paciente')
           }}
+        />
+      )}
+
+      {/* Modal de configuração de análise — disparado de Insights/Hub/DetailView */}
+      {analysisConfigTarget && (
+        <AnalysisConfigModal
+          patient={analysisConfigTarget}
+          currentUser={currentUser}
+          onConfirm={({ noteIds, template }) => {
+            const patient = analysisConfigTarget
+            setAnalysisConfigTarget(null)
+            setCurrentPatient(patient)
+            handleAnalysisConfirm({
+              patientIdOverride: patient.id,
+              additionalSessionIds: noteIds,
+              template,
+              imageBase64: null,
+            })
+          }}
+          onCancel={() => setAnalysisConfigTarget(null)}
         />
       )}
 

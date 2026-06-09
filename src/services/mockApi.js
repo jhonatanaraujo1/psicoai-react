@@ -700,6 +700,13 @@ export const api = {
     return all.find(a => a.id === analysisId) || null
   },
 
+  async getAnalysisStatus(analysisId) {
+    await delay(100)
+    const all = Object.values(ANALYSES).flat()
+    const a = all.find(x => x.id === analysisId)
+    return a ? { id: a.id, status: a.status || 'completed', errorMessage: null } : null
+  },
+
   async getPatientAnalyses(patientId, { page = 0, size = 20 } = {}) {
     await delay(350)
     const analyses = ANALYSES[patientId] || []

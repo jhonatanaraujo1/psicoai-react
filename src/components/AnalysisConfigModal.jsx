@@ -1,23 +1,32 @@
 /**
  * AnalysisConfigModal — pré-configuração antes de disparar análise IA.
  *
- * Permite ao psicólogo escolher:
- *   1. Escopo: todas as anotações OU seleção manual por data
- *   2. Tipo: Geral · Risco · Longitudinal
+ * 1. Escopo: todas as anotações OU seleção manual por data
+ * 2. Tipo: Geral · Risco · Longitudinal
+ *    → Risco e Longitudinal bloqueados para plano Consultório (evita crédito perdido em 422)
+ * 3. Créditos: pips visuais para plano Consultório; oculto para Especialista/ilimitado
  *
- * On confirm → chama onConfirm({ noteIds: string[], template: string|null })
- * noteIds vazio = analisar caderno inteiro (scope derivado pelo backend como "notebook").
+ * Props:
+ *   patient      { id, name }
+ *   currentUser  { analysesRemaining, plan }
+ *   onConfirm    ({ noteIds: string[], template: string|null }) → void
+ *   onCancel     () → void
  */
 
 import { useState, useEffect } from 'react'
 import { api } from '../services'
 
-// ── Tipos de análise ──────────────────────────────────────────────────────────
+// ── Constantes ────────────────────────────────────────────────────────────────
+
+const UNLIMITED = 2147483647 // Int.MAX_VALUE
+
+const RESTRICTED_PLANS = ['consultorio', 'base']
 
 const ANALYSIS_TYPES = [
   {
     id: null,
     label: 'Geral',
+    premiumOnly: false,
     icon: (
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
         <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
@@ -28,6 +37,7 @@ const ANALYSIS_TYPES = [
   {
     id: 'risk',
     label: 'Risco',
+    premiumOnly: true,
     icon: (
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
         <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
@@ -39,6 +49,7 @@ const ANALYSIS_TYPES = [
   {
     id: 'longitudinal',
     label: 'Longitudinal',
+    premiumOnly: true,
     icon: (
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
         <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
@@ -77,15 +88,68 @@ function Skeleton() {
   )
 }
 
+// ── Credit pips ───────────────────────────────────────────────────────────────
+
+function CreditBlock({ remaining, plan }) {
+  const isUnlimited = remaining >= UNLIMITED || !RESTRICTED_PLANS.includes(plan)
+  if (isUnlimited) return null // Especialista — sem ruído visual
+
+  const TOTAL = 5
+  const used  = Math.max(0, TOTAL - Math.min(remaining, TOTAL))
+  const isPPU = remaining <= 0
+
+  return (
+    <div style={{
+      padding: '12px 22px',
+      borderTop: '1px solid rgba(255,255,255,0.06)',
+      display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap',
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        {/* Pips: verde = disponível, cinza = usado */}
+        <div style={{ display: 'flex', gap: 3 }}>
+          {Array.from({ length: TOTAL }).map((_, i) => (
+            <div key={i} style={{
+              width: 6, height: 6, borderRadius: '50%',
+              background: i < used
+                ? 'rgba(255,255,255,0.18)'
+                : isPPU ? 'rgba(251,191,36,0.5)' : '#4ade80',
+              transition: 'background 0.2s',
+            }} />
+          ))}
+        </div>
+        <span style={{ fontSize: 11, color: isPPU ? 'rgba(251,191,36,0.75)' : 'rgba(255,255,255,0.3)', fontFamily: "'DM Sans', sans-serif" }}>
+          {isPPU
+            ? 'Incluídas esgotadas · R$4,90 por análise'
+            : `${remaining} análise${remaining !== 1 ? 's' : ''} restante${remaining !== 1 ? 's' : ''} este mês`}
+        </span>
+      </div>
+      {isPPU && (
+        <a
+          href="https://psiconotes.com.br/planos"
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{ fontSize: 11, color: 'rgba(74,222,128,0.7)', fontWeight: 600, fontFamily: "'DM Sans', sans-serif", textDecoration: 'none' }}
+        >
+          Upgrade para Especialista →
+        </a>
+      )}
+    </div>
+  )
+}
+
 // ── Componente principal ──────────────────────────────────────────────────────
 
-export default function AnalysisConfigModal({ patient, onConfirm, onCancel }) {
+export default function AnalysisConfigModal({ patient, currentUser, onConfirm, onCancel }) {
   const [notes, setNotes]               = useState([])
   const [loadingNotes, setLoadingNotes] = useState(true)
-  const [scope, setScope]               = useState('all')       // 'all' | 'select'
+  const [scope, setScope]               = useState('all')   // 'all' | 'select'
   const [selectedIds, setSelectedIds]   = useState(new Set())
-  const [template, setTemplate]         = useState(null)        // null | 'risk' | 'longitudinal'
+  const [template, setTemplate]         = useState(null)    // null | 'risk' | 'longitudinal'
   const [submitting, setSubmitting]     = useState(false)
+
+  const plan      = currentUser?.plan ?? 'consultorio'
+  const remaining = currentUser?.analysesRemaining ?? 0
+  const isRestricted = RESTRICTED_PLANS.includes(plan)
 
   // Carrega anotações do paciente ao abrir
   useEffect(() => {
@@ -94,13 +158,11 @@ export default function AnalysisConfigModal({ patient, onConfirm, onCancel }) {
     api.getPatientNotes(patient.id, { size: 50 })
       .then(res => {
         const list = (res?.content || []).sort((a, b) => {
-          // Ordena por noteDate desc (mais recentes primeiro)
           const da = a.sessionDate || a.noteDate || a.createdAt || ''
           const db = b.sessionDate || b.noteDate || b.createdAt || ''
           return db.localeCompare(da)
         })
         setNotes(list)
-        // Pré-seleciona todas quando carrega
         setSelectedIds(new Set(list.map(n => n.id)))
       })
       .catch(() => setNotes([]))
@@ -198,8 +260,6 @@ export default function AnalysisConfigModal({ patient, onConfirm, onCancel }) {
             <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '1px', textTransform: 'uppercase', color: 'rgba(255,255,255,0.35)', marginBottom: 12 }}>
               Escopo das anotações
             </div>
-
-            {/* Pills de escopo */}
             <div style={{ display: 'flex', gap: 8, marginBottom: scope === 'select' ? 14 : 0 }}>
               {[
                 { id: 'all',    label: `Todas${notes.length > 0 ? ` (${notes.length})` : ''}` },
@@ -225,7 +285,6 @@ export default function AnalysisConfigModal({ patient, onConfirm, onCancel }) {
             {/* Lista de anotações selecionáveis */}
             {scope === 'select' && (
               <div style={{ borderRadius: 10, border: '1px solid rgba(255,255,255,0.08)', overflow: 'hidden' }}>
-                {/* Header da lista */}
                 <div style={{
                   display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                   padding: '8px 14px',
@@ -242,8 +301,6 @@ export default function AnalysisConfigModal({ patient, onConfirm, onCancel }) {
                     {selectedIds.size === notes.length ? 'Desmarcar todas' : 'Selecionar todas'}
                   </button>
                 </div>
-
-                {/* Linhas */}
                 <div style={{ maxHeight: 220, overflowY: 'auto', scrollbarWidth: 'thin', scrollbarColor: 'rgba(255,255,255,0.1) transparent' }}>
                   {loadingNotes ? <div style={{ padding: '14px 14px' }}><Skeleton /></div> : (
                     notes.length === 0 ? (
@@ -269,7 +326,6 @@ export default function AnalysisConfigModal({ patient, onConfirm, onCancel }) {
                               background: checked ? 'rgba(74,222,128,0.06)' : 'transparent',
                             }}
                           >
-                            {/* Checkbox custom */}
                             <div style={{
                               width: 16, height: 16, borderRadius: 4, flexShrink: 0, marginTop: 1,
                               border: `1.5px solid ${checked ? '#4ade80' : 'rgba(255,255,255,0.2)'}`,
@@ -283,8 +339,6 @@ export default function AnalysisConfigModal({ patient, onConfirm, onCancel }) {
                                 </svg>
                               )}
                             </div>
-
-                            {/* Conteúdo */}
                             <div style={{ flex: 1, minWidth: 0 }}>
                               <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3 }}>
                                 <span style={{ fontSize: 11, fontWeight: 700, color: checked ? '#4ade80' : 'rgba(255,255,255,0.5)', fontFamily: "'Fraunces', serif" }}>
@@ -320,23 +374,32 @@ export default function AnalysisConfigModal({ patient, onConfirm, onCancel }) {
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {ANALYSIS_TYPES.map(t => {
-                const active = template === t.id
+                const active   = template === t.id
+                const locked   = t.premiumOnly && isRestricted
+                const disabled = locked
+
                 return (
                   <button
                     key={String(t.id)}
-                    onClick={() => setTemplate(t.id)}
+                    onClick={() => !disabled && setTemplate(t.id)}
+                    disabled={disabled}
+                    title={locked ? 'Disponível no plano Especialista' : undefined}
                     style={{
                       display: 'flex', alignItems: 'flex-start', gap: 12,
                       padding: '12px 14px', borderRadius: 10, textAlign: 'left',
                       border: `1.5px solid ${active ? 'rgba(74,222,128,0.45)' : 'rgba(255,255,255,0.08)'}`,
-                      background: active ? 'rgba(74,222,128,0.09)' : 'rgba(255,255,255,0.03)',
-                      cursor: 'pointer', transition: 'all 0.15s',
+                      background: active
+                        ? 'rgba(74,222,128,0.09)'
+                        : disabled ? 'rgba(255,255,255,0.015)' : 'rgba(255,255,255,0.03)',
+                      cursor: disabled ? 'not-allowed' : 'pointer',
+                      opacity: disabled ? 0.5 : 1,
+                      transition: 'all 0.15s',
                       fontFamily: "'DM Sans', sans-serif",
                     }}
-                    onMouseEnter={e => { if (!active) e.currentTarget.style.background = 'rgba(255,255,255,0.06)' }}
-                    onMouseLeave={e => { if (!active) e.currentTarget.style.background = 'rgba(255,255,255,0.03)' }}
+                    onMouseEnter={e => { if (!active && !disabled) e.currentTarget.style.background = 'rgba(255,255,255,0.06)' }}
+                    onMouseLeave={e => { if (!active && !disabled) e.currentTarget.style.background = 'rgba(255,255,255,0.03)' }}
                   >
-                    {/* Ícone + radio */}
+                    {/* Ícone */}
                     <div style={{
                       width: 32, height: 32, borderRadius: 8, flexShrink: 0,
                       background: active ? 'rgba(74,222,128,0.18)' : 'rgba(255,255,255,0.06)',
@@ -349,8 +412,15 @@ export default function AnalysisConfigModal({ patient, onConfirm, onCancel }) {
                     </div>
                     {/* Texto */}
                     <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: 13, fontWeight: 700, color: active ? '#f1f5f9' : 'rgba(255,255,255,0.6)', marginBottom: 3, transition: 'color 0.15s' }}>
-                        {t.label}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3 }}>
+                        <span style={{ fontSize: 13, fontWeight: 700, color: active ? '#f1f5f9' : 'rgba(255,255,255,0.6)', transition: 'color 0.15s' }}>
+                          {t.label}
+                        </span>
+                        {locked && (
+                          <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.5px', padding: '1px 6px', borderRadius: 10, background: 'rgba(167,139,250,0.15)', color: '#a78bfa', border: '1px solid rgba(167,139,250,0.25)', textTransform: 'uppercase' }}>
+                            Especialista
+                          </span>
+                        )}
                       </div>
                       <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', lineHeight: 1.5 }}>
                         {t.desc}
@@ -373,6 +443,9 @@ export default function AnalysisConfigModal({ patient, onConfirm, onCancel }) {
           </div>
         </div>
 
+        {/* ── Bloco de créditos (só Consultório) ── */}
+        <CreditBlock remaining={remaining} plan={plan} />
+
         {/* ── Footer ── */}
         <div style={{
           padding: '14px 22px',
@@ -381,7 +454,7 @@ export default function AnalysisConfigModal({ patient, onConfirm, onCancel }) {
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           gap: 12, flexShrink: 0,
         }}>
-          <div style={{ fontSize: 10.5, color: 'rgba(255,255,255,0.2)', lineHeight: 1.5, maxWidth: 260 }}>
+          <div style={{ fontSize: 10.5, color: 'rgba(255,255,255,0.18)', lineHeight: 1.5, maxWidth: 260 }}>
             Hipóteses de suporte ao raciocínio clínico · diagnóstico é responsabilidade do profissional
           </div>
           <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
@@ -425,6 +498,9 @@ export default function AnalysisConfigModal({ patient, onConfirm, onCancel }) {
                     <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
                   </svg>
                   Analisar com IA
+                  {remaining <= 0 && !( remaining >= UNLIMITED || !RESTRICTED_PLANS.includes(plan)) && (
+                    <span style={{ fontSize: 11, opacity: 0.7 }}>· R$4,90</span>
+                  )}
                 </>
               )}
             </button>
