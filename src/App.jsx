@@ -679,10 +679,11 @@ export default function App() {
         duration: 10000,
       })
     } catch (e) {
+      const backendMsg = e?.message || 'Falha na análise em segundo plano.'
       failProgress()
-      showToast('Falha na análise em segundo plano', 'error', {
-        description: 'Verifique sua conexão e tente novamente.',
-        duration: 6000,
+      showToast('Falha na análise', 'error', {
+        description: backendMsg,
+        duration: 8000,
       })
     }
   }
@@ -749,13 +750,19 @@ export default function App() {
         duration: 6000,
       })
     } catch (e) {
-      setAnalysisResult({ error: 'Falha na análise. Tente novamente.' })
+      // Extrair mensagem real do backend — realApi.js já faz throw new Error(json.message)
+      const backendMsg = e?.message || 'Falha na análise.'
+      // Erros de conteúdo/validação (422) não se resolve com retry — mostrar ação de retry só para erros de rede/servidor
+      const isRetryable = backendMsg.includes('indisponível') || backendMsg.includes('conexão') || backendMsg.startsWith('Erro ')
+      setAnalysisResult({ error: backendMsg })
       failProgress()
       dismissToast(loadingId)
       showToast('Falha na análise', 'error', {
-        description: 'Verifique sua conexão e tente novamente.',
-        action: { label: 'Tentar novamente', onClick: () => handleAnalysisConfirm({ imageBase64, textContent, htmlContent, duration, sessionId, additionalSessionIds, template, canvasDataJson, canvasTextContent }) },
-        duration: 8000,
+        description: backendMsg,
+        ...(isRetryable && {
+          action: { label: 'Tentar novamente', onClick: () => handleAnalysisConfirm({ imageBase64, textContent, htmlContent, duration, sessionId, additionalSessionIds, template, canvasDataJson, canvasTextContent }) },
+        }),
+        duration: 10000,
       })
     } finally {
       setAnalysisLoading(false)
@@ -775,10 +782,11 @@ export default function App() {
       dismissToast(loadingId)
       showToast('Análise refinada', 'success', { description: 'Resultado atualizado com seu feedback.' })
     } catch (e) {
-      setAnalysisResult({ error: 'Falha no refinamento. Tente novamente.' })
+      const backendMsg = e?.message || 'Falha no refinamento.'
+      setAnalysisResult({ error: backendMsg })
       failProgress()
       dismissToast(loadingId)
-      showToast('Falha no refinamento', 'error', { duration: 6000 })
+      showToast('Falha no refinamento', 'error', { description: backendMsg, duration: 6000 })
     } finally {
       setAnalysisLoading(false)
     }
