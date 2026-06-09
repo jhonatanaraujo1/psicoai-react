@@ -4,12 +4,30 @@ import RegisterFlow from '../components/RegisterFlow'
 import TermsOfUse from './TermsOfUse'
 
 export default function Login({ onLogin }) {
+  // Email capturado da landing via ?email=xxx
+  const [prefillEmail] = useState(() => {
+    try {
+      const params = new URLSearchParams(window.location.search)
+      const e = params.get('email') || ''
+      // Limpa o parâmetro da URL para não reaparecer ao navegar
+      if (e) window.history.replaceState({}, '', window.location.pathname)
+      return e
+    } catch { return '' }
+  })
+
   // 'login' | 'register' | 'termos' | 'forgot' | 'reset'
   const [mode, setMode] = useState(() => {
     const params = new URLSearchParams(window.location.search)
-    return params.has('reset') ? 'reset' : 'login'
+    if (params.has('reset')) return 'reset'
+    // Se veio com email ou ?register=1 da landing, abre direto no cadastro
+    if (params.get('email') || params.get('register')) return 'register'
+    return 'login'
   })
-  const [email, setEmail] = useState('')
+  const [email, setEmail] = useState(() => {
+    try {
+      return new URLSearchParams(window.location.search).get('email') || ''
+    } catch { return '' }
+  })
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -23,7 +41,7 @@ export default function Login({ onLogin }) {
   const [newPasswordConfirm, setNewPasswordConfirm] = useState('')
   const [resetDone, setResetDone] = useState(false)
 
-  if (mode === 'register') return <RegisterFlow onLogin={onLogin} onBack={() => setMode('login')} />
+  if (mode === 'register') return <RegisterFlow onLogin={onLogin} onBack={() => setMode('login')} initialEmail={prefillEmail} />
   if (mode === 'termos')   return <TermsOfUse onClose={() => setMode('login')} />
 
   // ── Esqueci minha senha ─────────────────────────────────────────────────────

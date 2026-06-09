@@ -74,14 +74,14 @@ const Err = ({ msg }) => msg ? <div style={{ fontSize: '12px', color: '#EF4444',
 
 const chevronBg = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238B8B8B' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E") no-repeat right 12px center`
 
-export default function RegisterFlow({ onLogin, onBack }) {
+export default function RegisterFlow({ onLogin, onBack, initialEmail = '' }) {
   const [step, setStep] = useState(1)
   const [loading, setLoading] = useState(false)
   const [showPass, setShowPass] = useState(false)
   const [errors, setErrors] = useState({})
   const [registeredUser, setRegisteredUser] = useState(null)
   const [form, setForm] = useState({
-    name: '', crp: '', email: '', password: '',
+    name: '', crp: '', email: initialEmail, password: '',
     specialty: '', approach: '', clinicName: '', city: '',
   })
 

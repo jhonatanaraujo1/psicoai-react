@@ -10,21 +10,39 @@ import { api, assertSafeRedirectUrl } from '../services'
 const PLANS = [
   {
     id: 'base',
-    name: 'PsicoNotes',
-    price: 'R$79',
+    name: 'Consultório',
+    price: 'R$49',
     period: '/mês',
-    tagline: 'Tudo incluído · 5 análises IA/mês · sem surpresa no bolso',
+    tagline: 'Gestão completa · 5 análises IA/mês',
     features: [
       'Prontuário eletrônico ilimitado',
-      'Canvas de anotações com desenho e texto',
-      'Agenda integrada',
-      'Linha do tempo clínica',
-      'Alertas de padrão clínico',
+      'Canvas de anotações (único no segmento)',
+      'Agenda com lembretes automáticos',
+      'Controle financeiro + recibos',
+      'Formulários clínicos (PHQ-9, Beck, TCLE)',
       '5 análises IA incluídas por mês',
       'Conformidade CFP 09/2024',
       'Análises extras: R$4,90/análise',
     ],
-    badge: '14 dias grátis',
+    highlight: false,
+  },
+  {
+    id: 'clinico',
+    name: 'Especialista',
+    price: 'R$97',
+    period: '/mês',
+    tagline: 'IA clínica sem limite — sem interrupção no raciocínio',
+    features: [
+      'Tudo do Consultório incluído',
+      'Análises IA ilimitadas — sem cap',
+      'Hipóteses DSM-5/CID-11 com grau de evidência',
+      '5 templates: reflexão, risco, longitudinal, supervisão, psicodinâmica',
+      'Alertas de padrão (evitação, ruminação, hipervigilância)',
+      'Re-análise com feedback até 3x por sessão',
+      'Insights agregados da sua carteira',
+      'Acesso antecipado a novas features',
+    ],
+    badge: 'Recomendado',
     highlight: true,
   },
 ]
@@ -124,11 +142,11 @@ export default function PaymentModal({ onLogout }) {
                 fontFamily: "'Fraunces', serif", fontSize: '22px',
                 color: '#fff', fontWeight: 300, marginBottom: '5px',
               }}>
-                Falha no pagamento da assinatura
+                Sua assinatura expirou
               </div>
               <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.55)', lineHeight: 1.5 }}>
-                Seus prontuários e sessões estão intactos — renove a assinatura
-                abaixo para retomar o acesso completo.
+                Seus prontuários e anotações estão intactos — renove abaixo
+                para retomar o acesso completo em segundos.
               </div>
             </div>
           </div>
