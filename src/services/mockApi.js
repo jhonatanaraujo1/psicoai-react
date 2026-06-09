@@ -621,7 +621,13 @@ export const api = {
   // Sessions
   async getPatientSessions(patientId, { page = 0, size = 20 } = {}) {
     await delay(350)
-    const sessions = SESSIONS_BY_PATIENT[patientId] || []
+    const raw = SESSIONS_BY_PATIENT[patientId] || []
+    // Mais recente primeiro — sessionDate desc, createdAt desc (espelha backend)
+    const sessions = [...raw].sort((a, b) => {
+      const da = a.sessionDate || a.noteDate || a.createdAt || ''
+      const db = b.sessionDate || b.noteDate || b.createdAt || ''
+      return db.localeCompare(da)
+    })
     return {
       content: sessions.slice(page * size, page * size + size),
       totalElements: sessions.length,
