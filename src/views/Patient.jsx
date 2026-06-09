@@ -353,7 +353,7 @@ export default function Patient({ patient: propPatient, setCurrentView, onSessao
         ) : (
           <div className="sess-tbl-outer">
             {/* Colunas: Nº · Tipo · Resumo · Criado · Última alteração · Status · ações */}
-            <div className="sess-tbl-hdr" style={{ display: 'grid', gridTemplateColumns: '52px 58px 1fr 88px 110px 110px 28px', borderBottom: '2px solid var(--gr2)', padding: '8px 20px', background: 'var(--ow)' }}>
+            <div className="sess-tbl-hdr" style={{ display: 'grid', gridTemplateColumns: '52px 86px 1fr 88px 110px 110px 28px', columnGap: '12px', borderBottom: '2px solid var(--gr2)', padding: '8px 20px', background: 'var(--ow)' }}>
               {['Nº', 'Tipo', 'Resumo / Anotações', 'Criado', 'Última alt.', 'Status', ''].map((h, i) => (
                 <div key={i} style={{ fontSize: '10px', fontWeight: 600, letterSpacing: '0.8px', textTransform: 'uppercase', color: 'var(--gr4)' }}>{h}</div>
               ))}
@@ -372,7 +372,7 @@ export default function Patient({ patient: propPatient, setCurrentView, onSessao
                   <div
                     className="sess-tbl-row"
                     onClick={() => onReopenSession && onReopenSession(s)}
-                    style={{ display: 'grid', gridTemplateColumns: '52px 58px 1fr 88px 110px 110px 28px', padding: '12px 20px', alignItems: 'center', cursor: 'pointer', transition: 'background 0.12s' }}
+                    style={{ display: 'grid', gridTemplateColumns: '52px 86px 1fr 88px 110px 110px 28px', columnGap: '12px', padding: '12px 20px', alignItems: 'center', cursor: 'pointer', transition: 'background 0.12s' }}
                     onMouseEnter={e => e.currentTarget.style.background = 'var(--ow)'}
                     onMouseLeave={e => e.currentTarget.style.background = ''}
                   >
