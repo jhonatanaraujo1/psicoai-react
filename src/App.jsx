@@ -673,7 +673,8 @@ export default function App() {
   }
 
   // Step 2: called by AnalyzeSessionsModal after the psychologist selects sessions and clicks confirm.
-  const handleAnalysisConfirm = async ({ imageBase64, textContent, htmlContent, duration, sessionId, additionalSessionIds = [], template = null, canvasDataJson, canvasTextContent, sessionDate }) => {
+  // patientIdOverride: usado quando chamado de Insights (currentPatient ainda não foi atualizado no state)
+  const handleAnalysisConfirm = async ({ imageBase64, textContent, htmlContent, duration, sessionId, additionalSessionIds = [], template = null, canvasDataJson, canvasTextContent, sessionDate, patientIdOverride }) => {
     setPendingAnalysis(null)
     setAiDrawerOpen(true)
     setAnalysisResult(null)
@@ -687,7 +688,7 @@ export default function App() {
       // as anotações: noteIds selecionados ou [] = caderno inteiro (longitudinal).
       // imageBase64 = render do canvas gerado SOB DEMANDA (não persistido) p/ a visão da IA.
       const data = await api.createAnalysis({
-        patientId: currentPatient?.id,
+        patientId: patientIdOverride || currentPatient?.id,
         noteIds: additionalSessionIds,
         template,
         imageBase64,
@@ -770,7 +771,20 @@ export default function App() {
       case 'pacientes':   return <Patients key={patientsRefreshKey} setCurrentView={handleSetView} onNovoCadastro={() => setCadastroOpen(true)} />
       case 'paciente':    return <Patient key={`${currentPatient?.id}-${sessionsRefreshKey}`} patient={currentPatient} setCurrentView={handleSetView} onSessao={() => handleSetView('sessao', currentPatient)} onReopenSession={handleReopenSession} onViewProntuario={() => setProntuarioOpen(true)} onSyncAgenda={_syncRecurringAgenda} />
       case 'agenda':      return <Agenda currentUser={currentUser} />
-      case 'insights':    return <Insights onGoToPatient={(patient) => handleSetView('paciente', patient)} />
+      case 'insights':    return <Insights
+        onGoToPatient={(patient) => handleSetView('paciente', patient)}
+        onStartAnalysis={(patient, { noteIds, template }) => {
+          // Seta paciente e dispara análise com os parâmetros do AnalysisConfigModal.
+          // Usa patientIdOverride porque setCurrentPatient é async e não foi commitado ainda.
+          setCurrentPatient(patient)
+          handleAnalysisConfirm({
+            patientIdOverride: patient.id,
+            additionalSessionIds: noteIds,
+            template,
+            imageBase64: null,
+          })
+        }}
+      />
       case 'financeiro':  return <Finance />
       case 'lembretes':   return <Reminders />
       case 'formularios': return <Forms />
