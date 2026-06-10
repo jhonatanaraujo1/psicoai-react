@@ -2,7 +2,10 @@
 <html lang="pt-BR">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <!-- viewport-fit=cover: suporte ao notch/safe-area no iOS.
+         Sem maximum-scale/user-scalable: WCAG 1.4.4 (zoom deve ser possível).
+         Auto-zoom em inputs é prevenido via CSS font-size:16px !important. -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>PsicoNotes — Plataforma Clínica Inteligente</title>
 
     <!-- Favicon -->

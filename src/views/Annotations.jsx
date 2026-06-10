@@ -323,7 +323,7 @@ export default function Annotations({ setCurrentView, onOpenCanvas }) {
       )}
 
       {/* Filters */}
-      <div style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap', alignItems: 'center' }}>
+      <div className="ann-filter-bar" style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap', alignItems: 'center' }}>
         {/* Search */}
         <div style={{ position: 'relative', flex: '1 1 220px' }}>
           <svg style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--gr4)" strokeWidth="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
@@ -348,7 +348,7 @@ export default function Annotations({ setCurrentView, onOpenCanvas }) {
         </div>
 
         {/* Evolução filter pills */}
-        <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
+        <div className="ev-pills" style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
           {EV_FILTERS.map(f => (
             <button
               key={f.key}

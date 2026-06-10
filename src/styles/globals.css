@@ -1,10 +1,17 @@
 *{margin:0;padding:0;box-sizing:border-box}
-/* Previne zoom automático em qualquer elemento focável/editável.
-   Android Chrome 86+ ignora user-scalable=no por acessibilidade — a única
-   garantia real é font-size ≥ 16px em TUDO que recebe foco de texto. */
-input,textarea,select,[contenteditable]{font-size:16px !important}
+/* ── ANTI-ZOOM GLOBAL ────────────────────────────────────────────────────────
+   iOS Safari dispara zoom automático em qualquer campo com font-size < 16px.
+   Android Chrome 86+ ignora user-scalable=no por acessibilidade.
+   Solução definitiva: font-size ≥ 16px em TUDO que recebe foco de texto.
+   !important garante precedência sobre inline styles (ex: fontSize:'13px' no JSX).
+   Cobre inputs nativos, contentEditable, e elementos com inputmode (custom pickers). */
+input,textarea,select,[contenteditable],
+[inputmode],[inputmode="text"],[inputmode="numeric"],[inputmode="decimal"],
+[inputmode="email"],[inputmode="search"],[inputmode="tel"],[inputmode="url"],
+[role=textbox],[role=searchbox],[role=spinbutton],[role=combobox]{font-size:16px !important}
 /* Desabilita double-tap-zoom nos elementos interativos sem bloquear scroll */
-button,a,label,[role=button],input,textarea,select,[contenteditable]{touch-action:manipulation}
+button,a,label,[role=button],input,textarea,select,[contenteditable],
+[inputmode],[role=textbox],[role=searchbox]{touch-action:manipulation}
 :root{
   --g900:#1E3328;--g700:#2D4A38;--g600:#3D6B4A;--g500:#4A7C59;--g400:#5C8F6A;--g300:#8BB89A;--g100:#D4E8DA;--g50:#EBF4EE;
   --ow:#F5F2EC;--cream:#EDE9E1;--w:#FFFFFF;
@@ -1212,5 +1219,114 @@ img, video, svg, canvas { max-width: 100%; }
   .content {
     padding-left: max(18px, env(safe-area-inset-left, 0px));
     padding-right: max(18px, env(safe-area-inset-right, 0px));
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   RESPONSIVE v3 — Zoom & overflow hardening
+   ══════════════════════════════════════════════════════════════════ */
+
+/* ── GLOBAL OVERFLOW CONTAINMENT ─────────────────────────────────
+   Nenhuma página deve ter scroll horizontal.
+   html overflow-x:hidden sozinho não funciona no iOS (body precisa).  */
+html { overflow-x: hidden; }
+body { overflow-x: hidden; }
+
+/* ── FILTER BARS — phone XS (≤360px) ────────────────────────────
+   Barra de filtros (busca + select + pills) com minWidth fixo pode
+   vazar em phones de 320-360px. Em telas muito estreitas, cada
+   elemento ocupa toda a largura.                                    */
+@media(max-width:360px) {
+  /* Filtros em flex-wrap: forçar cada filho a 100% de largura */
+  .pac-filter-bar > *,
+  .ann-filter-bar > * { flex: 1 1 100% !important; min-width: 0 !important; }
+  /* Pills de evolução: scroll horizontal em vez de wrap descontrolado */
+  .ev-pills { flex-wrap: nowrap !important; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+}
+
+/* ── TOPBAR ACTION BUTTONS — não vazar em iPhone SE (375px) ──────── */
+@media(max-width:400px) {
+  .tb-right { gap: 4px !important; }
+  .tb-btn { width: 32px !important; height: 32px !important; }
+}
+
+/* ── MODALS — garantir que não saiam do viewport em qualquer tamanho */
+.recibo-box, .form-preview-box {
+  max-width: min(440px, calc(100vw - 24px)) !important;
+}
+@media(max-width:480px) {
+  .recibo-box { width: calc(100vw - 24px) !important; }
+  .form-preview-box {
+    width: calc(100vw - 16px) !important;
+    max-height: min(88dvh, 88svh, 88vh) !important;
+  }
+}
+
+/* ── PATIENT ANALYSIS HUB — mobile ──────────────────────────────── */
+@media(max-width:640px) {
+  .analysis-hub-header { flex-direction: column !important; align-items: flex-start !important; }
+  .analysis-hub-stats { grid-template-columns: 1fr 1fr !important; }
+}
+
+/* ── AI DRAWER BOTTOM SHEET — garantir posicionamento correto ────── */
+@media(max-width:640px) {
+  /* Previne que o sheet escape acima da viewport em iPhones com notch */
+  .ai-drawer {
+    max-height: calc(100dvh - env(safe-area-inset-top, 0px)) !important;
+    top: env(safe-area-inset-top, 0px) !important;
+  }
+}
+
+/* ── CANVAS SESSION TOPBAR — safe area portrait+landscape ─────────── */
+@media(max-width:640px) {
+  .cs-topbar {
+    padding-left: max(12px, env(safe-area-inset-left, 0px)) !important;
+    padding-right: max(12px, env(safe-area-inset-right, 0px)) !important;
+  }
+}
+
+/* ── FINANCE TABLE — horizontal scroll wrapper ───────────────────── */
+.fin-table-wrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  width: 100%;
+}
+
+/* ── PAT-STATS — wrap limpa em iPhone SE ────────────────────────── */
+@media(max-width:380px) {
+  .pat-stats { gap: 10px !important; }
+  .pat-stat-val { font-size: 16px !important; }
+  .pat-stat-label { font-size: 10px !important; }
+}
+
+/* ── NOTEBOOK / INSIGHTS HEADER — não quebrar em tablet ─────────── */
+@media(max-width:900px) {
+  .insights-header { flex-wrap: wrap; gap: 12px; }
+}
+
+/* ── LEMBRETE CONFIG — vertical em phone ────────────────────────── */
+@media(max-width:480px) {
+  .lembrete-config-row { flex-direction: column !important; gap: 12px !important; }
+  .lembrete-cfg-channel { gap: 4px !important; }
+}
+
+/* ── SCROLLBAR HIDE em mobile (não ocupa espaço visual) ──────────── */
+@media(max-width:640px) {
+  .content::-webkit-scrollbar { display: none; }
+  .content { scrollbar-width: none; }
+}
+
+/* ── PREVENT TEXT SELECTION na área de desenho canvas ───────────── */
+.as-main canvas, .cs-page canvas {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+/* ── SAFE min touch target para todos os botões de ícone ──────────── */
+@media(max-width:900px) {
+  button:not(.btn-primary):not(.btn-outline):not(.login-submit) {
+    min-height: 36px;
+    min-width: 36px;
   }
 }
