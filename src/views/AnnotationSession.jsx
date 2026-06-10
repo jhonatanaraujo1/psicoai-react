@@ -957,11 +957,22 @@ export default function AnnotationSession({
     sessionDateRef.current = defaultDate
 
     const init = async () => {
-      // 1. Tenta localStorage primeiro (rápido, sem latência)
-      let saved = loadCanvasPages(sessionId, patient.id)
+      // 1. initialCanvasData prop tem prioridade quando fornecido pelo parent com dados frescos do backend
+      let saved = null
+      if (initialCanvasData) {
+        try {
+          const parsed = JSON.parse(initialCanvasData)
+          if (Array.isArray(parsed) && parsed.length > 0) saved = parsed
+        } catch { /* JSON inválido — ignora */ }
+      }
 
-      // 2. Fallback: se localStorage vazio E há sessionId, busca canvasData do backend
-      //    Isso garante recuperação em outros dispositivos ou após limpeza do browser
+      // 2. Fallback: localStorage (rápido, sem latência) — usado quando parent não pré-carregou
+      if (!saved) {
+        saved = loadCanvasPages(sessionId, patient.id)
+      }
+
+      // 3. Fallback: se ainda vazio E há sessionId, busca canvasData do backend diretamente
+      //    Garante recuperação em outros dispositivos ou após limpeza do browser
       if (!saved && sessionId && onFetchSession) {
         try {
           const raw = await onFetchSession(sessionId)
@@ -969,19 +980,10 @@ export default function AnnotationSession({
             const parsed = (() => { try { return JSON.parse(raw) } catch { return null } })()
             if (Array.isArray(parsed) && parsed.length > 0) {
               saved = parsed
-              // Migra para localStorage para próximos acessos ficarem rápidos
               saveCanvasPages(sessionId, patient.id, saved)
             }
           }
         } catch { /* backend indisponível — continua sem dados */ }
-      }
-
-      // 3. Fallback: initialCanvasData prop (pre-construído pelo parent — ex: nota rápida sem canvas)
-      if (!saved && initialCanvasData) {
-        try {
-          const parsed = JSON.parse(initialCanvasData)
-          if (Array.isArray(parsed) && parsed.length > 0) saved = parsed
-        } catch { /* JSON inválido — ignora */ }
       }
 
       const restored = saved

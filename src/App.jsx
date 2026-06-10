@@ -458,11 +458,11 @@ export default function App() {
     setCurrentPatient(pat)
     setActiveSessionType('canvas')
     setCanvasInitialPageType(null)
+    setCanvasInitialData(null) // reset antes de carregar do backend — evita vazar dados de abertura anterior
 
-    // Se localStorage do paciente está vazio, reconstrói do backend
-    const patKey = `psicoai_canvas3_p${pat?.id}`
-    const hasLocal = pat?.id && !!localStorage.getItem(patKey)
-    if (!hasLocal && pat?.id) {
+    // Sempre carrega do backend ao reabrir uma anotação existente —
+    // localStorage pode ter dados stale/em branco de uma sessão nova aberta anteriormente.
+    if (pat?.id) {
       try {
         const sessions = await api.getPatientNotebook(pat.id)
         const list = [...(sessions || [])].sort((a, b) => (a.position ?? 0) - (b.position ?? 0))
@@ -484,8 +484,10 @@ export default function App() {
           if (html) return [{ id: `p-${s.id}`, pageType: 'text', textHtml: html, dataUrl: null, sessionId: s.id }]
           return []
         })
-        if (pages.length > 0) setCanvasInitialData(JSON.stringify(pages))
-      } catch { /* backend indisponível */ }
+        if (pages.length > 0) {
+          setCanvasInitialData(JSON.stringify(pages))
+        }
+      } catch { /* backend indisponível — usa localStorage existente */ }
     }
 
     if (pat) {
