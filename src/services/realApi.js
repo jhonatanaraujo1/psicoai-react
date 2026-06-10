@@ -95,10 +95,12 @@ async function req(method, path, body, opts = {}) {
 
   let res = await fetch(url, { method, headers, body: body ? JSON.stringify(body) : undefined, ...opts })
 
-  // Auto-refresh on 401 — apenas para endpoints protegidos.
-  // Endpoints de auth (/api/v1/auth/*) retornam 401 para credenciais erradas,
-  // não para token expirado — nunca fazer refresh nesse caso.
-  if (res.status === 401 && !opts._retry && !path.startsWith('/api/v1/auth/')) {
+  // Auto-refresh on 401 e 403.
+  // O Spring Boot retorna 403 (não 401) para tokens expirados — tratamos igual ao 401.
+  // Endpoints de auth (/api/v1/auth/*) são excluídos: retornam 401/403 por credenciais erradas,
+  // não por token expirado.
+  const origStatus = res.status
+  if ((origStatus === 401 || origStatus === 403) && !opts._retry && !path.startsWith('/api/v1/auth/')) {
     try {
       const newToken = await refreshOnce()
       headers['Authorization'] = `Bearer ${newToken}`
@@ -108,17 +110,18 @@ async function req(method, path, body, opts = {}) {
         // Servidor temporariamente down (deploy Railway, restart) — mantém sessão, propaga erro
         throw new Error('Serviço temporariamente indisponível. Aguarde alguns segundos e tente novamente.')
       }
-      // Token realmente inválido ou expirado — desloga
-      clearTokens()
-      window.dispatchEvent(new CustomEvent('psicoai:session-expired'))
-      window.location.replace('/')
-      return
+      if (origStatus === 401) {
+        // 401 inrecuperável = não autenticado → desloga
+        clearTokens()
+        window.dispatchEvent(new CustomEvent('psicoai:session-expired'))
+        window.location.replace('/')
+        return
+      }
+      // 403 inrecuperável = permissão negada mesmo após refresh → mantém sessão, propaga erro
+      throw new Error('Acesso negado.')
     }
   }
-
-  // 403 = acesso negado ao recurso específico — NÃO desloga.
-  // Deslogar apenas em 401 (token inválido) que não consegue refresh.
-  // 403 é "você não tem permissão para isso", não "você não está autenticado".
+  // Se chegou até aqui com res.status >= 400, cai no handler de erro abaixo (não desloga).
 
   if (res.status === 204) return null
 
