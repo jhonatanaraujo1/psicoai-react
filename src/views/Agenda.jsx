@@ -243,9 +243,10 @@ export default function Agenda({ currentUser }) {
     .slice(0, 6)
 
   const weekRange = `${weekDates[0].getDate()} a ${weekDates[4].getDate()} de ${MONTHS_PT[weekDates[0].getMonth()]}`
+  const weekEnd = new Date(weekDates[4]); weekEnd.setHours(23, 59, 59, 999)
   const sessionsThisWeek = events.filter(e => {
     const d = new Date(e.startAt)
-    return d >= weekDates[0] && d <= weekDates[4] && e.type === 'session'
+    return d >= weekDates[0] && d <= weekEnd && e.type === 'session'
   }).length
 
   // List view: filtrado por data selecionada (ou últimos 7 dias + futuros)
