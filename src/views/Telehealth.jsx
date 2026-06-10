@@ -1,57 +1,131 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { api } from '../services'
 import { DatePicker, TimePicker, CustomSelect } from '../components/DateTimePickers'
 import { showToast } from '../components/Toast'
 
-const MOCK_SESSIONS = [
-  { key: 'lucas-martins', initials: 'LM', name: 'Lucas Martins', meta: 'Sessão #15 · Hoje às', time: '09:00', tag: 'live', link: 'https://meet.google.com/abc-defg-hij' },
-  { key: 'rafael-ferreira', initials: 'RF', name: 'Rafael Ferreira', meta: 'Sessão #8 · 19 mai (amanhã) às', time: '14:00', tag: 'scheduled', link: 'https://meet.google.com/xyz-uvwx-yz1' },
-  { key: 'joao-oliveira', initials: 'JO', name: 'João Oliveira', meta: 'Sessão #4 · 20 mai às', time: '11:00', tag: 'pending', link: null },
-]
+function formatScheduledAt(iso) {
+  const d = new Date(iso)
+  const now = new Date()
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+  const target = new Date(d.getFullYear(), d.getMonth(), d.getDate())
+  const diff = Math.round((target - today) / 86400000)
+  const time = d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+  const day = diff === 0 ? 'Hoje' : diff === 1 ? 'Amanhã' : d.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })
+  return { day, time, isToday: diff === 0 }
+}
 
 export default function Telehealth() {
+  const location = useLocation()
+  const navigate = useNavigate()
+
+  const [sessions, setSessions] = useState([])
+  const [loadingSessions, setLoadingSessions] = useState(true)
+
+  const [googleStatus, setGoogleStatus] = useState({ connected: false, email: null, calendarSync: false })
+  const [checkingConn, setCheckingConn] = useState(false)
+  const [connectingGoogle, setConnectingGoogle] = useState(false)
+
+  const [generatingLink, setGeneratingLink] = useState(null)
+
   const [teleModal, setTeleModal] = useState(false)
   const [teleForm, setTeleForm] = useState({ patientId: '', date: '', time: '', notes: '' })
   const [allPatients, setAllPatients] = useState([])
   const [teleSaving, setTeleSaving] = useState(false)
 
-  const [googleConnected, setGoogleConnected] = useState(true)
-  const [checkingConn, setCheckingConn] = useState(false)
+  // ── Load sessions + google status ──────────────────────────────────────────
+  const loadSessions = useCallback(async () => {
+    setLoadingSessions(true)
+    try {
+      const data = await api.getTeleSessions()
+      setSessions(data)
+    } catch {
+      showToast('Erro ao carregar sessões', 'error')
+    } finally {
+      setLoadingSessions(false)
+    }
+  }, [])
 
-  const [sessionLinks, setSessionLinks] = useState(() => {
-    const init = {}
-    MOCK_SESSIONS.forEach(s => { init[s.key] = s.link })
-    return init
-  })
-  const [generatingLink, setGeneratingLink] = useState(null)
+  const loadGoogleStatus = useCallback(async () => {
+    try {
+      const status = await api.getGoogleStatus()
+      setGoogleStatus(status)
+    } catch {
+      // não bloqueia a tela se falhar
+    }
+  }, [])
+
+  useEffect(() => {
+    loadSessions()
+    loadGoogleStatus()
+  }, [loadSessions, loadGoogleStatus])
+
+  // ── Handle OAuth callback (?google=connected / ?google=error) ─────────────
+  useEffect(() => {
+    const params = new URLSearchParams(location.search)
+    const googleParam = params.get('google')
+    if (googleParam === 'connected') {
+      showToast('Google Meet conectado com sucesso!', 'success')
+      loadGoogleStatus()
+      navigate(location.pathname, { replace: true })
+    } else if (googleParam === 'error') {
+      showToast('Falha ao conectar com Google. Tente novamente.', 'error')
+      navigate(location.pathname, { replace: true })
+    }
+  }, [location.search, location.pathname, navigate, loadGoogleStatus])
 
   useEffect(() => {
     if (teleModal) api.getPatients({ size: 100 }).then(r => setAllPatients(r.content || []))
   }, [teleModal])
 
+  // ── Google connection ──────────────────────────────────────────────────────
   async function handleCheckConnection() {
     setCheckingConn(true)
     try {
-      await new Promise(r => setTimeout(r, 1100))
-      setGoogleConnected(true)
-      showToast('Conexão com Google Meet verificada — tudo certo!', 'success')
+      const status = await api.getGoogleStatus()
+      setGoogleStatus(status)
+      showToast(status.connected ? 'Conexão com Google Meet verificada — tudo certo!' : 'Google não conectado', status.connected ? 'success' : 'error')
     } catch {
-      setGoogleConnected(false)
-      showToast('Erro ao verificar conexão com Google', 'error')
+      showToast('Erro ao verificar conexão', 'error')
     } finally {
       setCheckingConn(false)
     }
   }
 
-  async function handleGenerateLink(sessionKey) {
-    if (!googleConnected) { showToast('Conecte sua conta Google primeiro', 'error'); return }
-    setGeneratingLink(sessionKey)
+  async function handleConnectGoogle() {
+    setConnectingGoogle(true)
     try {
-      await new Promise(r => setTimeout(r, 1000))
-      const rnd = () => Math.random().toString(36).slice(2, 5)
-      const link = `https://meet.google.com/${rnd()}-${rnd()}${rnd().slice(0,1)}-${rnd()}`
-      setSessionLinks(prev => ({ ...prev, [sessionKey]: link }))
+      const { url, _mock } = await api.getGoogleAuthUrl()
+      if (_mock) {
+        // Mock: status já foi atualizado internamente no mockApi
+        const status = await api.getGoogleStatus()
+        setGoogleStatus(status)
+        showToast('Google Meet conectado!', 'success')
+      } else if (url) {
+        window.location.href = url
+      }
+    } catch {
+      showToast('Erro ao iniciar conexão com Google', 'error')
+    } finally {
+      setConnectingGoogle(false)
+    }
+  }
+
+  // ── Generate real Google Meet link ─────────────────────────────────────────
+  async function handleGenerateLink(session) {
+    if (!googleStatus.connected) {
+      showToast('Conecte sua conta Google primeiro', 'error')
+      return
+    }
+    setGeneratingLink(session.id)
+    try {
+      const { meetLink } = await api.createGoogleMeet(session.patientName || 'Paciente')
+      // Persiste o link na sessão
+      await api.updateTeleSession(session.id, { roomLink: meetLink })
+      setSessions(prev => prev.map(s => s.id === session.id ? { ...s, roomLink: meetLink } : s))
       showToast('Link do Google Meet gerado!', 'success')
+    } catch (e) {
+      showToast(e.message || 'Erro ao gerar link', 'error')
     } finally {
       setGeneratingLink(null)
     }
@@ -65,22 +139,34 @@ export default function Telehealth() {
     window.open(link, '_blank', 'noopener,noreferrer')
   }
 
+  // ── Schedule new session ───────────────────────────────────────────────────
   async function handleTeleSave() {
     setTeleSaving(true)
     try {
       const selectedPatient = allPatients.find(p => String(p.id) === String(teleForm.patientId))
       const patientName = selectedPatient?.name || ''
-      if (typeof api.createTeleSession === 'function') {
-        await api.createTeleSession({ patientId: teleForm.patientId, patientName, date: teleForm.date, time: teleForm.time, platform: 'google_meet', notes: teleForm.notes, status: 'scheduled' })
-      } else {
-        showToast('Sessão agendada!', 'success')
-      }
+      const scheduledAt = teleForm.date && teleForm.time ? `${teleForm.date}T${teleForm.time}:00` : new Date().toISOString()
+      await api.createTeleSession({
+        patientId: teleForm.patientId,
+        patientName,
+        scheduledAt,
+        platform: 'meet',
+        notes: teleForm.notes,
+        status: 'scheduled',
+      })
+      showToast('Sessão agendada!', 'success')
       setTeleModal(false)
       setTeleForm({ patientId: '', date: '', time: '', notes: '' })
+      loadSessions()
+    } catch {
+      showToast('Erro ao agendar sessão', 'error')
     } finally {
       setTeleSaving(false)
     }
   }
+
+  const upcoming = sessions.filter(s => s.status !== 'done')
+  const history  = sessions.filter(s => s.status === 'done').slice(0, 10)
 
   const inputSt = { border: '1px solid var(--gr2)', borderRadius: 'var(--r)', padding: '9px 12px', fontSize: '13px', fontFamily: "'DM Sans', sans-serif", outline: 'none', background: 'var(--ow)', width: '100%', boxSizing: 'border-box', color: 'var(--d)' }
   const labelSt = { fontSize: '10px', fontWeight: 600, letterSpacing: '0.8px', textTransform: 'uppercase', color: 'var(--gr4)', display: 'block', marginBottom: '6px' }
@@ -93,7 +179,10 @@ export default function Telehealth() {
         {/* LEFT — session list */}
         <div>
           <div className="tele-stats-mini">
-            <div className="tele-stat"><div className="tele-stat-val">6</div><div className="tele-stat-label">Sessões remotas em maio</div></div>
+            <div className="tele-stat">
+              <div className="tele-stat-val">{sessions.filter(s => s.status !== 'done').length}</div>
+              <div className="tele-stat-label">Sessões remotas próximas</div>
+            </div>
           </div>
 
           <button className="btn-primary" style={{ fontSize: '12px', padding: '8px 14px', marginBottom: '16px' }} onClick={() => setTeleModal(true)}>
@@ -102,36 +191,41 @@ export default function Telehealth() {
 
           <div style={{ fontFamily: "'Fraunces', serif", fontSize: '13px', color: 'var(--gr5)', marginBottom: '12px' }}>Próximas sessões remotas</div>
 
-          {MOCK_SESSIONS.map(s => {
-            const link = sessionLinks[s.key]
-            const isGenerating = generatingLink === s.key
-            return (
-              <div key={s.key} className={`tele-session-card${s.tag === 'live' ? ' live' : ''}`}>
-                <div className="tele-av" style={s.tag === 'live' ? { background: 'var(--g400)' } : {}}>{s.initials}</div>
-                <div className="tele-info">
-                  <div className="tele-name">{s.name}</div>
-                  <div className="tele-meta">{s.meta} <strong>{s.time}</strong> · Remota</div>
-                  {s.tag === 'live' && <div style={{ fontSize: '11px', color: 'var(--g600)', marginTop: '4px', fontWeight: 600 }}>● Em andamento</div>}
-                  {s.tag === 'pending' && <div style={{ fontSize: '11px', color: 'var(--warn)', marginTop: '4px' }}>⚠ Confirmação pendente</div>}
-                  {s.tag === 'scheduled' && link && <div style={{ fontSize: '11px', color: 'var(--gr4)', marginTop: '4px' }}>Link gerado · Lembrete enviado</div>}
+          {loadingSessions ? (
+            <div style={{ padding: '24px', textAlign: 'center', color: 'var(--gr4)', fontSize: '13px' }}>Carregando…</div>
+          ) : upcoming.length === 0 ? (
+            <div style={{ padding: '24px', textAlign: 'center', color: 'var(--gr4)', fontSize: '13px' }}>Nenhuma sessão agendada</div>
+          ) : upcoming.map(s => {
+            const { day, time } = formatScheduledAt(s.scheduledAt)
+            const isLive = s.status === 'live'
+            const isPending = s.confirmationStatus === 'pending' && !isLive
+            const isGenerating = generatingLink === s.id
+            const initials = s.patientInitials || (s.patientName || '??').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
 
-                  {/* Link copiável inline */}
-                  {link && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '8px', background: 'var(--ow)', border: '1px solid var(--gr2)', borderRadius: 'var(--r)', padding: '5px 10px' }}>
+            return (
+              <div key={s.id} className={`tele-session-card${isLive ? ' live' : ''}`}>
+                <div className="tele-av" style={isLive ? { background: 'var(--g400)' } : {}}>{initials}</div>
+                <div className="tele-info">
+                  <div className="tele-name">{s.patientName || 'Paciente'}</div>
+                  <div className="tele-meta"><strong>{day}</strong> às <strong>{time}</strong> · Remota</div>
+                  {isLive && <div style={{ fontSize: '11px', color: 'var(--g600)', marginTop: '4px', fontWeight: 600 }}>● Em andamento</div>}
+                  {isPending && <div style={{ fontSize: '11px', color: 'var(--warn)', marginTop: '4px' }}>⚠ Confirmação pendente</div>}
+                  {s.roomLink && !isLive && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '7px', background: 'var(--ow)', border: '1px solid var(--gr2)', borderRadius: 'var(--r)', padding: '5px 10px' }}>
                       <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--gr4)" strokeWidth="2"><path d="M15 7h3a5 5 0 0 1 0 10h-3m-6 0H6A5 5 0 0 1 6 7h3"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
-                      <span style={{ fontSize: '11px', color: 'var(--gr5)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: 'monospace' }}>{link}</span>
+                      <span style={{ fontSize: '11px', color: 'var(--gr5)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: 'monospace' }}>{s.roomLink}</span>
                     </div>
                   )}
                 </div>
 
                 <div className="tele-actions">
-                  {link ? (
+                  {s.roomLink ? (
                     <>
-                      <button className="btn-start-call secondary" onClick={() => copyLink(link)}>
+                      <button className="btn-start-call secondary" onClick={() => copyLink(s.roomLink)}>
                         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
                         Copiar
                       </button>
-                      <button className="btn-start-call" onClick={() => openLink(link)}>
+                      <button className="btn-start-call" onClick={() => openLink(s.roomLink)}>
                         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
                         Entrar
                       </button>
@@ -140,7 +234,7 @@ export default function Telehealth() {
                     <button
                       className="btn-start-call"
                       disabled={isGenerating}
-                      onClick={() => handleGenerateLink(s.key)}
+                      onClick={() => handleGenerateLink(s)}
                       style={{ opacity: isGenerating ? 0.7 : 1 }}
                     >
                       {isGenerating ? (
@@ -161,33 +255,35 @@ export default function Telehealth() {
             )
           })}
 
-          <div className="card" style={{ marginTop: '20px' }}>
-            <div className="card-header"><div className="card-title">Histórico de sessões remotas</div></div>
-            <div style={{ padding: 0 }}>
-              {[
-                { initials: 'CS', name: 'Carla Silva', meta: 'Sessão #5 · 12 mai 2026 · Google Meet' },
-                { initials: 'BL', name: 'Beatriz Lima', meta: 'Sessão #4 · 10 mai 2026 · Google Meet' },
-                { initials: 'MA', name: 'Marina Costa', meta: 'Sessão #8 · 8 mai 2026 · Google Meet' },
-              ].map((h, i) => (
-                <div key={i} className="tele-hist-item">
-                  <div className="tele-av" style={{ width: '36px', height: '36px', fontSize: '13px', borderRadius: '10px', background: 'var(--g50)', color: 'var(--g600)' }}>{h.initials}</div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: '13px', fontWeight: 500 }}>{h.name}</div>
-                    <div style={{ fontSize: '11px', color: 'var(--gr5)', marginTop: '2px' }}>{h.meta}</div>
-                  </div>
-                  <span className="card-badge badge-green" style={{ marginLeft: '8px' }}>Concluída</span>
-                </div>
-              ))}
+          {history.length > 0 && (
+            <div className="card" style={{ marginTop: '20px' }}>
+              <div className="card-header"><div className="card-title">Histórico de sessões remotas</div></div>
+              <div style={{ padding: 0 }}>
+                {history.map((h, i) => {
+                  const initials = h.patientInitials || (h.patientName || '??').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
+                  const date = new Date(h.scheduledAt).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' })
+                  return (
+                    <div key={i} className="tele-hist-item">
+                      <div className="tele-av" style={{ width: '36px', height: '36px', fontSize: '13px', borderRadius: '10px', background: 'var(--g50)', color: 'var(--g600)' }}>{initials}</div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: '13px', fontWeight: 500 }}>{h.patientName || 'Paciente'}</div>
+                        <div style={{ fontSize: '11px', color: 'var(--gr5)', marginTop: '2px' }}>
+                          {date} · Google Meet
+                        </div>
+                      </div>
+                      <span className="card-badge badge-green" style={{ marginLeft: '8px' }}>Concluída</span>
+                    </div>
+                  )
+                })}
+              </div>
             </div>
-          </div>
+          )}
         </div>
 
         {/* RIGHT — google connection + settings */}
         <div>
-          {/* Google Meet connection card */}
           <div className="tele-platform-card" style={{ padding: '20px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
-              {/* Google Meet icon */}
               <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: '#fff', border: '1px solid var(--gr2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                 <svg width="22" height="22" viewBox="0 0 48 48" fill="none">
                   <path d="M29 23.5L35.5 18V30L29 24.5" fill="#00897B"/>
@@ -198,47 +294,67 @@ export default function Telehealth() {
                 <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--d)' }}>Google Meet</div>
                 <div style={{ fontSize: '11px', color: 'var(--gr4)', marginTop: '2px' }}>Plataforma de videochamada</div>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '11px', fontWeight: 600, color: googleConnected ? 'var(--g600)' : 'var(--err, #e53)' }}>
-                <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: googleConnected ? 'var(--g500)' : 'var(--err, #e53)' }} />
-                {googleConnected ? 'Conectado' : 'Desconectado'}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '11px', fontWeight: 600, color: googleStatus.connected ? 'var(--g600)' : 'var(--gr4)' }}>
+                <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: googleStatus.connected ? 'var(--g500)' : 'var(--gr3)' }} />
+                {googleStatus.connected ? 'Conectado' : 'Desconectado'}
               </div>
             </div>
 
-            {googleConnected ? (
+            {googleStatus.connected ? (
               <div style={{ background: 'var(--g50)', borderRadius: 'var(--r)', padding: '10px 12px', marginBottom: '12px' }}>
                 <div style={{ fontSize: '11px', color: 'var(--g700)', lineHeight: 1.5 }}>
-                  Conta vinculada: <strong>dra.ana@gmail.com</strong>
+                  Conta: <strong>{googleStatus.email || 'conta vinculada'}</strong>
                   <br />Links gerados via Google Calendar API
                 </div>
               </div>
             ) : (
-              <div style={{ background: '#fff5f5', borderRadius: 'var(--r)', padding: '10px 12px', marginBottom: '12px' }}>
-                <div style={{ fontSize: '11px', color: '#c53030', lineHeight: 1.5 }}>
-                  Sem conexão com Google. Conecte para gerar links automáticos.
+              <div style={{ background: 'var(--ow)', borderRadius: 'var(--r)', border: '1px solid var(--gr2)', padding: '10px 12px', marginBottom: '12px' }}>
+                <div style={{ fontSize: '11px', color: 'var(--gr5)', lineHeight: 1.5 }}>
+                  Conecte sua conta Google para gerar links reais do Google Meet para cada sessão.
                 </div>
               </div>
             )}
 
-            <button
-              onClick={handleCheckConnection}
-              disabled={checkingConn}
-              style={{ width: '100%', padding: '9px 14px', border: '1px solid var(--gr2)', borderRadius: 'var(--r)', background: 'var(--ow)', fontSize: '12px', fontWeight: 600, color: 'var(--d)', cursor: checkingConn ? 'default' : 'pointer', fontFamily: "'DM Sans', sans-serif", display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '7px', opacity: checkingConn ? 0.7 : 1, transition: 'opacity 0.15s' }}
-            >
-              {checkingConn ? (
-                <>
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ animation: 'spin 1s linear infinite' }}><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
-                  Verificando…
-                </>
-              ) : (
-                <>
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-                  {googleConnected ? 'Verificar conexão' : 'Conectar com Google'}
-                </>
-              )}
-            </button>
+            {googleStatus.connected ? (
+              <button
+                onClick={handleCheckConnection}
+                disabled={checkingConn}
+                style={{ width: '100%', padding: '9px 14px', border: '1px solid var(--gr2)', borderRadius: 'var(--r)', background: 'var(--ow)', fontSize: '12px', fontWeight: 600, color: 'var(--d)', cursor: checkingConn ? 'default' : 'pointer', fontFamily: "'DM Sans', sans-serif", display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '7px', opacity: checkingConn ? 0.7 : 1, transition: 'opacity 0.15s' }}
+              >
+                {checkingConn ? (
+                  <>
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ animation: 'spin 1s linear infinite' }}><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
+                    Verificando…
+                  </>
+                ) : (
+                  <>
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                    Verificar conexão
+                  </>
+                )}
+              </button>
+            ) : (
+              <button
+                onClick={handleConnectGoogle}
+                disabled={connectingGoogle}
+                className="btn-primary"
+                style={{ width: '100%', padding: '9px 14px', fontSize: '12px', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '7px', opacity: connectingGoogle ? 0.7 : 1 }}
+              >
+                {connectingGoogle ? (
+                  <>
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ animation: 'spin 1s linear infinite' }}><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
+                    Conectando…
+                  </>
+                ) : (
+                  <>
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z" style={{ display: 'none' }}/><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+                    Conectar com Google
+                  </>
+                )}
+              </button>
+            )}
           </div>
 
-          {/* Settings */}
           <div className="card">
             <div className="card-header"><div className="card-title">Configurações</div></div>
             <div className="card-body" style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>

@@ -1353,8 +1353,9 @@ export const api = {
   },
 
   async getGoogleAuthUrl() {
-    await delay(100)
-    // No mock, simula conexão diretamente
+    await delay(800)
+    // Mock: simula OAuth aprovado imediatamente (sem redirect real)
+    this._googleConnected = true
     return { url: null, _mock: true }
   },
 
