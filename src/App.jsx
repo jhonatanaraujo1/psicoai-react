@@ -877,8 +877,7 @@ export default function App() {
       case 'cadernos':    return <Notebooks
         onOpenCanvas={(patient) => {
           setCurrentPatient(patient)
-          if (_hasAnnotations(patient.id)) { _openExistingAnnotation(patient) }
-          else { _openTextSession(patient) }
+          _openExistingAnnotation(patient) // backend é fonte de verdade — sempre carrega do servidor
         }}
         onOpenPatient={(patient) => {
           setCurrentPatient(patient)

@@ -85,11 +85,11 @@ function CadernoCard({ patient, canvas, onOpen, onOpenPatient, isOpenSession }) 
   const [hovered, setHovered] = useState(false)
   const _col = avatarColor(patient.id)
   const col = { bg: patient.avatarBg || _col.bg, fg: patient.avatarColor || _col.fg }
-  const isEmpty = !canvas
+  const backendCount = patient.sessions ?? 0
+  const hasData = !!canvas || backendCount > 0
+  const isEmpty = !hasData
 
-  // Sub-label usa APENAS dados locais (canvas pages) — o session count do backend
-  // inclui sessões abertas/vazias e não representa anotações reais do usuário.
-  const subLabel = !isEmpty
+  const subLabel = canvas
     ? (() => {
         const parts = []
         if (canvas.pageCount > 0) parts.push(`${canvas.pageCount} página${canvas.pageCount !== 1 ? 's' : ''}`)
@@ -97,7 +97,9 @@ function CadernoCard({ patient, canvas, onOpen, onOpenPatient, isOpenSession }) 
         if (rel) parts.push(rel)
         return parts.join(' · ') || 'Editado recentemente'
       })()
-    : 'Toque para iniciar anotação'
+    : backendCount > 0
+      ? `${backendCount} ${backendCount === 1 ? 'anotação' : 'anotações'} · toque para abrir`
+      : 'Toque para iniciar anotação'
 
   // Sempre abre a anotação/canvas — nunca vai para o perfil a partir daqui
   const handleClick = () => onOpen(patient)
@@ -212,10 +214,11 @@ export default function Notebooks({ onOpenCanvas, onOpenPatient, openSessionPati
   // "com anotações" = tem canvas local OU tem sessões no backend
   const hasNotes = ({ canvas, patient }) => !!canvas || (patient.sessions ?? 0) > 0
 
-  // Ordena: primeiro quem tem páginas (por lastModified desc), depois os sem notas (alfabético)
+  // Ordena: primeiro quem tem canvas local (lastModified desc), depois quem tem só backend (sessions desc), depois sem notas
   const sorted = [
     ...enriched.filter(c => c.canvas).sort((a, b) => (b.canvas.lastModified || 0) - (a.canvas.lastModified || 0)),
-    ...enriched.filter(c => !c.canvas).sort((a, b) => a.patient.name.localeCompare(b.patient.name, 'pt-BR')),
+    ...enriched.filter(c => !c.canvas && (c.patient.sessions ?? 0) > 0).sort((a, b) => (b.patient.sessions ?? 0) - (a.patient.sessions ?? 0)),
+    ...enriched.filter(c => !c.canvas && !(c.patient.sessions ?? 0)).sort((a, b) => a.patient.name.localeCompare(b.patient.name, 'pt-BR')),
   ]
 
   // Aplica filtros — usa mesma lógica do contador acima
@@ -231,7 +234,7 @@ export default function Notebooks({ onOpenCanvas, onOpenPatient, openSessionPati
 
   const comNotas   = enriched.filter(hasNotes).length
   const semNotas   = enriched.filter(c => !hasNotes(c)).length
-  const totalPages = enriched.reduce((a, c) => a + (c.canvas?.pageCount || 0), 0)
+  const totalPages = enriched.reduce((a, c) => a + (c.canvas?.pageCount ?? c.patient.sessions ?? 0), 0)
 
   return (
     <div className="view">
