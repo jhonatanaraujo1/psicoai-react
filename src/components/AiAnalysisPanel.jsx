@@ -12,6 +12,7 @@ const PAT_LABELS = {
   catastrophizing:'Catastrofização',
   dissociation:   'Dissociação',
   isolation:      'Isolamento social',
+  other:          'Outro padrão identificado',
 }
 
 const SEV = {
@@ -41,6 +42,17 @@ function fmtDate(iso) {
 function tryParse(raw, fallback = []) {
   if (Array.isArray(raw)) return raw
   try { return JSON.parse(raw || '[]') } catch { return fallback }
+}
+
+function SectionLabel({ children, right }) {
+  return (
+    <div style={{ padding: '12px 20px 8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <div style={{ fontSize: '11px', fontWeight: 700, color: 'rgba(255,255,255,0.3)', letterSpacing: '0.8px', textTransform: 'uppercase' }}>
+        {children}
+      </div>
+      {right && <span style={{ fontSize: '10px', color: 'rgba(255,255,255,0.2)', background: 'rgba(255,255,255,0.05)', padding: '2px 8px', borderRadius: '20px' }}>{right}</span>}
+    </div>
+  )
 }
 
 // Anel de probabilidade SVG
@@ -109,7 +121,7 @@ function HypothesisBar({ h, index }) {
           }} />
         </div>
         {h.rationale && (
-          <div style={{ fontSize: '11.5px', color: 'rgba(241,245,249,0.45)', lineHeight: 1.5, fontStyle: 'italic' }}>
+          <div style={{ fontSize: '11.5px', color: 'rgba(241,245,249,0.45)', lineHeight: 1.6, fontStyle: 'italic', marginTop: '4px' }}>
             "{h.rationale}"
           </div>
         )}
@@ -132,14 +144,17 @@ export default function AiAnalysisPanel({ sessionId, analysis: propAnalysis, cre
       .finally(() => setLoading(false))
   }, [sessionId]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const hypotheses = tryParse(analysis?.hypotheses)
-  const patterns   = tryParse(analysis?.patterns)
-  const risks      = tryParse(analysis?.riskAlerts)
-  const suggestions = tryParse(analysis?.nextSessionSuggestions)
-  const summary    = analysis?.summary
+  const hypotheses   = tryParse(analysis?.hypotheses)
+  const patterns     = tryParse(analysis?.patterns)
+  const risks        = tryParse(analysis?.riskAlerts)
+  const suggestions  = tryParse(analysis?.nextSessionSuggestions)
+  const summary      = analysis?.summary
+  const clinicalBasis = analysis?.clinicalBasis
 
-  const hasRisks   = risks.length > 0
-  const hasSuggest = suggestions.length > 0
+  const hasRisks     = risks.length > 0
+  const hasSuggest   = suggestions.length > 0
+  const hasPatterns  = patterns.length > 0
+  const hasHypo      = hypotheses.length > 0
 
   return (
     <div style={{
@@ -187,7 +202,7 @@ export default function AiAnalysisPanel({ sessionId, analysis: propAnalysis, cre
         <div style={{ padding: '32px 20px', textAlign: 'center' }}>
           <span style={{ fontSize: '13px', color: 'rgba(255,255,255,0.3)' }}>Análise não disponível para esta sessão.</span>
         </div>
-      ) : !summary && !hypotheses.length && !patterns.length && !hasRisks && !hasSuggest ? (
+      ) : !summary && !hasHypo && !hasPatterns && !hasRisks && !hasSuggest ? (
         /* Análise salva como completed mas sem conteúdo — backend retornou vazio */
         <div style={{ padding: '32px 20px', textAlign: 'center' }}>
           <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="rgba(245,158,11,0.4)" strokeWidth="1.2"
@@ -204,68 +219,92 @@ export default function AiAnalysisPanel({ sessionId, analysis: propAnalysis, cre
         </div>
       ) : (
         <>
-          {/* Resumo clínico */}
+          {/* ── Raciocínio clínico (summary) ─────────────────────────────── */}
           {summary && (
             <div style={{ padding: '16px 20px', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
               <div style={{ fontSize: '11px', fontWeight: 700, color: 'rgba(255,255,255,0.3)', letterSpacing: '0.8px', textTransform: 'uppercase', marginBottom: '8px' }}>
                 Raciocínio clínico
               </div>
-              <div style={{ fontSize: '13px', color: 'rgba(241,245,249,0.7)', lineHeight: 1.7, fontStyle: 'italic' }}>
+              <div style={{ fontSize: '13px', color: 'rgba(241,245,249,0.75)', lineHeight: 1.75, fontStyle: 'italic' }}>
                 {summary}
               </div>
             </div>
           )}
 
-          {/* Hipóteses diagnósticas */}
-          {hypotheses.length > 0 && (
-            <div>
-              <div style={{ padding: '12px 20px 8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <div style={{ fontSize: '11px', fontWeight: 700, color: 'rgba(255,255,255,0.3)', letterSpacing: '0.8px', textTransform: 'uppercase' }}>
-                  Hipóteses Diagnósticas
+          {/* ── Base clínica (clinicalBasis) ─────────────────────────────── */}
+          {clinicalBasis && (
+            <div style={{ padding: '12px 20px', borderBottom: '1px solid rgba(255,255,255,0.05)', display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="rgba(74,222,128,0.5)" strokeWidth="2" style={{ flexShrink: 0, marginTop: '2px' }}>
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>
+              </svg>
+              <div>
+                <div style={{ fontSize: '10px', fontWeight: 700, color: 'rgba(74,222,128,0.5)', letterSpacing: '0.7px', textTransform: 'uppercase', marginBottom: '4px' }}>
+                  Com base em quê
                 </div>
-                <span style={{ fontSize: '10px', color: 'rgba(255,255,255,0.2)', background: 'rgba(255,255,255,0.05)', padding: '2px 8px', borderRadius: '20px' }}>
-                  DSM-5 · CID-11
-                </span>
+                <div style={{ fontSize: '12px', color: 'rgba(241,245,249,0.5)', lineHeight: 1.6 }}>
+                  {clinicalBasis}
+                </div>
               </div>
+            </div>
+          )}
+
+          {/* ── Hipóteses diagnósticas ───────────────────────────────────── */}
+          {hasHypo && (
+            <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+              <SectionLabel right="DSM-5 · CID-11">Hipóteses Diagnósticas</SectionLabel>
               {hypotheses.map((h, i) => <HypothesisBar key={h.code || i} h={h} index={i} />)}
             </div>
           )}
 
-          {/* Padrões detectados */}
-          {patterns.length > 0 && (
+          {/* ── Padrões detectados ───────────────────────────────────────── */}
+          {hasPatterns && (
             <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
-              <div style={{ padding: '12px 20px 8px' }}>
-                <div style={{ fontSize: '11px', fontWeight: 700, color: 'rgba(255,255,255,0.3)', letterSpacing: '0.8px', textTransform: 'uppercase' }}>
-                  Padrões Detectados
-                </div>
-              </div>
+              <SectionLabel>Padrões Detectados</SectionLabel>
               <div style={{ padding: '0 20px 16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 {patterns.map((pat, i) => {
                   const s = SEV[pat.severity] || SEV.low
                   return (
                     <div key={i} style={{
-                      display: 'flex', gap: '12px', alignItems: 'flex-start',
-                      padding: '10px 12px',
+                      padding: '12px 14px',
                       background: s.bg,
-                      borderRadius: '8px',
+                      borderRadius: '10px',
                       border: `1px solid ${s.color}22`,
                     }}>
-                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', flexShrink: 0, paddingTop: '2px' }}>
-                        <span style={{ width: 8, height: 8, borderRadius: '50%', background: s.dot, display: 'inline-block', boxShadow: `0 0 6px ${s.dot}` }} />
-                        <span style={{ fontSize: '8.5px', fontWeight: 700, color: s.color, letterSpacing: '0.4px', textTransform: 'uppercase', writingMode: 'vertical-rl', transform: 'rotate(180deg)', whiteSpace: 'nowrap' }}>
-                          {s.label}
-                        </span>
-                      </div>
-                      <div>
-                        <div style={{ fontSize: '12.5px', fontWeight: 600, color: '#f1f5f9', marginBottom: '3px' }}>
-                          {PAT_LABELS[pat.type] || pat.type}
+                      <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start', marginBottom: pat.sessionEvidence ? '8px' : 0 }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', flexShrink: 0, paddingTop: '2px' }}>
+                          <span style={{ width: 8, height: 8, borderRadius: '50%', background: s.dot, display: 'inline-block', boxShadow: `0 0 6px ${s.dot}` }} />
+                          <span style={{ fontSize: '8.5px', fontWeight: 700, color: s.color, letterSpacing: '0.4px', textTransform: 'uppercase', writingMode: 'vertical-rl', transform: 'rotate(180deg)', whiteSpace: 'nowrap' }}>
+                            {s.label}
+                          </span>
                         </div>
-                        {pat.description && (
-                          <div style={{ fontSize: '11.5px', color: 'rgba(241,245,249,0.5)', lineHeight: 1.5 }}>
-                            {pat.description}
+                        <div>
+                          <div style={{ fontSize: '12.5px', fontWeight: 600, color: '#f1f5f9', marginBottom: '3px' }}>
+                            {PAT_LABELS[pat.type] || pat.type}
                           </div>
-                        )}
+                          {pat.description && (
+                            <div style={{ fontSize: '11.5px', color: 'rgba(241,245,249,0.55)', lineHeight: 1.5 }}>
+                              {pat.description}
+                            </div>
+                          )}
+                        </div>
                       </div>
+                      {/* Evidência nas anotações */}
+                      {pat.sessionEvidence && (
+                        <div style={{
+                          marginTop: '8px', marginLeft: '18px',
+                          padding: '8px 12px',
+                          background: 'rgba(0,0,0,0.25)',
+                          borderRadius: '6px',
+                          borderLeft: `2px solid ${s.color}55`,
+                        }}>
+                          <div style={{ fontSize: '9.5px', fontWeight: 700, color: `${s.color}99`, letterSpacing: '0.5px', textTransform: 'uppercase', marginBottom: '3px' }}>
+                            Evidência nas anotações
+                          </div>
+                          <div style={{ fontSize: '11px', color: 'rgba(241,245,249,0.4)', lineHeight: 1.5, fontStyle: 'italic' }}>
+                            "{pat.sessionEvidence}"
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )
                 })}
@@ -273,30 +312,46 @@ export default function AiAnalysisPanel({ sessionId, analysis: propAnalysis, cre
             </div>
           )}
 
-          {/* Alertas de risco */}
+          {/* ── Alertas clínicos ─────────────────────────────────────────── */}
           {hasRisks && (
             <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)', padding: '12px 20px 16px' }}>
-              <div style={{ fontSize: '11px', fontWeight: 700, color: 'rgba(255,255,255,0.3)', letterSpacing: '0.8px', textTransform: 'uppercase', marginBottom: '10px' }}>
-                Alertas Clínicos
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              <SectionLabel>Alertas Clínicos</SectionLabel>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '4px' }}>
                 {risks.map((r, i) => {
                   const rv = RISK[r.level] || RISK.medium
                   return (
                     <div key={i} style={{
-                      display: 'flex', gap: '10px', alignItems: 'flex-start',
-                      padding: '10px 14px',
-                      background: rv.bg, borderRadius: '8px',
+                      padding: '12px 14px',
+                      background: rv.bg, borderRadius: '10px',
                       border: `1px solid ${rv.border}`,
                     }}>
-                      <span style={{ fontSize: '14px', flexShrink: 0, marginTop: '1px' }}>{rv.icon}</span>
-                      <div>
-                        <span style={{ fontSize: '9px', fontWeight: 800, color: rv.color, letterSpacing: '1px', textTransform: 'uppercase', display: 'block', marginBottom: '3px' }}>
-                          {rv.label}
-                        </span>
-                        <span style={{ fontSize: '12px', color: 'rgba(241,245,249,0.75)', lineHeight: 1.5 }}>
-                          {r.description}
-                        </span>
+                      <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
+                        <span style={{ fontSize: '14px', flexShrink: 0, marginTop: '1px' }}>{rv.icon}</span>
+                        <div style={{ flex: 1 }}>
+                          <span style={{ fontSize: '9px', fontWeight: 800, color: rv.color, letterSpacing: '1px', textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>
+                            {rv.label}
+                          </span>
+                          <span style={{ fontSize: '12.5px', color: 'rgba(241,245,249,0.8)', lineHeight: 1.55, display: 'block' }}>
+                            {r.description}
+                          </span>
+                          {/* Ação recomendada */}
+                          {r.recommendedAction && (
+                            <div style={{
+                              marginTop: '8px',
+                              padding: '8px 12px',
+                              background: 'rgba(0,0,0,0.2)',
+                              borderRadius: '6px',
+                              borderLeft: `2px solid ${rv.color}55`,
+                            }}>
+                              <div style={{ fontSize: '9.5px', fontWeight: 700, color: `${rv.color}99`, letterSpacing: '0.5px', textTransform: 'uppercase', marginBottom: '3px' }}>
+                                Ação recomendada
+                              </div>
+                              <div style={{ fontSize: '11.5px', color: 'rgba(241,245,249,0.55)', lineHeight: 1.5 }}>
+                                {r.recommendedAction}
+                              </div>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
                   )
@@ -305,31 +360,31 @@ export default function AiAnalysisPanel({ sessionId, analysis: propAnalysis, cre
             </div>
           )}
 
-          {/* Para a próxima sessão */}
+          {/* ── Para a próxima sessão ────────────────────────────────────── */}
           {hasSuggest && (
             <div style={{ borderTop: '1px solid rgba(255,255,255,0.05)', padding: '12px 20px 20px' }}>
-              <div style={{ fontSize: '11px', fontWeight: 700, color: 'rgba(255,255,255,0.3)', letterSpacing: '0.8px', textTransform: 'uppercase', marginBottom: '10px' }}>
-                Para a próxima sessão
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              <SectionLabel>Para a próxima sessão</SectionLabel>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '4px' }}>
                 {suggestions.map((s, i) => (
-                  <div key={i} style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
+                  <div key={i} style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
                     <span style={{
-                      width: '18px', height: '18px', borderRadius: '50%', flexShrink: 0,
+                      width: '20px', height: '20px', borderRadius: '50%', flexShrink: 0,
                       background: 'rgba(74,222,128,0.12)',
                       border: '1px solid rgba(74,222,128,0.25)',
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      fontSize: '8px', fontWeight: 800, color: '#4ade80',
-                      marginTop: '2px',
+                      fontSize: '9px', fontWeight: 800, color: '#4ade80',
+                      marginTop: '1px',
                     }}>{i + 1}</span>
-                    <span style={{ fontSize: '12.5px', color: 'rgba(241,245,249,0.65)', lineHeight: 1.6 }}>{s}</span>
+                    <span style={{ fontSize: '12.5px', color: 'rgba(241,245,249,0.7)', lineHeight: 1.65 }}>
+                      {typeof s === 'string' ? s : s.text || s.suggestion || JSON.stringify(s)}
+                    </span>
                   </div>
                 ))}
               </div>
             </div>
           )}
 
-          {/* Footer disclaimer */}
+          {/* ── Footer disclaimer ────────────────────────────────────────── */}
           <div style={{
             padding: '10px 20px',
             borderTop: '1px solid rgba(255,255,255,0.05)',
