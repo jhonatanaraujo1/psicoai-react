@@ -330,7 +330,7 @@ function AnalysisRow({ analysis, index, total, isFirst, onOpen, onRetry }) {
                 : (analysis.errorMessage || 'Não foi possível gerar a análise. Tente novamente.')}
             </div>
             <button
-              onClick={e => { e.stopPropagation(); onRetry() }}
+              onClick={e => { e.stopPropagation(); onRetry(analysis.id) }}
               style={{
                 fontSize: 11, fontWeight: 600,
                 padding: '4px 12px', borderRadius: 6,
@@ -386,6 +386,17 @@ export default function PatientAnalysisHub({ patient, currentUser, onBack, onOpe
   }
 
   useEffect(() => { loadAnalyses() }, [patient?.id])
+
+  async function handleRetry(analysisId) {
+    // Atualiza o item localmente para "processing" imediatamente — evita clique duplo
+    setAnalyses(prev => prev.map(a => a.id === analysisId ? { ...a, status: 'processing', errorMessage: null } : a))
+    try {
+      await api.retryAnalysis(analysisId)
+    } catch {
+      // Se falhou no retry, recarrega o estado real do servidor
+      loadAnalyses(true)
+    }
+  }
 
   // Auto-poll a cada 4s enquanto houver análises em processing
   useEffect(() => {
@@ -551,7 +562,7 @@ export default function PatientAnalysisHub({ patient, currentUser, onBack, onOpe
                 total={analyses.length}
                 isFirst={idx === 0}
                 onOpen={(analysisId) => onOpenAnalysis(analysisId, patient)}
-                onRetry={() => onNewAnalysis(patient)}
+                onRetry={(analysisId) => handleRetry(analysisId)}
               />
             ))}
           </div>

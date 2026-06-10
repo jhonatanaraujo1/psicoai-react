@@ -501,6 +501,10 @@ export const api = {
     throw new Error('Tempo de análise excedido. O servidor pode estar sobrecarregado. Tente novamente em instantes.')
   },
 
+  async retryAnalysis(analysisId) {
+    return post(`/api/v1/analyses/${analysisId}/retry`, {})
+  },
+
   async refineAnalysis(analysisId, feedback = null) {
     return post(`/api/v1/analyses/${analysisId}/refine`, { feedback })
   },
