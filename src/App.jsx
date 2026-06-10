@@ -236,52 +236,6 @@ export default function App() {
     } catch {}
   }
 
-  // ── Annotation browser-history routing ───────────────────────────────────
-  // Quando o canvas abre: pushState → browser back volta para a tela anterior.
-  // Quando muda de página dentro da anotação: pushState → browser back volta à página anterior.
-  // popstate: se o estado tem psicoai_canvas → navega entre páginas; senão → fecha canvas.
-  const canvasOpenRef       = useRef(false)
-  const [annotationTargetPage, setAnnotationTargetPage] = useState(null)
-
-  useEffect(() => { canvasOpenRef.current = canvasOpen }, [canvasOpen])
-
-  // Push history entry quando a anotação abre
-  useEffect(() => {
-    if (!canvasOpen) return
-    const params = new URLSearchParams(window.location.search)
-    params.set('view', 'anotacao')
-    if (currentPatient?.id) params.set('paciente', String(currentPatient.id))
-    window.history.pushState(
-      { psicoai_canvas: true, page: 0 },
-      '',
-      `${window.location.pathname}?${params}`
-    )
-  }, [canvasOpen]) // eslint-disable-line — só ao abrir/fechar
-
-  // Popstate listener — montado uma vez, usa ref para canvasOpen
-  useEffect(() => {
-    const handler = (e) => {
-      if (!canvasOpenRef.current) return
-      if (e.state?.psicoai_canvas && typeof e.state.page === 'number') {
-        // Back/forward dentro da anotação → navega entre páginas
-        setAnnotationTargetPage(e.state.page)
-      } else {
-        // Back saindo da anotação → fecha canvas sem encerrar sessão
-        setCanvasOpen(false)
-        setCanvasInitialPageType(null)
-        // Limpa params de anotação da URL
-        const p = new URLSearchParams(window.location.search)
-        if (p.get('view') === 'anotacao') {
-          p.delete('view'); p.delete('paciente')
-          const q = p.toString()
-          window.history.replaceState({}, '', q ? `${window.location.pathname}?${q}` : window.location.pathname)
-        }
-      }
-    }
-    window.addEventListener('popstate', handler)
-    return () => window.removeEventListener('popstate', handler)
-  }, []) // eslint-disable-line — usa ref, não recria
-
   // ── Active session tracking ────────────────────────────────────────────────
   const activeSessionRef  = useRef(null)
 
@@ -379,6 +333,45 @@ export default function App() {
   const [viewOnlySessionId, setViewOnlySessionId] = useState(null)
   // Sessão alvo para scroll automático ao abrir o caderno
   const [scrollToSessionId, setScrollToSessionId] = useState(null)
+
+  // ── Annotation browser-history routing ───────────────────────────────────
+  // Declarado AQUI — depois de canvasOpen (315), canvasInitialPageType (313) e currentPatient (217)
+  const canvasOpenRef = useRef(false)
+  const [annotationTargetPage, setAnnotationTargetPage] = useState(null)
+
+  useEffect(() => { canvasOpenRef.current = canvasOpen }, [canvasOpen])
+
+  useEffect(() => {
+    if (!canvasOpen) return
+    const params = new URLSearchParams(window.location.search)
+    params.set('view', 'anotacao')
+    if (currentPatient?.id) params.set('paciente', String(currentPatient.id))
+    window.history.pushState(
+      { psicoai_canvas: true, page: 0 },
+      '',
+      `${window.location.pathname}?${params}`
+    )
+  }, [canvasOpen]) // eslint-disable-line
+
+  useEffect(() => {
+    const handler = (e) => {
+      if (!canvasOpenRef.current) return
+      if (e.state?.psicoai_canvas && typeof e.state.page === 'number') {
+        setAnnotationTargetPage(e.state.page)
+      } else {
+        setCanvasOpen(false)
+        setCanvasInitialPageType(null)
+        const p = new URLSearchParams(window.location.search)
+        if (p.get('view') === 'anotacao') {
+          p.delete('view'); p.delete('paciente')
+          const q = p.toString()
+          window.history.replaceState({}, '', q ? `${window.location.pathname}?${q}` : window.location.pathname)
+        }
+      }
+    }
+    window.addEventListener('popstate', handler)
+    return () => window.removeEventListener('popstate', handler)
+  }, []) // eslint-disable-line
 
   // ── AI Drawer ─────────────────────────────────────────────────────────────
   const [aiDrawerOpen, setAiDrawerOpen] = useState(false)
