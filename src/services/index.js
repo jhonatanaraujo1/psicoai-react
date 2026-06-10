@@ -1,32 +1,30 @@
 /**
- * services/index.js — Smart router: mock (demo) → realApi (Railway/Kotlin).
+ * services/index.js — Aponta sempre para o backend real (Railway/Kotlin).
+ * Mock removido — app roda 100% contra realApi.
  *
- * Prioridade de modo (primeira var definida ganha):
+ * Variável de ambiente obrigatória:
+ *   VITE_API_BASE_URL=https://<seu-app>.up.railway.app
  *
- *   1. VITE_API_BASE_URL definida → realApi (backend Kotlin no Railway)
- *
- *   2. Nenhuma var definida      → mockApi (demo offline, sem backend)
- *
- * Setup:
- *   Modo Railway → .env.local: VITE_API_BASE_URL=https://api.psicnotes.com
- *   Modo Demo    → não precisa de .env.local
+ * Dev local:
+ *   VITE_API_BASE_URL=http://localhost:8080  (via .env.local)
  */
 
-import * as mockModule from './mockApi.js'
 import * as realModule from './realApi.js'
 
-const HAS_RAILWAY = Boolean(import.meta.env.VITE_API_BASE_URL)
+export const auth = realModule.auth
+export const api  = realModule.api
 
-export const auth = HAS_RAILWAY ? realModule.auth : mockModule.auth
-export const api  = HAS_RAILWAY ? realModule.api  : mockModule.api
-
-// FE-004: validação de redirect URLs — sempre exportada (mesma fn, independe de mock/real)
 export { assertSafeRedirectUrl } from './realApi.js'
 
-export const API_MODE = HAS_RAILWAY ? 'railway' : 'mock'
+export const API_MODE = 'railway'
 
 if (import.meta.env.DEV) {
-  console.info(`[PsicoNotes] API mode: ${API_MODE}`)
+  const base = import.meta.env.VITE_API_BASE_URL
+  if (!base) {
+    console.warn('[PsicoNotes] ⚠ VITE_API_BASE_URL não definida — todas as chamadas API vão falhar. Configure .env.local.')
+  } else {
+    console.info(`[PsicoNotes] API → ${base}`)
+  }
 }
 
 export default api
