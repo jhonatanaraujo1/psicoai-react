@@ -219,13 +219,6 @@ export default function Insights({ onGoToPatient, onOpenAnalysisHub }) {
 
   const totalAlerts = Object.values(data?.alertCount || {}).reduce((a, b) => a + b, 0)
 
-  const analyses = data?.recentAnalyses || []
-  const evCounts = analyses.reduce((acc, a) => {
-    const k = a.evolution || 'neutral'
-    acc[k] = (acc[k] || 0) + 1
-    return acc
-  }, { positive: 0, neutral: 0, negative: 0 })
-  const evTotal = analyses.length || 1
 
   return (
     <div className="view">
@@ -486,43 +479,90 @@ export default function Insights({ onGoToPatient, onOpenAnalysisHub }) {
               </div>
             </div>
 
-            {/* Evolução */}
+            {/* Agenda de análises */}
             <div className="card">
               <div className="card-header">
                 <div>
-                  <div className="card-title">Distribuição de evolução</div>
-                  <div className="card-sub">{analyses.length} análise{analyses.length !== 1 ? 's' : ''} · classificadas pela IA</div>
+                  <div className="card-title" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    Agenda de análises
+                    <Tip text="Pacientes ordenados pelo tempo desde a última análise IA — os mais desatualizados aparecem primeiro. Ajuda a priorizar quem revisitar." />
+                  </div>
+                  <div className="card-sub">Quanto tempo faz desde a última análise IA</div>
                 </div>
               </div>
               <div className="card-body">
-                {[
-                  { key: 'positive', label: 'Evolução positiva', color: 'var(--g500)', desc: 'Melhora, novo insight ou maior engajamento registrado' },
-                  { key: 'neutral',  label: 'Sessão descritiva',  color: 'var(--warn)',   desc: 'Sem indicação clara de direção ou dados insuficientes' },
-                  { key: 'negative', label: 'Requer atenção',    color: 'var(--danger)', desc: 'Piora, recaída ou desengajamento registrado' },
-                ].map(({ key, label, color, desc }) => {
-                  const count = evCounts[key] || 0
-                  const pct = Math.round((count / evTotal) * 100)
+                {(() => {
+                  const now = new Date()
+                  const byPatient = Object.values(
+                    (data?.recentAnalyses || []).reduce((acc, a) => {
+                      if (!acc[a.patientId] || new Date(a.createdAt) > new Date(acc[a.patientId].createdAt)) {
+                        acc[a.patientId] = a
+                      }
+                      return acc
+                    }, {})
+                  ).map(a => ({
+                    ...a,
+                    daysSince: Math.floor((now - new Date(a.createdAt)) / 86400000),
+                  })).sort((a, b) => b.daysSince - a.daysSince)
+
+                  const topOverdue = byPatient.slice(0, 4)
+                  const fresh = byPatient.filter(a => a.daysSince <= 30).length
+                  const aging = byPatient.filter(a => a.daysSince > 30 && a.daysSince <= 90).length
+                  const stale = byPatient.filter(a => a.daysSince > 90).length
+
+                  const dayLabel = (d) => {
+                    if (d === 0) return 'hoje'
+                    if (d === 1) return 'ontem'
+                    if (d < 7) return `${d} dias atrás`
+                    if (d < 30) return `${Math.floor(d / 7)} sem. atrás`
+                    if (d < 365) return `${Math.floor(d / 30)} mes. atrás`
+                    return `${Math.floor(d / 365)} ano(s) atrás`
+                  }
+                  const dotColor = (d) => d <= 30 ? 'var(--g500)' : d <= 90 ? 'var(--warn)' : 'var(--danger)'
+                  const tagLabel = (d) => d <= 30 ? 'Em dia' : d <= 90 ? 'Revisar' : 'Urgente'
+
                   return (
-                    <div key={key} style={{ marginBottom: '12px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '5px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
-                          <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: color, display: 'inline-block', flexShrink: 0 }} />
-                          <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--d)' }}>{label}</span>
+                    <>
+                      {topOverdue.length === 0 && (
+                        <div style={{ textAlign: 'center', padding: '20px 0', fontSize: '12px', color: 'var(--gr4)' }}>Nenhuma análise registrada ainda</div>
+                      )}
+                      {topOverdue.map(a => (
+                        <div key={a.patientId} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px', borderRadius: 'var(--r)', background: 'var(--ow)', border: '1px solid var(--gr2)', marginBottom: '8px' }}>
+                          <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: dotColor(a.daysSince), flexShrink: 0 }} />
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--d)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.patientName}</div>
+                            <div style={{ fontSize: '10px', color: 'var(--gr4)', marginTop: '1px' }}>{dayLabel(a.daysSince)}</div>
+                          </div>
+                          <span style={{ fontSize: '10px', fontWeight: 600, color: dotColor(a.daysSince), background: `color-mix(in srgb, ${dotColor(a.daysSince)} 12%, transparent)`, padding: '2px 8px', borderRadius: '20px', flexShrink: 0 }}>
+                            {tagLabel(a.daysSince)}
+                          </span>
                         </div>
-                        <span style={{ fontSize: '12px', fontWeight: 700, color, fontFamily: "'Fraunces', serif" }}>{count}</span>
-                      </div>
-                      <div style={{ height: '6px', background: 'var(--gr2)', borderRadius: '3px', overflow: 'hidden', marginBottom: '3px' }}>
-                        <div style={{ height: '100%', width: `${pct}%`, background: color, borderRadius: '3px', transition: 'width 0.8s cubic-bezier(0.22,1,0.36,1)' }} />
-                      </div>
-                      <div style={{ fontSize: '10px', color: 'var(--gr4)', lineHeight: 1.4 }}>{pct}% · {desc}</div>
-                    </div>
+                      ))}
+                      {byPatient.length > 0 && (
+                        <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
+                          {fresh > 0 && (
+                            <div style={{ flex: 1, padding: '8px', background: 'var(--g50)', borderRadius: '8px', textAlign: 'center', border: '1px solid var(--g100)' }}>
+                              <div style={{ fontSize: '16px', fontFamily: "'Fraunces', serif", color: 'var(--g600)', fontWeight: 400 }}>{fresh}</div>
+                              <div style={{ fontSize: '10px', color: 'var(--g600)' }}>em dia</div>
+                            </div>
+                          )}
+                          {aging > 0 && (
+                            <div style={{ flex: 1, padding: '8px', background: 'var(--warn-l)', borderRadius: '8px', textAlign: 'center', border: '1px solid rgba(202,138,4,0.2)' }}>
+                              <div style={{ fontSize: '16px', fontFamily: "'Fraunces', serif", color: 'var(--warn)', fontWeight: 400 }}>{aging}</div>
+                              <div style={{ fontSize: '10px', color: 'var(--warn)' }}>revisar</div>
+                            </div>
+                          )}
+                          {stale > 0 && (
+                            <div style={{ flex: 1, padding: '8px', background: 'var(--danger-l)', borderRadius: '8px', textAlign: 'center', border: '1px solid rgba(220,38,38,0.2)' }}>
+                              <div style={{ fontSize: '16px', fontFamily: "'Fraunces', serif", color: 'var(--danger)', fontWeight: 400 }}>{stale}</div>
+                              <div style={{ fontSize: '10px', color: 'var(--danger)' }}>urgente</div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </>
                   )
-                })}
-                <div style={{ marginTop: '14px', padding: '8px 12px', background: 'var(--ow)', borderRadius: 'var(--r)', border: '1px solid var(--gr2)' }}>
-                  <div style={{ fontSize: '11px', color: 'var(--gr5)', lineHeight: 1.5 }}>
-                    Classificação feita pela IA com base nas suas anotações. A interpretação clínica é sempre sua.
-                  </div>
-                </div>
+                })()}
               </div>
             </div>
 
