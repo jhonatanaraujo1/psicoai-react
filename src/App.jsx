@@ -240,7 +240,7 @@ export default function App() {
   // Quando o canvas abre: pushState → browser back volta para a tela anterior.
   // Quando muda de página dentro da anotação: pushState → browser back volta à página anterior.
   // popstate: se o estado tem psicoai_canvas → navega entre páginas; senão → fecha canvas.
-  const canvasOpenRef       = useRef(canvasOpen)
+  const canvasOpenRef       = useRef(false)
   const [annotationTargetPage, setAnnotationTargetPage] = useState(null)
 
   useEffect(() => { canvasOpenRef.current = canvasOpen }, [canvasOpen])
