@@ -161,8 +161,8 @@ function CadernoCard({ patient, canvas, onOpen, onOpenPatient, isOpenSession }) 
         </svg>
       </div>
 
-      {/* Stats — só aparece quando há páginas */}
-      {!isEmpty && (
+      {/* Stats — só aparece quando há dados locais (canvas) */}
+      {canvas && (
         <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
           <span style={{
             fontSize: '11px', padding: '2px 8px', borderRadius: '20px',
