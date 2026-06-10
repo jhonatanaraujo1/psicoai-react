@@ -187,6 +187,21 @@ export default function AiAnalysisPanel({ sessionId, analysis: propAnalysis, cre
         <div style={{ padding: '32px 20px', textAlign: 'center' }}>
           <span style={{ fontSize: '13px', color: 'rgba(255,255,255,0.3)' }}>Análise não disponível para esta sessão.</span>
         </div>
+      ) : !summary && !hypotheses.length && !patterns.length && !hasRisks && !hasSuggest ? (
+        /* Análise salva como completed mas sem conteúdo — backend retornou vazio */
+        <div style={{ padding: '32px 20px', textAlign: 'center' }}>
+          <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="rgba(245,158,11,0.4)" strokeWidth="1.2"
+            style={{ margin: '0 auto 14px', display: 'block' }}>
+            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+            <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+          </svg>
+          <div style={{ fontSize: '13px', fontWeight: 600, color: 'rgba(255,255,255,0.35)', marginBottom: '8px' }}>
+            A IA não gerou hipóteses nesta análise
+          </div>
+          <div style={{ fontSize: '11.5px', color: 'rgba(255,255,255,0.2)', lineHeight: 1.6, maxWidth: 300, margin: '0 auto' }}>
+            O processo foi concluído mas não produziu conteúdo com base nas anotações disponíveis. Adicione mais detalhes nas sessões e gere uma nova análise.
+          </div>
+        </div>
       ) : (
         <>
           {/* Resumo clínico */}

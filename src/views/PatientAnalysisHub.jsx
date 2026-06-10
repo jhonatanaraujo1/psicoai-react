@@ -139,17 +139,15 @@ function AnalysisRow({ analysis, index, total, isFirst, onOpen, onRetry }) {
   const rawProcessing = analysis.status === 'processing'
   const isFailed      = analysis.status === 'failed'
 
-  // Stale detection: "processing" há mais de 15 min → tratado como falha no frontend
-  // O backend cleanup (AnalysisStaleCleanupScheduler) vai corrigir no próximo ciclo de 5 min,
-  // mas a UI não deve deixar o usuário olhando para "Analisando..." eternamente.
   const ageMs         = Date.now() - new Date(analysis.createdAt).getTime()
   const isStale       = rawProcessing && ageMs > 15 * 60 * 1000
 
   const isProcessing  = rawProcessing && !isStale
-  // Fallback: se status ausente/desconhecido, assume completed (retrocompatibilidade com mock e dados legados)
   const isCompleted   = !rawProcessing && !isFailed
 
-  // Para rendering: stale é tratado como failed visualmente
+  // Completed mas sem conteúdo gerado (backend salvou status=completed mas vazio)
+  const isEmpty       = isCompleted && !analysis.summary && !analysis.hypotheses && !analysis.patterns
+
   const showAsFailed = isFailed || isStale
 
   const scopeLabel = analysis.scope === 'notebook'
@@ -196,25 +194,28 @@ function AnalysisRow({ analysis, index, total, isFirst, onOpen, onRetry }) {
 
       {/* Card conteúdo */}
       <div
-        onClick={() => isCompleted && onOpen(analysis.id)}
+        onClick={() => isCompleted && !isEmpty && onOpen(analysis.id)}
         style={{
           flex: 1,
           padding: '12px 16px',
           borderRadius: 10,
-          background: hovered && isCompleted
+          background: hovered && isCompleted && !isEmpty
             ? 'var(--g50)'
-            : showAsFailed
-              ? '#fef2f2'
-              : isProcessing
-                ? '#fffbeb'
-                : 'var(--ow)',
+            : isEmpty
+              ? '#fffbeb'
+              : showAsFailed
+                ? '#fef2f2'
+                : isProcessing
+                  ? '#fffbeb'
+                  : 'var(--ow)',
           border: `1px solid ${
+            isEmpty ? '#fde68a' :
             showAsFailed ? '#fecaca' :
             isProcessing ? '#fde68a' :
             hovered && isCompleted ? 'var(--g200)' :
             'var(--gr2)'
           }`,
-          cursor: isCompleted ? 'pointer' : 'default',
+          cursor: isCompleted && !isEmpty ? 'pointer' : 'default',
           transition: 'background 0.15s, border-color 0.15s, box-shadow 0.15s',
           boxShadow: hovered && isCompleted ? '0 2px 8px rgba(0,0,0,0.06)' : 'none',
         }}
@@ -239,8 +240,8 @@ function AnalysisRow({ analysis, index, total, isFirst, onOpen, onRetry }) {
             {meta.label}
           </span>
 
-          {/* Evolution chip — só em completed */}
-          {isCompleted && (
+          {/* Evolution chip — só em completed com conteúdo */}
+          {isCompleted && !isEmpty && (
             <span style={{
               fontSize: 10, fontWeight: 600,
               padding: '2px 8px', borderRadius: 20,
@@ -248,6 +249,17 @@ function AnalysisRow({ analysis, index, total, isFirst, onOpen, onRetry }) {
               flexShrink: 0,
             }}>
               {evChip.label}
+            </span>
+          )}
+          {/* Chip "sem conteúdo" para análises completadas mas vazias */}
+          {isEmpty && (
+            <span style={{
+              fontSize: 10, fontWeight: 600, color: '#92400e',
+              padding: '2px 8px', borderRadius: 20,
+              background: '#fffbeb', border: '1px solid #fde68a',
+              flexShrink: 0,
+            }}>
+              Sem conteúdo
             </span>
           )}
 
@@ -318,6 +330,29 @@ function AnalysisRow({ analysis, index, total, isFirst, onOpen, onRetry }) {
           </div>
         )}
 
+        {isEmpty && (
+          <div style={{ marginBottom: 8 }}>
+            <div style={{ fontSize: 12, color: '#92400e', lineHeight: 1.5, marginBottom: 8, fontFamily: "'DM Sans', sans-serif" }}>
+              A IA concluiu o processo mas não gerou hipóteses. Adicione mais detalhes nas sessões e gere uma nova análise.
+            </div>
+            <button
+              onClick={e => { e.stopPropagation(); onRetry(analysis.id) }}
+              style={{
+                fontSize: 11, fontWeight: 600,
+                padding: '4px 12px', borderRadius: 6,
+                border: '1px solid #d97706', color: '#92400e',
+                background: 'white', cursor: 'pointer',
+                fontFamily: "'DM Sans', sans-serif",
+                transition: 'background 0.15s',
+              }}
+              onMouseEnter={e => e.currentTarget.style.background = '#fffbeb'}
+              onMouseLeave={e => e.currentTarget.style.background = 'white'}
+            >
+              Gerar nova análise
+            </button>
+          </div>
+        )}
+
         {showAsFailed && (
           <div style={{ marginBottom: 8 }}>
             <div style={{
@@ -347,8 +382,8 @@ function AnalysisRow({ analysis, index, total, isFirst, onOpen, onRetry }) {
           </div>
         )}
 
-        {/* CTA ver análise — só em completed + hover */}
-        {isCompleted && (
+        {/* CTA ver análise — só em completed com conteúdo */}
+        {isCompleted && !isEmpty && (
           <div style={{
             fontSize: 11, fontWeight: 600,
             color: hovered ? '#16a34a' : 'var(--gr4)',
@@ -457,8 +492,8 @@ export default function PatientAnalysisHub({ patient, currentUser, onBack, onOpe
             <div style={{ fontSize: 12, color: 'var(--gr5)', marginTop: 2 }}>
               {loading
                 ? 'Carregando histórico…'
-                : completedCount > 0
-                  ? `${completedCount} análise${completedCount !== 1 ? 's' : ''} no histórico${processingCount > 0 ? ` · ${processingCount} gerando` : ''}`
+                : analyses.length > 0
+                  ? `${analyses.length} registro${analyses.length !== 1 ? 's' : ''} · ${completedCount} concluída${completedCount !== 1 ? 's' : ''}${processingCount > 0 ? ` · ${processingCount} gerando` : ''}`
                   : 'Análises clínicas com IA'}
             </div>
           </div>
