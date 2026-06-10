@@ -458,15 +458,19 @@ export default function App() {
     setCurrentPatient(pat)
     setActiveSessionType('canvas')
     setCanvasInitialPageType(null)
-    setCanvasInitialData(null) // reset antes de carregar do backend — evita vazar dados de abertura anterior
+    setCanvasInitialData(null) // reset antes de carregar do backend
 
-    // Sempre carrega do backend ao reabrir uma anotação existente —
-    // localStorage pode ter dados stale/em branco de uma sessão nova aberta anteriormente.
+    // Limpa localStorage stale do paciente para forçar uso dos dados frescos do backend.
+    // O AnnotationSession vai receber initialCanvasData via prop e ignorar localStorage vazio.
+    try { localStorage.removeItem(`psicoai_canvas3_p${pat?.id}`) } catch {}
+
+    // Carrega caderno completo do backend — notebook retorna NoteResponse com htmlContent/textContent.
     if (pat?.id) {
       try {
         const sessions = await api.getPatientNotebook(pat.id)
         const list = [...(sessions || [])].sort((a, b) => (a.position ?? 0) - (b.position ?? 0))
         const pages = list.flatMap(s => {
+          // Canvas page: canvasData tem o JSON de strokes/pages
           const cd = s.canvasData || s.canvasDataJson
           if (cd) {
             try {
@@ -479,6 +483,7 @@ export default function App() {
                 return [{ id: `p-${s.id}`, pageType: 'draw', dataUrl: parsed.dataUrl, textHtml: null, sessionId: s.id }]
             } catch {}
           }
+          // Text page: htmlContent ou textContent
           const html = s.htmlContent ||
             (s.textContent ? s.textContent.split('\n').map(l => `<p>${l || '<br>'}</p>`).join('') : '')
           if (html) return [{ id: `p-${s.id}`, pageType: 'text', textHtml: html, dataUrl: null, sessionId: s.id }]
@@ -487,7 +492,7 @@ export default function App() {
         if (pages.length > 0) {
           setCanvasInitialData(JSON.stringify(pages))
         }
-      } catch { /* backend indisponível — usa localStorage existente */ }
+      } catch { /* backend indisponível — abre caderno vazio */ }
     }
 
     if (pat) {

@@ -943,8 +943,20 @@ export default function AnnotationSession({
   useEffect(() => { sessionIdRef.current = sessionId }, [sessionId])
 
   // ── Inicializa ao abrir ────────────────────────────────────────────────────
+  // Ref para distinguir "canvas abriu agora" de "initialCanvasData chegou com sessão já aberta"
+  const initDoneRef = useRef(false)
   useEffect(() => {
-    if (!isOpen || !patient?.id) return
+    if (!isOpen || !patient?.id) { initDoneRef.current = false; return }
+
+    // Guard: se já inicializou com conteúdo E initialCanvasData mudou (não isOpen),
+    // só re-inicializa se as páginas atuais estiverem TODAS em branco (sem conteúdo salvo).
+    // Usa pagesRef2 (sempre atualizado) para evitar stale closure com pages state.
+    // Isso evita resetar edição em andamento quando o parent atualiza initialCanvasData.
+    const currentPages = pagesRef2.current || []
+    if (initDoneRef.current && currentPages.length > 0 && currentPages.some(p => p.textHtml || p.strokes?.length || p.dataUrl)) {
+      return
+    }
+
     setIsDirty(false)
     setShowEndModal(false)
     penDetectedRef.current = false
@@ -957,7 +969,7 @@ export default function AnnotationSession({
     sessionDateRef.current = defaultDate
 
     const init = async () => {
-      // 1. initialCanvasData prop tem prioridade quando fornecido pelo parent com dados frescos do backend
+      // 1. initialCanvasData prop tem prioridade — dados frescos do backend passados pelo parent
       let saved = null
       if (initialCanvasData) {
         try {
@@ -1026,8 +1038,11 @@ export default function AnnotationSession({
       }
     }
 
-    init()
-  }, [isOpen, patient?.id, initialPageType]) // eslint-disable-line
+    init().then(() => { initDoneRef.current = true })
+  // initialCanvasData nas deps: se o efeito rodou antes dos dados do backend chegarem
+  // (initialCanvasData=null), re-roda quando os dados estiverem disponíveis.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, patient?.id, initialPageType, initialCanvasData])
 
   // ── Autosave backend — debounce 6s + flush no unload/hidden ──────────────────
   // Padrão Google Docs:
