@@ -470,23 +470,24 @@ export default function App() {
         const sessions = await api.getPatientNotebook(pat.id)
         const list = [...(sessions || [])].sort((a, b) => (a.position ?? 0) - (b.position ?? 0))
         const pages = list.flatMap(s => {
+          const nd = s.sessionDate || null
           // Canvas page: canvasData tem o JSON de strokes/pages
           const cd = s.canvasData || s.canvasDataJson
           if (cd) {
             try {
               const parsed = JSON.parse(cd)
               if (Array.isArray(parsed) && parsed.length > 0)
-                return parsed.map(p => ({ ...p, sessionId: s.id }))
+                return parsed.map(p => ({ ...p, sessionId: s.id, noteDate: p.noteDate || nd }))
               if (parsed && Array.isArray(parsed.strokes))
-                return [{ id: `p-${s.id}`, pageType: 'draw', strokes: parsed.strokes, dataUrl: null, textHtml: null, sessionId: s.id }]
+                return [{ id: `p-${s.id}`, pageType: 'draw', strokes: parsed.strokes, dataUrl: null, textHtml: null, sessionId: s.id, noteDate: nd }]
               if (parsed && parsed.dataUrl)
-                return [{ id: `p-${s.id}`, pageType: 'draw', dataUrl: parsed.dataUrl, textHtml: null, sessionId: s.id }]
+                return [{ id: `p-${s.id}`, pageType: 'draw', dataUrl: parsed.dataUrl, textHtml: null, sessionId: s.id, noteDate: nd }]
             } catch {}
           }
           // Text page: htmlContent ou textContent
           const html = s.htmlContent ||
             (s.textContent ? s.textContent.split('\n').map(l => `<p>${l || '<br>'}</p>`).join('') : '')
-          if (html) return [{ id: `p-${s.id}`, pageType: 'text', textHtml: html, dataUrl: null, sessionId: s.id }]
+          if (html) return [{ id: `p-${s.id}`, pageType: 'text', textHtml: html, dataUrl: null, sessionId: s.id, noteDate: nd }]
           return []
         })
         if (pages.length > 0) {
@@ -942,24 +943,25 @@ export default function App() {
               // Função auxiliar: converte sessão backend em página de texto
               const sessionToPage = (s) => {
                 if (!s) return null
+                const nd = s.sessionDate || null
                 const cd = s.canvasData || s.canvasDataJson
                 if (cd) {
                   try {
                     const parsed = JSON.parse(cd)
                     // Legado: caderno inteiro como array de páginas
                     if (Array.isArray(parsed) && parsed.length > 0)
-                      return parsed.map(p => ({ ...p, sessionId: s.id }))
+                      return parsed.map(p => ({ ...p, sessionId: s.id, noteDate: p.noteDate || nd }))
                     // Página-por-nota: canvas vetorial { v, strokes }
                     if (parsed && Array.isArray(parsed.strokes))
-                      return [{ id: `p-${s.id}`, pageType: 'draw', strokes: parsed.strokes, dataUrl: null, textHtml: null, sessionId: s.id }]
+                      return [{ id: `p-${s.id}`, pageType: 'draw', strokes: parsed.strokes, dataUrl: null, textHtml: null, sessionId: s.id, noteDate: nd }]
                     // Legado: canvas único como PNG { dataUrl }
                     if (parsed && parsed.dataUrl)
-                      return [{ id: `p-${s.id}`, pageType: 'draw', dataUrl: parsed.dataUrl, textHtml: null, sessionId: s.id }]
+                      return [{ id: `p-${s.id}`, pageType: 'draw', dataUrl: parsed.dataUrl, textHtml: null, sessionId: s.id, noteDate: nd }]
                   } catch {}
                 }
                 const html = s.htmlContent ||
                   (s.textContent ? s.textContent.split('\n').map(l => `<p>${l || '<br>'}</p>`).join('') : '')
-                if (html) return [{ id: `p-${s.id}`, pageType: 'text', textHtml: html, dataUrl: null, sessionId: s.id }]
+                if (html) return [{ id: `p-${s.id}`, pageType: 'text', textHtml: html, dataUrl: null, sessionId: s.id, noteDate: nd }]
                 return null
               }
               try {
