@@ -468,6 +468,7 @@ export default function App() {
     if (pat?.id) {
       try {
         const sessions = await api.getPatientNotebook(pat.id)
+        console.log('[DEBUG] notebook sessions:', sessions?.length, sessions?.map(s => ({ id: s.id, htmlLen: s.htmlContent?.length, textLen: s.textContent?.length, canvasData: !!s.canvasData, canvasDataJson: !!s.canvasDataJson })))
         const list = [...(sessions || [])].sort((a, b) => (a.position ?? 0) - (b.position ?? 0))
         const pages = list.flatMap(s => {
           // Canvas page: canvasData tem o JSON de strokes/pages
@@ -489,10 +490,13 @@ export default function App() {
           if (html) return [{ id: `p-${s.id}`, pageType: 'text', textHtml: html, dataUrl: null, sessionId: s.id }]
           return []
         })
+        console.log('[DEBUG] pages built:', pages.length, pages.map(p => ({ id: p.id, type: p.pageType, htmlLen: p.textHtml?.length })))
         if (pages.length > 0) {
           setCanvasInitialData(JSON.stringify(pages))
         }
-      } catch { /* backend indisponível — abre caderno vazio */ }
+      } catch (err) {
+        console.error('[DEBUG] notebook error:', err)
+      }
     }
 
     if (pat) {
