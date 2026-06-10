@@ -43,7 +43,7 @@ function LoadingState() {
   return (
     <div className="ai-loading-wrap">
       <div className="ai-spinner" />
-      <div className="ai-loading-text">Claude está analisando as anotações…</div>
+      <div className="ai-loading-text">PsicoAI está analisando as anotações…</div>
       <div className="ai-loading-steps">
         {STEP_LABELS.map((s, i) => (
           <div key={i} className="ai-step" style={{ opacity: i <= step ? 1 : 0.35, transition: 'opacity 0.4s' }}>
@@ -153,7 +153,6 @@ export default function AiDrawer({ isOpen, onClose, onSave, patient, result, loa
                       : result.evolution === 'negative' ? ['Regressão', '↓', 'var(--danger)', 'var(--danger-l)']
                       : ['Neutro', '→', 'var(--warn)', 'var(--warn-l)'],
                     result.usedIncluded ? ['Incluído no plano', '✓', 'var(--g600)', 'var(--g50)'] : [`R$ ${result.cost?.toFixed(2)}`, '✦', 'var(--gr5)', 'var(--gr1)'],
-                    [`${(result.inputTokens || 0) + (result.outputTokens || 0)} tokens`, '◈', 'var(--gr5)', 'var(--gr1)'],
                   ].map(([label, icon, c, bg], idx) => (
                     <div key={idx} style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', fontSize: '11px', fontWeight: 600, padding: '4px 10px', borderRadius: '20px', background: bg, color: c }}>
                       <span>{icon}</span>{label}

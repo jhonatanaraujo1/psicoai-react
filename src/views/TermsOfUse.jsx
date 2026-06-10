@@ -269,8 +269,8 @@ export default function TermsOfUse({ onClose }) {
         <p style={s.p}>
           Os dados clínicos inseridos pelo Usuário <strong>nunca são utilizados para treinar modelos de IA</strong> próprios
           ou de terceiros, sem consentimento expresso e específico do Usuário. As análises geradas pela IA são
-          processadas por provedores terceiros (Anthropic, Inc.) sob seus próprios termos de privacidade e
-          políticas de dados clínicos.
+          processadas por provedores especializados de infraestrutura, sob contratos de confidencialidade e
+          proteção de dados compatíveis com a LGPD e as diretrizes do CFP.
         </p>
 
         {/* 9 */}
