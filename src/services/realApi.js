@@ -116,15 +116,9 @@ async function req(method, path, body, opts = {}) {
     }
   }
 
-  // 403 em endpoints protegidos = conta suspensa, token revogado ou acesso negado
-  // pelo backend ao recurso do próprio usuário → deslogar imediatamente.
-  // Nota: não se aplica a /api/v1/auth/* (403 ali = credencial errada, não sessão).
-  if (res.status === 403 && !path.startsWith('/api/v1/auth/')) {
-    clearTokens()
-    window.dispatchEvent(new CustomEvent('psicoai:session-expired'))
-    window.location.replace('/')
-    return
-  }
+  // 403 = acesso negado ao recurso específico — NÃO desloga.
+  // Deslogar apenas em 401 (token inválido) que não consegue refresh.
+  // 403 é "você não tem permissão para isso", não "você não está autenticado".
 
   if (res.status === 204) return null
 

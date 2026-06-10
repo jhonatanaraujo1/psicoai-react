@@ -93,7 +93,12 @@ export default function Patient({ patient: propPatient, setCurrentView, onSessao
       api.getPatientAnalyses(patientId),
     ]).then(([sum, sess, frms, als]) => {
       setSummary(sum)
-      setSessions(sess.content || [])
+      const sorted = (sess.content || []).sort((a, b) => {
+        const da = new Date(a.sessionDate || a.createdAt || 0)
+        const db = new Date(b.sessionDate || b.createdAt || 0)
+        return db - da
+      })
+      setSessions(sorted)
       setForms(frms?.content || frms || [])
       setAnalyses(als.content || [])
       setNotes((sum?.patient?.notes) || (propPatient?.notes) || '')
@@ -289,7 +294,7 @@ export default function Patient({ patient: propPatient, setCurrentView, onSessao
         </div>
       )}
 
-      {/* Timeline */}
+      {/* Timeline — cronologia simples, sem avaliação de evolução */}
       {timelineDots.length > 0 && !loading && (
         <div className="timeline-wrap">
           <div className="timeline-label">Linha do Tempo das Anotações</div>
@@ -297,22 +302,14 @@ export default function Patient({ patient: propPatient, setCurrentView, onSessao
             <div className="timeline-line" />
             <div className="timeline-dots">
               {timelineDots.map((d, i) => (
-                <div key={i} className={`tl-dot${d.evolution && !d.isOpen ? ` ${d.evolution}` : ''}`} style={d.isOpen ? { color: 'var(--g500)' } : {}}>
-                  <div className="tl-dot-circle" style={d.isOpen ? { background: 'var(--g500)' } : {}} />
+                <div key={i} className={`tl-dot${d.isOpen ? ' current' : ''}`}>
+                  <div className="tl-dot-circle" />
                   <div className="tl-dot-date">{d.date}</div>
                   <div className="tl-dot-num">{d.num}</div>
                   <div className="tl-tooltip">{d.tip}</div>
                 </div>
               ))}
             </div>
-          </div>
-          <div style={{ display: 'flex', gap: '16px', marginTop: '8px' }}>
-            {[['#27AE60', 'Evolução'], ['#F39C12', 'Neutro'], ['#E74C3C', 'Regressão/Alerta'], ['var(--g500)', 'Em aberto']].map(([c, l]) => (
-              <div key={l} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: 'var(--gr5)' }}>
-                <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: c, display: 'inline-block' }} />
-                {l}
-              </div>
-            ))}
           </div>
         </div>
       )}
@@ -361,12 +358,14 @@ export default function Patient({ patient: propPatient, setCurrentView, onSessao
                 <div key={i} style={{ fontSize: '10px', fontWeight: 600, letterSpacing: '0.8px', textTransform: 'uppercase', color: 'var(--gr4)' }}>{h}</div>
               ))}
             </div>
-            {/* Lista com scroll interno quando expandida */}
-            <div style={sessionsExpanded ? {
-              maxHeight: 480, overflowY: 'auto',
+            {/* Lista com scroll — sempre ativo */}
+            <div style={{
+              maxHeight: sessionsExpanded ? 640 : 420,
+              overflowY: 'auto',
               overscrollBehavior: 'contain',
               scrollbarWidth: 'thin', scrollbarColor: 'var(--gr2) transparent',
-            } : {}}>
+              scrollBehavior: 'smooth',
+            }}>
             {(sessionsExpanded ? sessions : sessions.slice(0, SESSIONS_DEFAULT)).map((s, i) => {
               const sessionNum = s.num ?? (i + 1)
               const evColor = { green: '#27AE60', yellow: '#F39C12', red: '#E74C3C' }[s.evolution] || null

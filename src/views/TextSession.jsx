@@ -41,6 +41,7 @@ export default function TextSession({ patient, isOpen, onClose, onMinimize, onAn
   const localSaveRef  = useRef(null)
   const editorRef     = useRef(null)
   const patientIdRef  = useRef(patient?.id)
+  const lastSavedTextRef = useRef('')
 
   useEffect(() => { patientIdRef.current = patient?.id }, [patient?.id])
 
@@ -89,12 +90,15 @@ export default function TextSession({ patient, isOpen, onClose, onMinimize, onAn
     }
   }, [isOpen]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Autosave every 30s while session is open and we have a real sessionId
+  // Autosave every 30s only when content changed since last save
   useEffect(() => {
     if (!isOpen || !sessionId || !onAutosave) return
     autosaveRef.current = setInterval(() => {
       const text = editorRef.current?.innerText || ''
-      if (text.trim()) onAutosave(sessionId, { textContent: text })
+      if (text.trim() && text !== lastSavedTextRef.current) {
+        lastSavedTextRef.current = text
+        onAutosave(sessionId, { textContent: text })
+      }
     }, 30000)
     return () => clearInterval(autosaveRef.current)
   }, [isOpen, sessionId, onAutosave])

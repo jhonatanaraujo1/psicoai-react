@@ -2388,23 +2388,18 @@ export default function AnnotationSession({
                 onClick={handleStartAnalysis} disabled={saving}
                 style={{
                   width: '100%', padding: 16, border: '2px solid var(--g300)',
-                  borderRadius: 12, background: 'var(--g50)', cursor: saving ? 'wait' : 'pointer',
+                  borderRadius: 12, background: 'var(--g50)', cursor: 'pointer',
                   textAlign: 'left', fontFamily: "'DM Sans', sans-serif",
-                  opacity: saving ? 0.7 : 1, transition: 'all 0.15s',
+                  transition: 'all 0.15s',
                 }}
-                onMouseEnter={e => { if (!saving) { e.currentTarget.style.background = 'var(--g100)'; e.currentTarget.style.borderColor = 'var(--g400)' }}}
+                onMouseEnter={e => { e.currentTarget.style.background = 'var(--g100)'; e.currentTarget.style.borderColor = 'var(--g400)' }}
                 onMouseLeave={e => { e.currentTarget.style.background = 'var(--g50)'; e.currentTarget.style.borderColor = 'var(--g300)' }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
-                  {saving
-                    ? <span style={{ width: 16, height: 16, border: '2px solid var(--g300)', borderTopColor: 'var(--g600)', borderRadius: '50%', display: 'inline-block', animation: 'as-spin 0.8s linear infinite', flexShrink: 0 }} />
-                    : <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--g600)" strokeWidth="2" style={{ flexShrink: 0 }}>
-                        <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
-                      </svg>
-                  }
-                  <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--g700)' }}>
-                    {saving ? 'Analisando…' : 'Analisar com IA'}
-                  </span>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--g600)" strokeWidth="2" style={{ flexShrink: 0 }}>
+                    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+                  </svg>
+                  <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--g700)' }}>Analisar com IA</span>
                 </div>
                 <div style={{ fontSize: 12, color: 'var(--g600)', lineHeight: 1.5, paddingLeft: 26 }}>
                   A IA analisa suas anotações e devolve hipóteses diagnósticas, padrões e alertas de risco.

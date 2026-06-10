@@ -248,9 +248,9 @@ export default function Patients({ setCurrentView, onNovoCadastro }) {
             </div>
           </div>
 
-          {/* Crescimento */}
+          {/* Captação — novos pacientes este mês vs média dos 2 anteriores */}
           <div className="card" style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 4 }}>
-            <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--gr4)', letterSpacing: '0.6px', textTransform: 'uppercase', marginBottom: 2 }}>Crescimento</div>
+            <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--gr4)', letterSpacing: '0.6px', textTransform: 'uppercase', marginBottom: 2 }}>Captação</div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <span style={{ fontSize: 28, fontWeight: 700, fontFamily: "'Fraunces', serif", lineHeight: 1, color: stats.growth > 0 ? 'var(--g600)' : stats.growth < 0 ? 'var(--danger)' : 'var(--gr4)' }}>
                 {stats.growth > 0 ? '+' : ''}{stats.growth}%
@@ -261,7 +261,7 @@ export default function Patients({ setCurrentView, onNovoCadastro }) {
                   : <><polyline points="23 18 13.5 8.5 8.5 13.5 1 6"/><polyline points="17 18 23 18 23 12"/></>}
               </svg>
             </div>
-            <div style={{ fontSize: 11, color: 'var(--gr4)', marginTop: 4 }}>vs. média dos 2 meses anteriores</div>
+            <div style={{ fontSize: 11, color: 'var(--gr4)', marginTop: 4 }}>novos pacientes vs. média dos 2 meses anteriores</div>
             <div style={{ marginTop: 8, height: 4, borderRadius: 4, background: 'var(--gr1)', overflow: 'hidden' }}>
               <div style={{ height: '100%', width: `${Math.min(Math.abs(stats.growth), 100)}%`, background: stats.growth >= 0 ? 'var(--g500)' : 'var(--danger)', borderRadius: 4, transition: 'width 0.6s ease' }} />
             </div>
