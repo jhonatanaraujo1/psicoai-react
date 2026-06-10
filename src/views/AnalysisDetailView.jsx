@@ -258,6 +258,33 @@ export default function AnalysisDetailView({ analysisId, patient, currentUser, o
               {analysis.sessionCount} anotação{analysis.sessionCount !== 1 ? 'ões' : ''}
             </span>
           )}
+          {/* Token usage */}
+          {(analysis?.inputTokens || analysis?.outputTokens) && (
+            <span style={{
+              fontSize: 10, color: 'rgba(255,255,255,0.25)',
+              background: 'rgba(255,255,255,0.05)',
+              border: '1px solid rgba(255,255,255,0.08)',
+              borderRadius: 6, padding: '3px 8px',
+              whiteSpace: 'nowrap', fontFamily: 'monospace',
+              display: 'flex', alignItems: 'center', gap: 5,
+            }}>
+              <span style={{ color: 'rgba(255,255,255,0.18)', fontSize: 9 }}>
+                {analysis.model?.includes('haiku') ? 'haiku' : analysis.model?.includes('sonnet') ? 'sonnet' : analysis.model?.split('-')[1] ?? 'ai'}
+              </span>
+              <span style={{ color: 'rgba(255,255,255,0.12)' }}>·</span>
+              <span title="tokens de entrada">
+                {(analysis.inputTokens ?? 0) >= 1000
+                  ? `${((analysis.inputTokens) / 1000).toFixed(1)}k`
+                  : analysis.inputTokens} in
+              </span>
+              <span style={{ color: 'rgba(255,255,255,0.12)' }}>·</span>
+              <span title="tokens de saída">
+                {(analysis.outputTokens ?? 0) >= 1000
+                  ? `${((analysis.outputTokens) / 1000).toFixed(1)}k`
+                  : analysis.outputTokens} out
+              </span>
+            </span>
+          )}
           {/* Copy link */}
           <button
             onClick={handleCopyLink}
