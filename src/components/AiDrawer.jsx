@@ -152,7 +152,6 @@ export default function AiDrawer({ isOpen, onClose, onSave, patient, result, loa
                     result.evolution === 'positive' ? ['Evolução', '↑', 'var(--g600)', 'var(--g50)']
                       : result.evolution === 'negative' ? ['Regressão', '↓', 'var(--danger)', 'var(--danger-l)']
                       : ['Neutro', '→', 'var(--warn)', 'var(--warn-l)'],
-                    result.usedIncluded ? ['Incluído no plano', '✓', 'var(--g600)', 'var(--g50)'] : [`R$ ${result.cost?.toFixed(2)}`, '✦', 'var(--gr5)', 'var(--gr1)'],
                   ].map(([label, icon, c, bg], idx) => (
                     <div key={idx} style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', fontSize: '11px', fontWeight: 600, padding: '4px 10px', borderRadius: '20px', background: bg, color: c }}>
                       <span>{icon}</span>{label}
