@@ -291,7 +291,15 @@ export default function Insights({ onGoToPatient, onOpenAnalysisHub }) {
                   </div>
                 </div>
               ))
-            : [...(data?.recentAnalyses || []).map(a => ({
+            : [...Object.values(
+                (data?.recentAnalyses || []).reduce((acc, a) => {
+                  // Deduplica por paciente — mantém a análise mais recente
+                  if (!acc[a.patientId] || new Date(a.createdAt) > new Date(acc[a.patientId].createdAt)) {
+                    acc[a.patientId] = a
+                  }
+                  return acc
+                }, {})
+              ).map(a => ({
                 id: a.patientId,
                 name: a.patientName,
                 initials: a.patientName?.split(' ').slice(0, 2).map(w => w[0]).join(''),
