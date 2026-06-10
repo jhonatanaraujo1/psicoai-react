@@ -88,7 +88,7 @@ export default function Patient({ patient: propPatient, setCurrentView, onSessao
     setError(null)
     Promise.all([
       api.getPatientSummary(patientId),
-      api.getPatientSessions(patientId),
+      api.getPatientSessions(patientId, { size: 200 }),
       api.getPatientForms(patientId),
       api.getPatientAnalyses(patientId),
     ]).then(([sum, sess, frms, als]) => {
