@@ -136,10 +136,21 @@ function AnalysisRow({ analysis, index, total, isFirst, onOpen, onRetry }) {
   const evChip  = EVOLUTION_CHIP[analysis.evolution] ?? EVOLUTION_CHIP.neutral
   const isLast  = index === total - 1
 
-  const isProcessing = analysis.status === 'processing'
-  const isFailed     = analysis.status === 'failed'
+  const rawProcessing = analysis.status === 'processing'
+  const isFailed      = analysis.status === 'failed'
+
+  // Stale detection: "processing" há mais de 15 min → tratado como falha no frontend
+  // O backend cleanup (AnalysisStaleCleanupScheduler) vai corrigir no próximo ciclo de 5 min,
+  // mas a UI não deve deixar o usuário olhando para "Analisando..." eternamente.
+  const ageMs         = Date.now() - new Date(analysis.createdAt).getTime()
+  const isStale       = rawProcessing && ageMs > 15 * 60 * 1000
+
+  const isProcessing  = rawProcessing && !isStale
   // Fallback: se status ausente/desconhecido, assume completed (retrocompatibilidade com mock e dados legados)
-  const isCompleted  = !isProcessing && !isFailed
+  const isCompleted   = !rawProcessing && !isFailed
+
+  // Para rendering: stale é tratado como failed visualmente
+  const showAsFailed = isFailed || isStale
 
   const scopeLabel = analysis.scope === 'notebook'
     ? 'Caderno completo'
@@ -175,7 +186,7 @@ function AnalysisRow({ analysis, index, total, isFirst, onOpen, onRetry }) {
         zIndex: 1,
         background: isProcessing
           ? '#d97706'
-          : isFailed
+          : showAsFailed
             ? '#dc2626'
             : isFirst ? evColor : 'var(--gr3)',
         boxShadow: isFirst && isCompleted ? `0 0 6px ${evColor}55` : 'none',
@@ -192,13 +203,13 @@ function AnalysisRow({ analysis, index, total, isFirst, onOpen, onRetry }) {
           borderRadius: 10,
           background: hovered && isCompleted
             ? 'var(--g50)'
-            : isFailed
+            : showAsFailed
               ? '#fef2f2'
               : isProcessing
                 ? '#fffbeb'
                 : 'var(--ow)',
           border: `1px solid ${
-            isFailed     ? '#fecaca' :
+            showAsFailed ? '#fecaca' :
             isProcessing ? '#fde68a' :
             hovered && isCompleted ? 'var(--g200)' :
             'var(--gr2)'
@@ -260,8 +271,8 @@ function AnalysisRow({ analysis, index, total, isFirst, onOpen, onRetry }) {
             </span>
           )}
 
-          {/* Chip "Falhou" */}
-          {isFailed && (
+          {/* Chip "Falhou" ou "Expirou" */}
+          {showAsFailed && (
             <span style={{
               fontSize: 10, fontWeight: 600,
               color: '#dc2626',
@@ -270,7 +281,7 @@ function AnalysisRow({ analysis, index, total, isFirst, onOpen, onRetry }) {
               <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                 <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
               </svg>
-              Falha na geração
+              {isStale ? 'Não concluída' : 'Falha na geração'}
             </span>
           )}
         </div>
@@ -307,14 +318,16 @@ function AnalysisRow({ analysis, index, total, isFirst, onOpen, onRetry }) {
           </div>
         )}
 
-        {isFailed && (
+        {showAsFailed && (
           <div style={{ marginBottom: 8 }}>
             <div style={{
               fontSize: 12, color: '#b91c1c',
               lineHeight: 1.5, marginBottom: 8,
               fontFamily: "'DM Sans', sans-serif",
             }}>
-              {analysis.errorMessage || 'Não foi possível gerar a análise. Tente novamente.'}
+              {isStale
+                ? 'O processo foi interrompido (deploy ou timeout). Gere uma nova análise.'
+                : (analysis.errorMessage || 'Não foi possível gerar a análise. Tente novamente.')}
             </div>
             <button
               onClick={e => { e.stopPropagation(); onRetry() }}
