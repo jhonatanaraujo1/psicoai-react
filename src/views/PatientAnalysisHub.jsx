@@ -373,17 +373,27 @@ export default function PatientAnalysisHub({ patient, currentUser, onBack, onOpe
   const remaining = currentUser?.analysesRemaining ?? 0
   const plan      = currentUser?.plan ?? 'consultorio'
 
-  const loadAnalyses = () => {
+  const loadAnalyses = (silent = false) => {
     if (!patient?.id) return
-    setLoading(true)
-    setError(null)
+    if (!silent) { setLoading(true); setError(null) }
     api.getPatientAnalyses(patient.id, { size: 50 })
-      .then(res => setAnalyses(res?.content || []))
-      .catch(() => setError('Não foi possível carregar o histórico.'))
-      .finally(() => setLoading(false))
+      .then(res => {
+        setAnalyses(res?.content || [])
+        if (!silent) setError(null)
+      })
+      .catch(() => { if (!silent) setError('Não foi possível carregar o histórico.') })
+      .finally(() => { if (!silent) setLoading(false) })
   }
 
   useEffect(() => { loadAnalyses() }, [patient?.id])
+
+  // Auto-poll a cada 4s enquanto houver análises em processing
+  useEffect(() => {
+    const hasProcessing = analyses.some(a => a.status === 'processing')
+    if (!hasProcessing || !patient?.id) return
+    const interval = setInterval(() => loadAnalyses(true), 4000)
+    return () => clearInterval(interval)
+  }, [analyses, patient?.id])
 
   const initials = patient?.name?.split(' ').slice(0, 2).map(w => w[0]).join('') || '?'
 
