@@ -203,49 +203,114 @@ export default function Telehealth() {
             const initials = s.patientInitials || (s.patientName || '??').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
 
             return (
-              <div key={s.id} className={`tele-session-card${isLive ? ' live' : ''}`}>
-                <div className="tele-av" style={isLive ? { background: 'var(--g400)' } : {}}>{initials}</div>
-                <div className="tele-info">
-                  <div className="tele-name">{s.patientName || 'Paciente'}</div>
-                  <div className="tele-meta"><strong>{day}</strong> às <strong>{time}</strong> · Remota</div>
-                  {isLive && <div style={{ fontSize: '11px', color: 'var(--g600)', marginTop: '4px', fontWeight: 600 }}>● Em andamento</div>}
-                  {isPending && <div style={{ fontSize: '11px', color: 'var(--warn)', marginTop: '4px' }}>⚠ Confirmação pendente</div>}
-                  {s.roomLink && !isLive && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '7px', background: 'var(--ow)', border: '1px solid var(--gr2)', borderRadius: 'var(--r)', padding: '5px 10px' }}>
-                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--gr4)" strokeWidth="2"><path d="M15 7h3a5 5 0 0 1 0 10h-3m-6 0H6A5 5 0 0 1 6 7h3"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
-                      <span style={{ fontSize: '11px', color: 'var(--gr5)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: 'monospace' }}>{s.roomLink}</span>
+              <div key={s.id} className={`tele-session-card${isLive ? ' live' : ''}`} style={{ flexDirection: 'column', gap: 0, padding: '16px' }}>
+
+                {/* ── Cabeçalho: avatar + nome + badges ── */}
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', marginBottom: '10px' }}>
+                  <div className="tele-av" style={{ flexShrink: 0, ...(isLive ? { background: 'var(--g400)' } : {}) }}>{initials}</div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '7px', flexWrap: 'wrap' }}>
+                      <span style={{ fontSize: '14px', fontWeight: 700, color: 'var(--d)' }}>{s.patientName || 'Paciente'}</span>
+                      {isLive && (
+                        <span style={{ fontSize: '10px', fontWeight: 700, color: '#fff', background: 'var(--g500)', borderRadius: '20px', padding: '2px 8px', letterSpacing: '0.3px' }}>● AO VIVO</span>
+                      )}
+                      {isPending && (
+                        <span style={{ fontSize: '10px', fontWeight: 600, color: '#92400E', background: '#FEF3C7', borderRadius: '20px', padding: '2px 8px' }}>⚠ Confirmação pendente</span>
+                      )}
                     </div>
+                    <div style={{ fontSize: '12px', color: 'var(--gr5)', marginTop: '3px' }}>
+                      <strong style={{ color: 'var(--d)' }}>{day}</strong> às <strong style={{ color: 'var(--d)' }}>{time}</strong>
+                      <span style={{ color: 'var(--gr3)', margin: '0 5px' }}>·</span>
+                      <span>Google Meet</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* ── Status do lembrete ── */}
+                <div style={{
+                  display: 'flex', alignItems: 'center', gap: '7px',
+                  fontSize: '11px', fontWeight: 500,
+                  color: s.reminderSent ? 'var(--g700)' : 'var(--gr4)',
+                  background: s.reminderSent ? 'var(--g50)' : 'var(--ow)',
+                  border: `1px solid ${s.reminderSent ? 'var(--g100)' : 'var(--gr2)'}`,
+                  borderRadius: '7px', padding: '6px 10px', marginBottom: '10px'
+                }}>
+                  {s.reminderSent ? (
+                    <>
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                      Lembrete enviado{s.roomLink ? ' com link da sala' : ''}
+                    </>
+                  ) : (
+                    <>
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                      Lembrete ainda não enviado
+                    </>
                   )}
                 </div>
 
-                <div className="tele-actions">
+                {/* ── Link da sala ── */}
+                {s.roomLink && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '10px', background: 'var(--ow)', border: '1px solid var(--gr2)', borderRadius: '7px', padding: '6px 10px' }}>
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--gr4)" strokeWidth="2" style={{ flexShrink: 0 }}><path d="M15 7h3a5 5 0 0 1 0 10h-3m-6 0H6A5 5 0 0 1 6 7h3"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+                    <span style={{ fontSize: '11px', color: 'var(--gr5)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: 'monospace' }}>{s.roomLink}</span>
+                  </div>
+                )}
+
+                {/* ── Ações ── */}
+                <div style={{ display: 'flex', gap: '7px', flexWrap: 'wrap' }}>
+                  {/* Prontuário — sempre visível */}
+                  <button
+                    onClick={() => navigate(`/patient/${s.patientId}`)}
+                    style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '7px 12px', border: '1px solid var(--gr2)', borderRadius: 'var(--r)', background: 'var(--ow)', fontSize: '12px', fontWeight: 600, color: 'var(--d)', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}
+                  >
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                    Prontuário
+                  </button>
+
+                  {/* Nova anotação — abre paciente direto em nova sessão */}
+                  <button
+                    onClick={() => navigate(`/patient/${s.patientId}?newSession=1`)}
+                    style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '7px 12px', border: '1px solid var(--gr2)', borderRadius: 'var(--r)', background: 'var(--ow)', fontSize: '12px', fontWeight: 600, color: 'var(--d)', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}
+                  >
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                    Anotar sessão
+                  </button>
+
+                  {/* Link / entrar na sala */}
                   {s.roomLink ? (
                     <>
-                      <button className="btn-start-call secondary" onClick={() => copyLink(s.roomLink)}>
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-                        Copiar
+                      <button
+                        onClick={() => copyLink(s.roomLink)}
+                        style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '7px 12px', border: '1px solid var(--gr2)', borderRadius: 'var(--r)', background: 'var(--ow)', fontSize: '12px', fontWeight: 600, color: 'var(--d)', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}
+                      >
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                        Copiar link
                       </button>
-                      <button className="btn-start-call" onClick={() => openLink(s.roomLink)}>
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
-                        Entrar
+                      <button
+                        onClick={() => openLink(s.roomLink)}
+                        className="btn-primary"
+                        style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '7px 14px', fontSize: '12px', fontWeight: 700 }}
+                      >
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
+                        Entrar na sala
                       </button>
                     </>
                   ) : (
                     <button
-                      className="btn-start-call"
+                      className="btn-primary"
                       disabled={isGenerating}
                       onClick={() => handleGenerateLink(s)}
-                      style={{ opacity: isGenerating ? 0.7 : 1 }}
+                      style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '7px 14px', fontSize: '12px', fontWeight: 700, opacity: isGenerating ? 0.7 : 1 }}
                     >
                       {isGenerating ? (
                         <>
-                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ animation: 'spin 1s linear infinite' }}><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
-                          Gerando…
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ animation: 'spin 1s linear infinite' }}><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
+                          Gerando link…
                         </>
                       ) : (
                         <>
-                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
-                          Gerar link
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+                          Gerar link Meet
                         </>
                       )}
                     </button>
