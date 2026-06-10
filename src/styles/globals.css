@@ -590,6 +590,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--ow);color:var(--d);displa
 @keyframes scaleIn{from{opacity:0;transform:scale(0.92)}to{opacity:1;transform:scale(1)}}
 @keyframes sheetIn{from{transform:translateY(100%)}to{transform:translateY(0)}}
 @keyframes sheetOut{from{transform:translateY(0)}to{transform:translateY(100%)}}
+@keyframes pulse-warn{0%,100%{outline-color:rgba(245,158,11,0.9)}50%{outline-color:rgba(245,158,11,0.3)}}
 
 /* ── CFG RESPONSIVE GRID (usado no Configuracoes.jsx) ─────────────────────── */
 .cfg-grid-2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:20px}

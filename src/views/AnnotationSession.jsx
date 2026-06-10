@@ -731,13 +731,23 @@ function TextPage({ page, isActive, onTextChange, onClick, sessionDate, onDateCh
 
         {/* Centro: DatePill — data clínica da PÁGINA, visível no corpo do documento */}
         {onDateChange ? (
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
-            <DatePill value={sessionDate} onChange={onDateChange} />
-            {!(page.textHtml && page.textHtml.replace(/<[^>]*>/g, '').trim()) && isActive && (
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+            {/* Quando sem data: pill destacado com borda laranja + label obrigatório */}
+            <div style={!sessionDate ? {
+              outline: '2px solid #F59E0B', outlineOffset: 2, borderRadius: 20,
+              animation: 'pulse-warn 2s ease-in-out infinite',
+            } : {}}>
+              <DatePill value={sessionDate} onChange={onDateChange} />
+            </div>
+            {!sessionDate ? (
+              <span style={{ fontSize: 9.5, color: '#D97706', fontFamily: "'DM Sans', sans-serif", fontWeight: 700, letterSpacing: '0.3px' }}>
+                ← selecione a data da sessão
+              </span>
+            ) : !(page.textHtml && page.textHtml.replace(/<[^>]*>/g, '').trim()) && isActive ? (
               <span style={{ fontSize: 9.5, color: '#8BB89A', fontFamily: "'DM Sans', sans-serif", fontWeight: 600, letterSpacing: '0.2px' }}>
                 data desta anotação
               </span>
-            )}
+            ) : null}
           </div>
         ) : sessionDate ? (
           <div style={{ display: 'flex', justifyContent: 'center' }}>
@@ -752,13 +762,33 @@ function TextPage({ page, isActive, onTextChange, onClick, sessionDate, onDateCh
         {/* Direita: espaçador */}
         <div />
       </div>
+      {/* Overlay suave quando não há data — não bloqueia, só sinaliza */}
+      {!sessionDate && (
+        <div style={{
+          margin: '16px 44px 0',
+          padding: '10px 14px',
+          borderRadius: 8,
+          background: '#FFFBEB',
+          border: '1px solid #FDE68A',
+          display: 'flex', alignItems: 'center', gap: 8,
+          fontSize: 12, color: '#92400E',
+          fontFamily: "'DM Sans', sans-serif", fontWeight: 500,
+        }}>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#D97706" strokeWidth="2" style={{ flexShrink: 0 }}>
+            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+            <line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/>
+            <line x1="3" y1="10" x2="21" y2="10"/>
+          </svg>
+          Selecione a data da sessão acima para que a anotação seja salva.
+        </div>
+      )}
       <div
         ref={editorRef}
         contentEditable
         suppressContentEditableWarning
         data-placeholder="Escreva suas observações clínicas aqui…"
         style={{
-          flex: 1, padding: '28px 44px 48px',
+          flex: 1, padding: '20px 44px 48px',
           minHeight: PAGE_H - 80, outline: 'none',
           fontSize: 15.5, lineHeight: 1.9,
           color: '#1A1F1C', fontFamily: "'DM Sans', sans-serif",
@@ -811,9 +841,9 @@ export default function AnnotationSession({
   const metaKey  = patient?.id ? `psicoai_meta_p${patient.id}` : null   // lembra a última data usada (default p/ novas páginas)
 
   const readDefaultDate = () => {
-    if (!metaKey) return todayIso()
-    try { const m = JSON.parse(localStorage.getItem(metaKey) || '{}'); return m.sessionDate || todayIso() }
-    catch { return todayIso() }
+    if (!metaKey) return ''
+    try { const m = JSON.parse(localStorage.getItem(metaKey) || '{}'); return m.sessionDate || '' }
+    catch { return '' }
   }
 
   // sessionDate = data clínica EXIBIDA no pill. No modo página-por-nota ela
@@ -1024,15 +1054,18 @@ export default function AnnotationSession({
           const html = isText ? (p.textHtml || null) : null
           const text = stripHtml(html)
           const hasStrokes = Array.isArray(p.strokes) && p.strokes.length > 0
-          const hasContent = !!(html || hasStrokes || p.dataUrl)
+          // Usa texto extraído (não HTML bruto) para evitar criar nota com <p><br></p> vazio
+          const hasContent = !!(text?.trim() || hasStrokes || p.dataUrl)
+          const noteDate   = p.noteDate || sessionDateRef.current || null
           // Fonte de verdade do noteId: mapa síncrono > sessionId da página
           let noteId = map[p.id] || p.sessionId || null
           if (noteId && !map[p.id]) map[p.id] = noteId
           if (!noteId) {
             if (!hasContent) continue                   // página vazia → não cria nota
+            if (!noteDate)   continue                   // data obrigatória → não cria nota sem data
             noteId = await onCreateNote({
               contentType: isText ? 'text' : 'canvas',
-              noteDate: p.noteDate || sessionDateRef.current || undefined,
+              noteDate,
             })
             if (!noteId) continue
             map[p.id] = noteId                          // dedup SÍNCRONO — próximo flush já enxerga
