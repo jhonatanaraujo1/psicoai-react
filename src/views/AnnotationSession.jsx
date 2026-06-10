@@ -828,6 +828,8 @@ export default function AnnotationSession({
   onAutosaveNote,           // async (noteId, { textContent, htmlContent, canvasData, imageBase64 })
   onDeleteNote,             // async (noteId)
   onUpdateNote,             // async (noteId, { noteDate }) — atualiza data clínica da página
+  targetPage = null,        // quando muda, navega para essa página (browser back)
+  onPageChange,             // (pageIdx) => void — chamado ao mudar página ativa
 }) {
   const perPageNotes = !!(onCreateNote && onAutosaveNote)
   // Sempre canvas — texto é apenas um tipo de página dentro do canvas
@@ -1390,6 +1392,19 @@ export default function AnnotationSession({
     c.scrollTo({ top: el.offsetTop - 32, behavior: 'smooth' })
     setActivePage(idx)
   }
+
+  // Notifica App.jsx quando a página ativa muda (para pushState no browser history)
+  const initDoneForPageRef = useRef(false)
+  useEffect(() => {
+    if (!initDoneForPageRef.current) { initDoneForPageRef.current = true; return }
+    onPageChange?.(activePage)
+  }, [activePage]) // eslint-disable-line
+
+  // Navega para página específica quando App.jsx recebe popstate (browser back/forward)
+  useEffect(() => {
+    if (targetPage === null || targetPage === undefined) return
+    if (targetPage >= 0 && targetPage < pages.length) scrollToPage(targetPage)
+  }, [targetPage]) // eslint-disable-line
 
   // ── Helpers de análise ─────────────────────────────────────────────────────
   const togglePageSel = (id) => setSelectedPageIds(prev => {

@@ -236,6 +236,52 @@ export default function App() {
     } catch {}
   }
 
+  // ── Annotation browser-history routing ───────────────────────────────────
+  // Quando o canvas abre: pushState → browser back volta para a tela anterior.
+  // Quando muda de página dentro da anotação: pushState → browser back volta à página anterior.
+  // popstate: se o estado tem psicoai_canvas → navega entre páginas; senão → fecha canvas.
+  const canvasOpenRef       = useRef(canvasOpen)
+  const [annotationTargetPage, setAnnotationTargetPage] = useState(null)
+
+  useEffect(() => { canvasOpenRef.current = canvasOpen }, [canvasOpen])
+
+  // Push history entry quando a anotação abre
+  useEffect(() => {
+    if (!canvasOpen) return
+    const params = new URLSearchParams(window.location.search)
+    params.set('view', 'anotacao')
+    if (currentPatient?.id) params.set('paciente', String(currentPatient.id))
+    window.history.pushState(
+      { psicoai_canvas: true, page: 0 },
+      '',
+      `${window.location.pathname}?${params}`
+    )
+  }, [canvasOpen]) // eslint-disable-line — só ao abrir/fechar
+
+  // Popstate listener — montado uma vez, usa ref para canvasOpen
+  useEffect(() => {
+    const handler = (e) => {
+      if (!canvasOpenRef.current) return
+      if (e.state?.psicoai_canvas && typeof e.state.page === 'number') {
+        // Back/forward dentro da anotação → navega entre páginas
+        setAnnotationTargetPage(e.state.page)
+      } else {
+        // Back saindo da anotação → fecha canvas sem encerrar sessão
+        setCanvasOpen(false)
+        setCanvasInitialPageType(null)
+        // Limpa params de anotação da URL
+        const p = new URLSearchParams(window.location.search)
+        if (p.get('view') === 'anotacao') {
+          p.delete('view'); p.delete('paciente')
+          const q = p.toString()
+          window.history.replaceState({}, '', q ? `${window.location.pathname}?${q}` : window.location.pathname)
+        }
+      }
+    }
+    window.addEventListener('popstate', handler)
+    return () => window.removeEventListener('popstate', handler)
+  }, []) // eslint-disable-line — usa ref, não recria
+
   // ── Active session tracking ────────────────────────────────────────────────
   const activeSessionRef  = useRef(null)
 
@@ -658,6 +704,20 @@ export default function App() {
     setCanvasOpen(true)
   }
 
+  // Chamado por AnnotationSession quando o usuário muda de página → pushState
+  const handleAnnotationPageChange = (pageIdx) => {
+    const params = new URLSearchParams(window.location.search)
+    params.set('view', 'anotacao')
+    if (currentPatient?.id) params.set('paciente', String(currentPatient.id))
+    params.set('pg', String(pageIdx))
+    window.history.pushState(
+      { psicoai_canvas: true, page: pageIdx },
+      '',
+      `${window.location.pathname}?${params}`
+    )
+    setAnnotationTargetPage(null) // reset após navegar (evita loop)
+  }
+
   // Volta para a sessão em background — reabre a view sem criar nova sessão
   const handleReturnToSession = () => {
     setCanvasOpen(true)
@@ -925,6 +985,8 @@ export default function App() {
             onMinimize={handleMinimizeCanvas}
             onAnalyze={handleAnalyze}
             onAutosave={(id, data) => api.autosaveSession?.(id, data)}
+            targetPage={annotationTargetPage}
+            onPageChange={handleAnnotationPageChange}
             // ── Modo página-por-nota: cada página vira uma anotação própria ──
             onCreateNote={async ({ contentType, noteDate }) => {
               if (!currentPatient?.id) return null
