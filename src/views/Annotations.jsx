@@ -248,6 +248,7 @@ export default function Annotations({ setCurrentView, onOpenCanvas }) {
   const [sessions,       setSessions]       = useState([])
   const [patients,       setPatients]       = useState([])
   const [loading,        setLoading]        = useState(true)
+  const [loadError,      setLoadError]      = useState(null)
   const [search,         setSearch]         = useState('')
   const [filterPatient,  setFilterPatient]  = useState('')
   const [filterEv,       setFilterEv]       = useState('')   // '' | 'positive' | 'neutral' | 'negative'
@@ -265,9 +266,10 @@ export default function Annotations({ setCurrentView, onOpenCanvas }) {
 
   const load = useCallback(() => {
     setLoading(true)
+    setLoadError(null)
     api.getRecentAnnotations({ search: debouncedSearch, patientId: filterPatient })
-      .then(setSessions)
-      .catch(() => setSessions([]))
+      .then(data => { setSessions(Array.isArray(data) ? data : []); setLoadError(null) })
+      .catch(err => { setSessions([]); setLoadError(err?.message || 'Não foi possível carregar as anotações.') })
       .finally(() => setLoading(false))
   }, [debouncedSearch, filterPatient])
 
@@ -374,6 +376,15 @@ export default function Annotations({ setCurrentView, onOpenCanvas }) {
           </button>
         )}
       </div>
+
+      {/* Erro de carregamento */}
+      {!loading && loadError && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px', borderRadius: 10, background: '#fef2f2', border: '1px solid #fecaca', marginBottom: 12 }}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          <span style={{ fontSize: 12, color: '#dc2626', fontFamily: "'DM Sans', sans-serif" }}>{loadError}</span>
+          <button onClick={load} style={{ marginLeft: 'auto', fontSize: 11, fontWeight: 600, color: '#dc2626', background: 'none', border: 'none', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>Tentar novamente</button>
+        </div>
+      )}
 
       {/* List — agrupado por data */}
       {loading ? (

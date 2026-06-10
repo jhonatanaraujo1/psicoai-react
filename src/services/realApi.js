@@ -766,8 +766,10 @@ export const api = {
   // Anotações — listagem global via /api/v1/notes (NoteController#listAll)
   async getRecentAnnotations({ search = '', patientId = '' } = {}) {
     if (patientId) {
-      const res = await get(`/api/v1/patients/${patientId}/notes`, { page: 0, size: 50 })
-      return (res?.content || []).map(n => this._noteToSession(n))
+      // Delega para getPatientNotes (mesma code path usada pelo histórico do paciente)
+      // e extrai o array de content para manter o contrato de retorno
+      const res = await this.getPatientNotes(patientId, { page: 0, size: 100 })
+      return res?.content || []
     }
     // Global: GET /api/v1/notes — endpoint correto no backend
     const res = await get('/api/v1/notes', { page: 0, size: 100 })
