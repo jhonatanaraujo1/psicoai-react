@@ -59,6 +59,9 @@ export default function Patient({ patient: propPatient, setCurrentView, onSessao
   const [notesSaved, setNotesSaved] = useState(false)
   const [reportOpen, setReportOpen] = useState(false)
   const [exportingPdf, setExportingPdf] = useState(false)
+  const [sessionsExpanded, setSessionsExpanded] = useState(false)
+
+  const SESSIONS_DEFAULT = 8
 
   const patientId = propPatient?.id
 
@@ -358,7 +361,13 @@ export default function Patient({ patient: propPatient, setCurrentView, onSessao
                 <div key={i} style={{ fontSize: '10px', fontWeight: 600, letterSpacing: '0.8px', textTransform: 'uppercase', color: 'var(--gr4)' }}>{h}</div>
               ))}
             </div>
-            {sessions.map((s, i) => {
+            {/* Lista com scroll interno quando expandida */}
+            <div style={sessionsExpanded ? {
+              maxHeight: 480, overflowY: 'auto',
+              overscrollBehavior: 'contain',
+              scrollbarWidth: 'thin', scrollbarColor: 'var(--gr2) transparent',
+            } : {}}>
+            {(sessionsExpanded ? sessions : sessions.slice(0, SESSIONS_DEFAULT)).map((s, i) => {
               const sessionNum = s.num ?? (i + 1)
               const evColor = { green: '#27AE60', yellow: '#F39C12', red: '#E74C3C' }[s.evolution] || null
               const bs = badgeStyle(s.statusLabel)
@@ -455,6 +464,35 @@ export default function Patient({ patient: propPatient, setCurrentView, onSessao
                 </div>
               )
             })}
+            </div>{/* fim scroll wrapper */}
+
+            {/* Botão ver mais / recolher */}
+            {sessions.length > SESSIONS_DEFAULT && (
+              <button
+                onClick={() => setSessionsExpanded(v => !v)}
+                style={{
+                  width: '100%', padding: '11px 20px',
+                  background: 'var(--ow)', border: 'none', borderTop: '1px solid var(--gr1)',
+                  cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                  fontSize: '12px', fontWeight: 600, color: 'var(--g600)',
+                  fontFamily: "'DM Sans', sans-serif", transition: 'background 0.12s',
+                }}
+                onMouseEnter={e => e.currentTarget.style.background = 'var(--g50)'}
+                onMouseLeave={e => e.currentTarget.style.background = 'var(--ow)'}
+              >
+                {sessionsExpanded ? (
+                  <>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="18 15 12 9 6 15"/></svg>
+                    Recolher
+                  </>
+                ) : (
+                  <>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+                    Ver todas as {sessions.length} anotações
+                  </>
+                )}
+              </button>
+            )}
           </div>
         )}
       </div>
