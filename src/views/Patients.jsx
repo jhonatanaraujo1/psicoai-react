@@ -98,6 +98,7 @@ export default function Patients({ setCurrentView, onNovoCadastro }) {
   const [debouncedSearch, setDebouncedSearch] = useState('')
   const [importing, setImporting] = useState(false)
   const [importResult, setImportResult] = useState(null)
+  const [retryKey, setRetryKey] = useState(0)
   const csvInputRef = useRef(null)
 
   // Stats dashboard — calculado a partir de TODOS os pacientes (sem filtro)
@@ -132,7 +133,7 @@ export default function Patients({ setCurrentView, onNovoCadastro }) {
       })
       .catch(e => setError(e.message || 'Erro ao carregar pacientes'))
       .finally(() => setLoading(false))
-  }, [debouncedSearch, statusFilter, activeTab])
+  }, [debouncedSearch, statusFilter, activeTab, retryKey])
 
   async function handleCsvImport(e) {
     const file = e.target.files?.[0]
@@ -168,7 +169,7 @@ export default function Patients({ setCurrentView, onNovoCadastro }) {
       </svg>
       <div style={{ fontSize: 14, color: 'var(--d)', fontWeight: 500 }}>Não foi possível carregar os pacientes</div>
       <div style={{ fontSize: 12, color: 'var(--gr5)' }}>{error}</div>
-      <button className="btn-primary" onClick={() => { setError(null); setLoading(true) }}>Tentar novamente</button>
+      <button className="btn-primary" onClick={() => { setError(null); setRetryKey(k => k + 1) }}>Tentar novamente</button>
     </div>
   )
 

@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { api } from '../services'
 import { DatePicker, TimePicker, CustomSelect } from '../components/DateTimePickers'
+import { showToast } from '../components/Toast'
 
 const DAYS = ['SEG', 'TER', 'QUA', 'QUI', 'SEX']
 const HOURS = [8, 9, 10, 11, 12, 13, 14, 15, 16, 17]
@@ -177,6 +178,13 @@ export default function Agenda({ currentUser }) {
 
   async function handleSave() {
     if (!form.title.trim() && form.type !== 'session') return
+    // Validar que o horário de fim é após o de início
+    const [h1, m1] = form.startTime.split(':').map(Number)
+    const [h2, m2] = form.endTime.split(':').map(Number)
+    if (h2 * 60 + m2 <= h1 * 60 + m1) {
+      showToast('Horário de fim deve ser após o horário de início.', 'error')
+      return
+    }
     setSaving(true)
     try {
       const payload = buildPayload()
@@ -188,7 +196,7 @@ export default function Agenda({ currentUser }) {
       await loadEvents()
       closeModal()
     } catch (e) {
-      console.error(e)
+      showToast(e?.message || 'Erro ao salvar evento. Tente novamente.', 'error')
     } finally {
       setSaving(false)
     }
@@ -202,7 +210,7 @@ export default function Agenda({ currentUser }) {
       await loadEvents()
       closeModal()
     } catch (e) {
-      console.error(e)
+      showToast(e?.message || 'Erro ao excluir evento. Tente novamente.', 'error')
     } finally {
       setSaving(false)
     }

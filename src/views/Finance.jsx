@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { api } from '../services'
 import { DatePicker, CustomSelect } from '../components/DateTimePickers'
+import { showToast } from '../components/Toast'
 
 function fmtBRL(n) {
   return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(n || 0)
@@ -61,11 +62,12 @@ export default function Finance() {
 
   useEffect(() => {
     setLoading(true)
-    Promise.all([
+    Promise.allSettled([
       api.getFinancialEvents(),
       api.getFinancialSummary(),
-    ]).then(([ev, sum]) => {
-      const evList = ev.content || []
+    ]).then(([evResult, sumResult]) => {
+      const evList = evResult.status === 'fulfilled' ? (evResult.value.content || []) : []
+      const sum    = sumResult.status === 'fulfilled' ? sumResult.value : null
       setEvents(evList)
       setSummary(sum)
       // Atualiza barData com dados reais agrupados por mês
@@ -147,22 +149,40 @@ export default function Finance() {
       }
       await reloadEvents()
       closeLanc()
+    } catch (e) {
+      showToast('Erro ao salvar lançamento. Tente novamente.', 'error')
     } finally {
       setLancSaving(false)
     }
   }
 
   async function deleteLanc() {
-    if (!window.confirm('Excluir este lançamento?')) return
+    const confirmed = await new Promise(resolve => {
+      const modal = document.createElement('div')
+      modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:9999;display:flex;align-items:center;justify-content:center'
+      modal.innerHTML = `<div style="background:var(--w,#fff);border-radius:12px;padding:28px 28px 24px;max-width:340px;width:90%;box-shadow:0 8px 40px rgba(0,0,0,0.18);font-family:'DM Sans',sans-serif">
+        <div style="font-size:16px;font-weight:600;color:var(--d,#1a1a1a);margin-bottom:8px">Excluir lançamento?</div>
+        <div style="font-size:13px;color:var(--gr5,#666);margin-bottom:22px">Esta ação não pode ser desfeita.</div>
+        <div style="display:flex;gap:10px;justify-content:flex-end">
+          <button id="cnc" style="padding:8px 18px;border:1px solid var(--gr2,#e0e0e0);border-radius:8px;background:none;font-size:13px;font-weight:600;cursor:pointer;color:var(--d,#1a1a1a);font-family:'DM Sans',sans-serif">Cancelar</button>
+          <button id="cnf" style="padding:8px 18px;border:none;border-radius:8px;background:var(--danger,#B03A2E);color:#fff;font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif">Excluir</button>
+        </div>
+      </div>`
+      document.body.appendChild(modal)
+      modal.querySelector('#cnf').onclick = () => { document.body.removeChild(modal); resolve(true) }
+      modal.querySelector('#cnc').onclick = () => { document.body.removeChild(modal); resolve(false) }
+      modal.onclick = e => { if (e.target === modal) { document.body.removeChild(modal); resolve(false) } }
+    })
+    if (!confirmed) return
+
     setLancSaving(true)
     const removedId = lancModal.data.id
     closeLanc()
-    // Optimistic: remove imediatamente da lista local
     setEvents(prev => prev.filter(e => e.id !== removedId))
     try {
       await api.deleteFinancialEvent(removedId)
-    } catch {
-      // Em caso de erro, recarrega para sincronizar
+    } catch (e) {
+      showToast('Erro ao excluir lançamento. Tente novamente.', 'error')
       await reloadEvents()
     } finally {
       setLancSaving(false)
@@ -365,15 +385,12 @@ export default function Finance() {
                             onClick={async e => {
                               e.stopPropagation()
                               if (row.status !== 'received') {
-                                // Optimistic update
-                                const updated = events.map(ev => ev.id === row.id ? { ...ev, status: 'received', paidAt: new Date().toISOString() } : ev)
-                                setEvents(updated)
-                                // Persist to backend
+                                setEvents(prev => prev.map(ev => ev.id === row.id ? { ...ev, status: 'received', paidAt: new Date().toISOString() } : ev))
                                 try {
                                   await api.updateFinancialEvent(row.id, { status: 'received', paidAt: new Date().toISOString() })
                                 } catch {
-                                  // Revert on error
-                                  setEvents(events)
+                                  showToast('Erro ao marcar pagamento. Recarregando…', 'error')
+                                  await reloadEvents()
                                 }
                               }
                             }}

@@ -715,15 +715,23 @@ export const api = {
 
     // Hipóteses e padrões (se houver análise)
     if (sections?.hypotheses !== false && latestAnalysis) {
-      const hypoText = latestAnalysis.hypotheses?.length
-        ? latestAnalysis.hypotheses.map(h => `• ${h.label || h.code} — probabilidade ${Math.round((h.probability || 0) * 100)}%`).join('\n')
+      const hypoRaw = typeof latestAnalysis.hypotheses === 'string'
+        ? (() => { try { return JSON.parse(latestAnalysis.hypotheses) } catch { return [] } })()
+        : (latestAnalysis.hypotheses || [])
+      const hypoText = Array.isArray(hypoRaw) && hypoRaw.length
+        ? hypoRaw.map(h => `• ${h.label || h.code} — probabilidade ${Math.round((h.probability || 0) * 100)}%`).join('\n')
         : 'Análise IA realizada. Consulte os Insights para detalhes.'
       built.push({ id: 'hypotheses', label: 'Hipóteses Diagnósticas (IA)', text: hypoText })
     }
 
-    if (sections?.patterns !== false && latestAnalysis?.patterns?.length) {
-      const patternsText = latestAnalysis.patterns.map(pt => `• ${pt.label || pt}`).join('\n')
-      built.push({ id: 'patterns', label: 'Padrões Identificados', text: patternsText })
+    if (sections?.patterns !== false && latestAnalysis) {
+      const patternsRaw = typeof latestAnalysis.patterns === 'string'
+        ? (() => { try { return JSON.parse(latestAnalysis.patterns) } catch { return [] } })()
+        : (latestAnalysis.patterns || [])
+      if (Array.isArray(patternsRaw) && patternsRaw.length) {
+        const patternsText = patternsRaw.map(pt => `• ${pt.label || pt}`).join('\n')
+        built.push({ id: 'patterns', label: 'Padrões Identificados', text: patternsText })
+      }
     }
 
     // Assinatura profissional

@@ -142,7 +142,7 @@ export default function AiAnalysisPanel({ sessionId, analysis: propAnalysis, cre
       .then(a => setAnalysis(a))
       .catch(() => setAnalysis(null))
       .finally(() => setLoading(false))
-  }, [sessionId]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [sessionId, propAnalysis])
 
   const hypotheses   = tryParse(analysis?.hypotheses)
   const patterns     = tryParse(analysis?.patterns)

@@ -942,7 +942,7 @@ export default function App() {
         ])}
       />
       case 'anotacoes':   return <Annotations key={sessionsRefreshKey} setCurrentView={handleSetView} onOpenCanvas={handleOpenCanvasFromHistory} />
-      case 'teleatendimento': return <Telehealth />
+      case 'teleatendimento': return <Telehealth onGoToPatient={(patient) => handleSetView('paciente', patient)} onNewSession={(patient) => handleSetView('paciente', patient)} />
       case 'configuracoes': return <Settings currentUser={currentUser} onProfileUpdate={(data) => setCurrentUser(u => ({ ...u, ...data }))} onOpenOnboarding={() => setOnboardingOpen(true)} onOpenTermos={() => setCurrentView('termos')} />
       case 'termos':      return <TermsOfUse onClose={() => setCurrentView('configuracoes')} />
       default:            return <Agenda currentUser={currentUser} />

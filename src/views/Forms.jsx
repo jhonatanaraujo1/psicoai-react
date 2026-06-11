@@ -567,32 +567,13 @@ export default function Forms() {
                   try {
                     const title = [...formTemplates, ...customForms].find(t => t.id === sendFormType)?.name || sendFormType
                     const created = await api.createForm({ patientId: sendPatient, type: sendFormType, title })
-                    const newEntry = created || {
-                      id: Date.now(),
-                      patientId: sendPatient,
-                      patientName: sendPatients.find(p => p.id === sendPatient)?.name || sendPatient,
-                      title,
-                      status: 'pending',
-                      createdAt: new Date().toISOString(),
-                      answeredAt: null,
-                    }
-                    setAllForms(prev => [newEntry, ...prev])
+                    if (created) setAllForms(prev => [created, ...prev])
+                    setSendModal(false)
                   } catch (e) {
                     console.error('Erro ao criar formulário:', e)
-                    // Optimistic fallback even on error so UI stays consistent
-                    const title = [...formTemplates, ...customForms].find(t => t.id === sendFormType)?.name || sendFormType
-                    setAllForms(prev => [{
-                      id: Date.now(),
-                      patientId: sendPatient,
-                      patientName: sendPatients.find(p => p.id === sendPatient)?.name || sendPatient,
-                      title,
-                      status: 'pending',
-                      createdAt: new Date().toISOString(),
-                      answeredAt: null,
-                    }, ...prev])
+                    showToast('Erro ao criar formulário. Tente novamente.', 'error')
                   } finally {
                     setSending(false)
-                    setSendModal(false)
                   }
                 }}
               >
