@@ -206,8 +206,8 @@ export default function App() {
       liveSession:     'Sessão em andamento',
       prontuario:      'Prontuário',
     }
-    const label = TITLES[currentView] || 'PsicoNotes'
-    document.title = `${label} — PsicoNotes`
+    const label = TITLES[currentView] || 'PsicNotes'
+    document.title = `${label} — PsicNotes`
   }, [currentView])
 
   const [sidebarOpen, setSidebarOpen] = useState(false)

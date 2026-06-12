@@ -216,7 +216,7 @@ export default function Agenda({ currentUser }) {
     }
   }
 
-  // Merge PsicoNotes + Google events into unified list
+  // Merge PsicNotes + Google events into unified list
   const allEvents = [
     ...events,
     ...googleEvents.map(g => ({

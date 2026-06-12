@@ -1,6 +1,6 @@
 {
-  "name": "PsicoNotes — Plataforma Clínica",
-  "short_name": "PsicoNotes",
+  "name": "PsicNotes — Plataforma Clínica",
+  "short_name": "PsicNotes",
   "description": "O primeiro assistente de raciocínio clínico para psicólogos",
   "start_url": "/",
   "display": "standalone",

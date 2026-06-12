@@ -95,7 +95,7 @@ export default function LgpdBanner({ onShowTermos }) {
 
           {/* Body */}
           <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)', lineHeight: 1.6, margin: 0 }}>
-            O PsicoNotes armazena e processa dados sensíveis de saúde (prontuários, anotações de sessão, análises clínicas com IA)
+            O PsicNotes armazena e processa dados sensíveis de saúde (prontuários, anotações de sessão, análises clínicas com IA)
             conforme a LGPD 13.709/2018 e a Resolução CFP 09/2024. Os dados são criptografados em trânsito (TLS) e repouso.
             {' '}
             <button

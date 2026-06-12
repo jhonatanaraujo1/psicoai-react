@@ -95,7 +95,7 @@ function ReportPreview({ report }) {
       <div style={{ borderBottom: '2px solid #2D4A38', paddingBottom: '16px', marginBottom: '20px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <div>
-            <div style={{ fontFamily: "'Fraunces', serif", fontSize: '16px', fontWeight: 400, color: '#1E3328', marginBottom: '3px' }}>PsicoNotes · Prontuário Clínico</div>
+            <div style={{ fontFamily: "'Fraunces', serif", fontSize: '16px', fontWeight: 400, color: '#1E3328', marginBottom: '3px' }}>PsicNotes · Prontuário Clínico</div>
             <div style={{ fontSize: '11px', color: '#666', fontFamily: "'DM Sans', sans-serif" }}>Documento gerado em {today}</div>
           </div>
           <div style={{ textAlign: 'right' }}>

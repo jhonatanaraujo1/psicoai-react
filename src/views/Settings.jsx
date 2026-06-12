@@ -173,7 +173,7 @@ function TabPlano({ profile }) {
       <div style={{ background: 'var(--g700)', borderRadius: 'var(--r2)', padding: '24px', marginBottom: '16px', position: 'relative', overflow: 'hidden' }}>
         <div style={{ position: 'absolute', top: '-40px', right: '-40px', width: '140px', height: '140px', borderRadius: '50%', background: 'rgba(255,255,255,0.04)' }} />
         <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '1px', color: 'var(--g300)', textTransform: 'uppercase', marginBottom: '5px' }}>Plano ativo</div>
-        <div style={{ fontFamily: "'Fraunces', serif", fontSize: '26px', color: '#fff', fontWeight: 300, marginBottom: '3px' }}>PsicoNotes — R$49/mês</div>
+        <div style={{ fontFamily: "'Fraunces', serif", fontSize: '26px', color: '#fff', fontWeight: 300, marginBottom: '3px' }}>PsicNotes — R$49/mês</div>
         <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.5)', marginBottom: '18px' }}>Tudo incluído · 5 análises IA/mês · extras por R$4,90</div>
         <div style={{ display: 'flex', gap: '7px', flexWrap: 'wrap' }}>
           {['Prontuário ilimitado', 'Canvas de anotações', 'Agenda integrada', 'Linha do tempo', '5 análises IA/mês'].map(f => (
@@ -448,7 +448,7 @@ function TabAjuda({ onOpenOnboarding, onOpenTermos }) {
 
   const FAQS = [
     { q: 'Como funciona a análise IA?', a: 'Ao encerrar uma sessão (Canvas ou Texto), você aciona a análise. A IA processa as anotações e gera hipóteses diagnósticas DSM-5/CID-11 com probabilidade, detecta padrões comportamentais e emite alertas graduados.' },
-    { q: 'A IA substitui meu diagnóstico?', a: 'Não. O PsicoNotes é um assistente de raciocínio clínico. Todo output é explicitamente marcado como "suporte clínico" e o diagnóstico final é sempre responsabilidade exclusiva do psicólogo.' },
+    { q: 'A IA substitui meu diagnóstico?', a: 'Não. O PsicNotes é um assistente de raciocínio clínico. Todo output é explicitamente marcado como "suporte clínico" e o diagnóstico final é sempre responsabilidade exclusiva do psicólogo.' },
     { q: 'Meus dados são seguros?', a: 'Sim. Seus dados são criptografados em repouso e em trânsito. Cumprimos a LGPD e a Resolução CFP 09/2024. Nenhum dado clínico é usado para treinar modelos de IA.' },
     { q: 'Como cancelar o plano?', a: 'Sem burocracia — basta acessar a aba "Plano & Cobrança" e clicar em "Cancelar assinatura". Você mantém acesso até o fim do período pago.' },
   ]
@@ -692,7 +692,7 @@ function TabIntegracoes() {
               Sincronizar Google Agenda
             </div>
             <div style={{ fontSize: '12px', color: 'var(--gr5)', lineHeight: 1.5 }}>
-              Seus eventos do Google Agenda aparecem na Agenda do PsicoNotes. Supervisões, reuniões e compromissos pessoais ficam visíveis junto com as sessões.
+              Seus eventos do Google Agenda aparecem na Agenda do PsicNotes. Supervisões, reuniões e compromissos pessoais ficam visíveis junto com as sessões.
             </div>
           </div>
           <label style={{ flexShrink: 0, cursor: status?.connected ? 'pointer' : 'not-allowed' }}>
@@ -713,7 +713,7 @@ function TabIntegracoes() {
       {/* Info note */}
       <div style={{ padding: '12px 14px', background: 'var(--ow)', border: '1px solid var(--gr2)', borderRadius: 'var(--r)', fontSize: '12px', color: 'var(--gr5)', lineHeight: 1.6, display: 'flex', gap: '10px' }}>
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--gr4)" strokeWidth="2" style={{ flexShrink: 0, marginTop: '1px' }}><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-        O PsicoNotes solicita apenas permissões de agenda (criar eventos e ler calendário). Nenhum dado clínico é enviado ao Google. Você pode revogar o acesso a qualquer momento.
+        O PsicNotes solicita apenas permissões de agenda (criar eventos e ler calendário). Nenhum dado clínico é enviado ao Google. Você pode revogar o acesso a qualquer momento.
       </div>
     </div>
   )

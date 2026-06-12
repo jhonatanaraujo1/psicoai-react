@@ -592,7 +592,7 @@ export default function Forms() {
               <div className="form-preview-header">
                 <div>
                   <div style={{ fontFamily: "'Fraunces', serif", fontSize: '18px', fontWeight: 400, color: 'var(--d)' }}>{allPreviews[preview].title}</div>
-                  <div style={{ fontSize: '11px', color: 'var(--gr4)', marginTop: '3px' }}>Modelo PsicoNotes · Enviado via link seguro</div>
+                  <div style={{ fontSize: '11px', color: 'var(--gr4)', marginTop: '3px' }}>Modelo PsicNotes · Enviado via link seguro</div>
                 </div>
                 <div style={{ display: 'flex', gap: '8px' }}>
                   <button className="btn-outline" style={{ fontSize: '12px', padding: '7px 14px' }} onClick={() => { navigator.clipboard?.writeText(window.location.origin + '/f/' + preview).catch(() => null); showToast('Link copiado!', 'success') }}>Copiar link</button>

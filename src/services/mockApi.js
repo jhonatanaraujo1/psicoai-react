@@ -1392,14 +1392,14 @@ export const api = {
   async exportProntuarioPdf(patientId) {
     await delay(1200)
     const patient = PATIENTS.find(p => p.id === patientId)
-    const text = `PRONTUÁRIO ELETRÔNICO\nPsicoNotes · Demo\n\nPaciente: ${patient?.name || 'Paciente'}\nGerado em: ${new Date().toLocaleString('pt-BR')}\n\n[Versão de demonstração — conecte o backend para PDF real]`
+    const text = `PRONTUÁRIO ELETRÔNICO\nPsicNotes · Demo\n\nPaciente: ${patient?.name || 'Paciente'}\nGerado em: ${new Date().toLocaleString('pt-BR')}\n\n[Versão de demonstração — conecte o backend para PDF real]`
     return new Blob([text], { type: 'application/pdf' })
   },
 
   async exportRelatorioPdf(patientId, type = 'encaminhamento') {
     await delay(1000)
     const patient = PATIENTS.find(p => p.id === patientId)
-    const text = `RELATÓRIO DE ENCAMINHAMENTO\nPsicoNotes · Demo\n\nPaciente: ${patient?.name || 'Paciente'}\nTipo: ${type}\nGerado em: ${new Date().toLocaleString('pt-BR')}\n\n[Versão de demonstração — conecte o backend para PDF real]`
+    const text = `RELATÓRIO DE ENCAMINHAMENTO\nPsicNotes · Demo\n\nPaciente: ${patient?.name || 'Paciente'}\nTipo: ${type}\nGerado em: ${new Date().toLocaleString('pt-BR')}\n\n[Versão de demonstração — conecte o backend para PDF real]`
     return new Blob([text], { type: 'application/pdf' })
   },
 
@@ -1472,7 +1472,7 @@ export const api = {
   async submitFeedback({ type, message, context }) {
     await delay(500)
     // Mock: só loga no console em modo dev
-    console.info('[PsicoNotes] Feedback (mock):', { type, message: message.slice(0, 80) })
+    console.info('[PsicNotes] Feedback (mock):', { type, message: message.slice(0, 80) })
     return { id: `fb-mock-${Date.now()}`, type, status: 'NEW' }
   },
 }

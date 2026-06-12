@@ -21,9 +21,9 @@ export const API_MODE = 'railway'
 if (import.meta.env.DEV) {
   const base = import.meta.env.VITE_API_BASE_URL
   if (!base) {
-    console.warn('[PsicoNotes] ⚠ VITE_API_BASE_URL não definida — todas as chamadas API vão falhar. Configure .env.local.')
+    console.warn('[PsicNotes] ⚠ VITE_API_BASE_URL não definida — todas as chamadas API vão falhar. Configure .env.local.')
   } else {
-    console.info(`[PsicoNotes] API → ${base}`)
+    console.info(`[PsicNotes] API → ${base}`)
   }
 }
 

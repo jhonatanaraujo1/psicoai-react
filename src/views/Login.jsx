@@ -61,7 +61,7 @@ export default function Login({ onLogin }) {
     return (
       <div className="login-root">
         <div className="login-left"><div className="login-left-inner">
-          <div className="login-brand"><div className="login-psi-icon">Ψ</div><span className="login-brand-name">PsicoNotes</span></div>
+          <div className="login-brand"><div className="login-psi-icon">Ψ</div><span className="login-brand-name">PsicNotes</span></div>
           <div className="login-hero-text"><h1>Recuperação de acesso</h1><p>Enviaremos um link seguro para redefinir sua senha diretamente no seu e-mail profissional.</p></div>
         </div></div>
         <div className="login-right"><div className="login-form-wrap">
@@ -119,7 +119,7 @@ export default function Login({ onLogin }) {
     return (
       <div className="login-root">
         <div className="login-left"><div className="login-left-inner">
-          <div className="login-brand"><div className="login-psi-icon">Ψ</div><span className="login-brand-name">PsicoNotes</span></div>
+          <div className="login-brand"><div className="login-psi-icon">Ψ</div><span className="login-brand-name">PsicNotes</span></div>
           <div className="login-hero-text"><h1>Nova senha</h1><p>Crie uma senha forte para proteger seu prontuário clínico.</p></div>
         </div></div>
         <div className="login-right"><div className="login-form-wrap">
@@ -194,7 +194,7 @@ export default function Login({ onLogin }) {
         <div className="login-left-inner">
           <div className="login-brand">
             <div className="login-psi-icon">Ψ</div>
-            <span className="login-brand-name">PsicoNotes</span>
+            <span className="login-brand-name">PsicNotes</span>
           </div>
 
           <div className="login-hero-text">
@@ -310,7 +310,7 @@ export default function Login({ onLogin }) {
           </p>
 
           <div className="login-footer-note">
-            PsicoNotes não é um serviço médico e não substitui o julgamento clínico profissional.<br />
+            PsicNotes não é um serviço médico e não substitui o julgamento clínico profissional.<br />
             Conformidade CFP 09/2024 · Dados criptografados · LGPD<br />
             <button type="button" onClick={() => setMode('termos')} style={{ background: 'none', border: 'none', padding: 0, color: 'inherit', opacity: 0.6, textDecoration: 'underline', cursor: 'pointer', fontSize: 'inherit', fontFamily: 'inherit' }}>Termos de Uso</button>
           </div>
