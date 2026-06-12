@@ -117,8 +117,8 @@ function TabPerfil({ profile, onSaved }) {
 function TabPlano({ profile }) {
   const isClinico = true // plano único — todos têm acesso completo
   const used = profile?.analysesUsedThisMonth || 0
-  const remaining = profile?.analysesRemaining ?? 5
-  const total = 5 // 5 análises incluídas/mês no plano único
+  const remaining = profile?.analysesRemaining ?? 15
+  const total = profile?.plan === 'especialista' ? 40 : 15
   const [billingLoading, setBillingLoading] = useState(false)
   const [coupon, setCoupon] = useState('')
   const [couponState, setCouponState] = useState(null)
@@ -173,10 +173,10 @@ function TabPlano({ profile }) {
       <div style={{ background: 'var(--g700)', borderRadius: 'var(--r2)', padding: '24px', marginBottom: '16px', position: 'relative', overflow: 'hidden' }}>
         <div style={{ position: 'absolute', top: '-40px', right: '-40px', width: '140px', height: '140px', borderRadius: '50%', background: 'rgba(255,255,255,0.04)' }} />
         <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '1px', color: 'var(--g300)', textTransform: 'uppercase', marginBottom: '5px' }}>Plano ativo</div>
-        <div style={{ fontFamily: "'Fraunces', serif", fontSize: '26px', color: '#fff', fontWeight: 300, marginBottom: '3px' }}>PsicNotes — R$49/mês</div>
-        <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.5)', marginBottom: '18px' }}>Tudo incluído · 5 análises IA/mês · extras por R$4,90</div>
+        <div style={{ fontFamily: "'Fraunces', serif", fontSize: '26px', color: '#fff', fontWeight: 300, marginBottom: '3px' }}>PsicNotes — {profile?.plan === 'especialista' ? 'R$97' : 'R$49'}/mês</div>
+        <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.5)', marginBottom: '18px' }}>Tudo incluído · {total} análises IA/mês · extras por R$4,90</div>
         <div style={{ display: 'flex', gap: '7px', flexWrap: 'wrap' }}>
-          {['Prontuário ilimitado', 'Canvas de anotações', 'Agenda integrada', 'Linha do tempo', '5 análises IA/mês'].map(f => (
+          {['Prontuário ilimitado', 'Canvas de anotações', 'Agenda integrada', 'Linha do tempo', `${total} análises IA/mês`].map(f => (
             <span key={f} style={{ fontSize: '11px', background: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.75)', padding: '3px 10px', borderRadius: '20px' }}>✓ {f}</span>
           ))}
         </div>
