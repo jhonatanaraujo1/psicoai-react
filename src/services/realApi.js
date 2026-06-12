@@ -593,6 +593,10 @@ export const api = {
     return get(`/api/v1/insights/patient/${patientId}`)
   },
 
+  async updatePatientAiContext(patientId, aiContext) {
+    return patch(`/api/v1/patients/${patientId}/ai-context`, { aiContext: aiContext || null })
+  },
+
   // User profile
   async getUserProfile() {
     const data = await get('/api/v1/me')

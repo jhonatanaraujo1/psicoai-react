@@ -57,6 +57,9 @@ export default function Patient({ patient: propPatient, setCurrentView, onSessao
   const [notes, setNotes] = useState('')
   const [notesSaving, setNotesSaving] = useState(false)
   const [notesSaved, setNotesSaved] = useState(false)
+  const [aiContext, setAiContext] = useState('')
+  const [aiContextSaving, setAiContextSaving] = useState(false)
+  const [aiContextSaved, setAiContextSaved] = useState(false)
   const [reportOpen, setReportOpen] = useState(false)
   const [exportingPdf, setExportingPdf] = useState(false)
   const [sessionsExpanded, setSessionsExpanded] = useState(false)
@@ -102,6 +105,7 @@ export default function Patient({ patient: propPatient, setCurrentView, onSessao
       setForms(frms?.content || frms || [])
       setAnalyses(als.content || [])
       setNotes((sum?.patient?.notes) || (propPatient?.notes) || '')
+      setAiContext((sum?.patient?.aiContext) || (propPatient?.aiContext) || '')
     })
     .catch(e => {
       // Se paciente não existe (ID de mock ou deletado), volta para lista
@@ -602,6 +606,59 @@ export default function Patient({ patient: propPatient, setCurrentView, onSessao
             {notesSaving && <><span style={{ width: 8, height: 8, borderRadius: '50%', border: '1.5px solid var(--gr4)', borderTopColor: 'transparent', display: 'inline-block', animation: 'spin 0.7s linear infinite' }} />Salvando…</>}
             {notesSaved && <><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>Salvo</>}
             {!notesSaving && !notesSaved && 'Salvo automaticamente ao sair do campo.'}
+          </div>
+        </div>
+      </div>
+
+      {/* Contexto para a IA */}
+      <div className="card">
+        <div className="card-header">
+          <div>
+            <div className="card-title" style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--g600)" strokeWidth="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+              Contexto para a IA
+            </div>
+            <div className="card-sub">O que a IA deveria saber sobre este paciente que não está nas anotações</div>
+          </div>
+          {aiContext && aiContext.trim() && (
+            <span style={{ fontSize: '10px', fontWeight: 600, padding: '2px 8px', borderRadius: '20px', background: 'var(--g50)', color: 'var(--g600)', border: '1px solid var(--g200)' }}>
+              Ativo — próxima análise inclui este contexto
+            </span>
+          )}
+        </div>
+        <div className="card-body">
+          <div style={{ background: 'var(--g50)', border: '1px solid var(--g100)', borderRadius: '8px', padding: '10px 12px', marginBottom: '10px', fontSize: '12px', color: 'var(--g700)', lineHeight: 1.6 }}>
+            <strong>Exemplos do que escrever:</strong> histórico familiar relevante, traumas anteriores ao processo, condições médicas paralelas, uso de medicação não prescrita, contexto socioeconômico, objetivos terapêuticos combinados, resistências conhecidas, avanços fora das sessões.
+          </div>
+          <textarea
+            value={aiContext}
+            onChange={e => { setAiContext(e.target.value); setAiContextSaved(false) }}
+            onBlur={async (e) => {
+              e.target.style.borderColor = 'var(--gr2)'
+              e.target.style.boxShadow = 'none'
+              if (patientId) {
+                setAiContextSaving(true)
+                await api.updatePatientAiContext(patientId, aiContext).catch(() => {})
+                setAiContextSaving(false)
+                setAiContextSaved(true)
+                setTimeout(() => setAiContextSaved(false), 2500)
+              }
+            }}
+            placeholder="Ex: Paciente cresceu em ambiente de violência doméstica. Mãe com diagnóstico de depressão maior. Faz uso de antidepressivo prescrito por psiquiatra (fluoxetina 20mg). Objetivo combinado: estabilização emocional antes de abordar trauma. Resistência a técnicas de exposição — prefere abordagem gradual e simbólica."
+            rows={5}
+            style={{ width: '100%', boxSizing: 'border-box', border: '1px solid var(--gr2)', borderRadius: 'var(--r)', padding: '10px 12px', fontSize: '13px', color: 'var(--d)', fontFamily: "'DM Sans', sans-serif", lineHeight: 1.6, resize: 'vertical', outline: 'none', background: 'var(--ow)', transition: 'border-color 0.15s, box-shadow 0.15s' }}
+            onFocus={e => { e.target.style.borderColor = 'var(--g300)'; e.target.style.boxShadow = '0 0 0 3px rgba(74,124,89,0.08)' }}
+            maxLength={3000}
+          />
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '6px' }}>
+            <div style={{ fontSize: '11px', color: aiContextSaved ? 'var(--g600)' : 'var(--gr4)', display: 'flex', alignItems: 'center', gap: 5, transition: 'color 0.2s' }}>
+              {aiContextSaving && <><span style={{ width: 8, height: 8, borderRadius: '50%', border: '1.5px solid var(--gr4)', borderTopColor: 'transparent', display: 'inline-block', animation: 'spin 0.7s linear infinite' }} />Salvando…</>}
+              {aiContextSaved && <><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>Salvo — será usado na próxima análise IA</>}
+              {!aiContextSaving && !aiContextSaved && 'Salvo automaticamente ao sair do campo.'}
+            </div>
+            <span style={{ fontSize: '10px', color: aiContext.length > 2700 ? 'var(--warn)' : 'var(--gr4)' }}>
+              {aiContext.length}/3000
+            </span>
           </div>
         </div>
       </div>

@@ -1031,6 +1031,13 @@ export const api = {
     return PATIENT_DATA[patientId] || fallback
   },
 
+  async updatePatientAiContext(patientId, aiContext) {
+    await delay(200)
+    const patient = PATIENTS.find(p => p.id === patientId)
+    if (patient) patient.aiContext = aiContext || null
+    return patient || null
+  },
+
   // Delete operations
   async deletePatient(id) {
     await delay(400)

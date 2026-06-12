@@ -54,7 +54,7 @@ function getInitials(name) {
 
 // ── PatientInsightsView — visão longitudinal de um paciente ───────────────────
 
-function PatientInsightsView({ patient, onBack, onOpenAnalysisHub }) {
+function PatientInsightsView({ patient, onBack, onGoToPatient, onOpenAnalysisHub }) {
   const [data, setData]       = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError]     = useState(null)
@@ -200,6 +200,29 @@ function PatientInsightsView({ patient, onBack, onOpenAnalysisHub }) {
 
       {!loading && !error && analyses.length > 0 && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+
+          {/* CTA contexto IA — aparece sempre como lembrete */}
+          {onOpenAnalysisHub && (
+            <div style={{
+              display: 'flex', alignItems: 'flex-start', gap: '12px',
+              padding: '12px 16px', borderRadius: '10px',
+              background: 'var(--g50)', border: '1px solid var(--g200)',
+            }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--g600)" strokeWidth="2" style={{ flexShrink: 0, marginTop: '1px' }}><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--g700)', marginBottom: '2px' }}>Contexto para a IA</div>
+                <div style={{ fontSize: '11px', color: 'var(--g600)', lineHeight: 1.5 }}>
+                  Há informações que a IA não encontra nas anotações? Histórico familiar, condições médicas, objetivos combinados? Adicione no perfil do paciente para calibrar as próximas análises.
+                </div>
+              </div>
+              <button
+                onClick={() => onGoToPatient && onGoToPatient(patient)}
+                style={{ fontSize: '11px', fontWeight: 600, padding: '4px 10px', borderRadius: '7px', background: 'var(--g600)', color: '#fff', border: 'none', cursor: 'pointer', flexShrink: 0, fontFamily: "'DM Sans', sans-serif" }}
+              >
+                Ir ao perfil →
+              </button>
+            </div>
+          )}
 
           {/* Timeline de análises */}
           <div className="card">
@@ -786,6 +809,7 @@ export default function Insights({ onGoToPatient, onOpenAnalysisHub }) {
       <PatientInsightsView
         patient={selectedPatient}
         onBack={handleBack}
+        onGoToPatient={onGoToPatient}
         onOpenAnalysisHub={onOpenAnalysisHub}
       />
     )
