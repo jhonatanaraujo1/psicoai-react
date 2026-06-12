@@ -80,7 +80,12 @@ function PatientInsightsView({ patient, onBack, onGoToPatient, onOpenAnalysisHub
         setTrendData(insights)
         const list = page?.content || []
         setAllAnalyses(list)
-        if (list.length > 0) setShownAnalysis(list[0])
+        // AnalysisListResponse não tem hipóteses/padrões/alertas — busca o full response
+        if (list.length > 0) {
+          return api.getAnalysis(list[0].id)
+            .then(full => { if (full) setShownAnalysis(full) })
+            .catch(() => {})
+        }
       })
       .catch(() => setError('Não foi possível carregar os dados deste paciente.'))
       .finally(() => setLoading(false))
@@ -89,9 +94,9 @@ function PatientInsightsView({ patient, onBack, onGoToPatient, onOpenAnalysisHub
   useEffect(() => { load() }, [load])
 
   function switchToAnalysis(id) {
-    const cached = allAnalyses.find(a => a.id === id)
-    if (cached) { setShownAnalysis(cached); return }
+    if (shownAnalysis?.id === id) return
     setLoadingSwap(true)
+    // Sempre busca o full response — AnalysisListResponse (cache) não tem conteúdo clínico
     api.getAnalysis(id)
       .then(full => { if (full) setShownAnalysis(full) })
       .catch(() => {})
@@ -356,10 +361,11 @@ function PatientInsightsView({ patient, onBack, onGoToPatient, onOpenAnalysisHub
               <div style={{ padding: '0 20px 16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
                 {hyps.map((h) => {
                   const sorted    = [...h.occurrences].sort((a, b) => new Date(a.date) - new Date(b.date))
+                  // probability vem como 0-100 do backend
                   const probFirst = sorted[0]?.probability || 0
                   const probLast  = sorted[sorted.length - 1]?.probability || 0
                   const delta     = probLast - probFirst
-                  const trend     = delta > 0.05 ? 'up' : delta < -0.05 ? 'down' : 'stable'
+                  const trend     = delta > 5 ? 'up' : delta < -5 ? 'down' : 'stable'
                   return (
                     <div key={h.code} style={{
                       padding: '12px 14px', borderRadius: '10px',
@@ -376,12 +382,13 @@ function PatientInsightsView({ patient, onBack, onGoToPatient, onOpenAnalysisHub
                       </div>
                       <div style={{ display: 'flex', gap: '6px', alignItems: 'flex-end', height: 48 }}>
                         {sorted.map((occ, i) => {
-                          const pct      = Math.max(0.05, occ.probability)
-                          const barColor = occ.probability >= 0.7 ? '#dc2626' : occ.probability >= 0.5 ? '#d97706' : '#9ca3af'
+                          // probability = 0-100; normaliza para 0-1 para altura da barra
+                          const p01      = Math.max(0.05, occ.probability / 100)
+                          const barColor = occ.probability >= 70 ? '#dc2626' : occ.probability >= 50 ? '#d97706' : '#9ca3af'
                           return (
                             <div key={occ.analysisId + i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px', height: '100%', justifyContent: 'flex-end' }}>
-                              <span style={{ fontSize: '9px', color: 'var(--gr4)', fontWeight: 600 }}>{Math.round(occ.probability * 100)}%</span>
-                              <div style={{ width: '100%', borderRadius: '3px 3px 0 0', height: `${Math.round(pct * 32)}px`, background: barColor }} />
+                              <span style={{ fontSize: '9px', color: 'var(--gr4)', fontWeight: 600 }}>{Math.round(occ.probability)}%</span>
+                              <div style={{ width: '100%', borderRadius: '3px 3px 0 0', height: `${Math.round(p01 * 32)}px`, background: barColor }} />
                             </div>
                           )
                         })}
