@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { api } from '../services'
+import AiAnalysisPanel from '../components/AiAnalysisPanel'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -55,27 +56,47 @@ function getInitials(name) {
 // ── PatientInsightsView — visão longitudinal de um paciente ───────────────────
 
 function PatientInsightsView({ patient, onBack, onGoToPatient, onOpenAnalysisHub }) {
-  const [data, setData]       = useState(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError]     = useState(null)
+  const [trendData, setTrendData]         = useState(null)
+  const [allAnalyses, setAllAnalyses]     = useState([])
+  const [shownAnalysis, setShownAnalysis] = useState(null)
+  const [loadingSwap, setLoadingSwap]     = useState(false)
+  const [loading, setLoading]             = useState(true)
+  const [error, setError]                 = useState(null)
 
   const load = useCallback(() => {
     if (!patient?.id) return
     setLoading(true)
     setError(null)
-    api.getPatientInsights(patient.id)
-      .then(setData)
+    Promise.all([
+      api.getPatientInsights(patient.id),
+      api.getPatientAnalyses(patient.id, { size: 20 }),
+    ])
+      .then(([insights, page]) => {
+        setTrendData(insights)
+        const list = page?.content || []
+        setAllAnalyses(list)
+        if (list.length > 0) setShownAnalysis(list[0])
+      })
       .catch(() => setError('Não foi possível carregar os dados deste paciente.'))
       .finally(() => setLoading(false))
   }, [patient?.id])
 
   useEffect(() => { load() }, [load])
 
-  const analyses = data?.analyses || []
-  const hyps     = data?.hypothesisTrend || []
-  const patterns = data?.patternHistory || []
-  const alerts   = data?.alertHistory || []
-  const evoInfo  = EVOLUTION_INFO[analyses[0]?.evolution] || EVOLUTION_INFO.neutral
+  function switchToAnalysis(id) {
+    const cached = allAnalyses.find(a => a.id === id)
+    if (cached) { setShownAnalysis(cached); return }
+    setLoadingSwap(true)
+    api.getAnalysis(id)
+      .then(full => { if (full) setShownAnalysis(full) })
+      .catch(() => {})
+      .finally(() => setLoadingSwap(false))
+  }
+
+  const analyses   = trendData?.analyses || []
+  const hyps       = trendData?.hypothesisTrend || []
+  const hasHistory = analyses.length > 1
+  const evoInfo    = EVOLUTION_INFO[analyses[0]?.evolution] || EVOLUTION_INFO.neutral
 
   return (
     <div className="view">
@@ -114,9 +135,9 @@ function PatientInsightsView({ patient, onBack, onGoToPatient, onOpenAnalysisHub
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: '16px', fontWeight: 700, color: 'var(--d)' }}>{patient.name}</div>
-          {!loading && data && (
+          {!loading && trendData && (
             <div style={{ fontSize: '12px', color: 'var(--gr5)', marginTop: '2px' }}>
-              {data.totalSessions} {data.totalSessions !== 1 ? 'anotações' : 'anotação'}
+              {trendData.totalSessions} {trendData.totalSessions !== 1 ? 'anotações' : 'anotação'}
               {analyses.length > 0 && ` · ${analyses.length} análise${analyses.length !== 1 ? 's' : ''} IA`}
               {analyses.length > 0 && ` · última ${fmtDate(analyses[0].createdAt)}`}
             </div>
@@ -150,7 +171,7 @@ function PatientInsightsView({ patient, onBack, onGoToPatient, onOpenAnalysisHub
       {/* Loading skeletons */}
       {loading && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          {[180, 120, 100].map((h, i) => <Skeleton key={i} style={{ height: h, width: '100%' }} />)}
+          {[320, 120, 80].map((h, i) => <Skeleton key={i} style={{ height: h, width: '100%' }} />)}
         </div>
       )}
 
@@ -199,96 +220,94 @@ function PatientInsightsView({ patient, onBack, onGoToPatient, onOpenAnalysisHub
       )}
 
       {!loading && !error && analyses.length > 0 && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
 
-          {/* CTA contexto IA — aparece sempre como lembrete */}
-          {onOpenAnalysisHub && (
-            <div style={{
-              display: 'flex', alignItems: 'flex-start', gap: '12px',
-              padding: '12px 16px', borderRadius: '10px',
-              background: 'var(--g50)', border: '1px solid var(--g200)',
-            }}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--g600)" strokeWidth="2" style={{ flexShrink: 0, marginTop: '1px' }}><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--g700)', marginBottom: '2px' }}>Contexto para a IA</div>
-                <div style={{ fontSize: '11px', color: 'var(--g600)', lineHeight: 1.5 }}>
-                  Há informações que a IA não encontra nas anotações? Histórico familiar, condições médicas, objetivos combinados? Adicione no perfil do paciente para calibrar as próximas análises.
-                </div>
-              </div>
-              <button
-                onClick={() => onGoToPatient && onGoToPatient(patient)}
-                style={{ fontSize: '11px', fontWeight: 600, padding: '4px 10px', borderRadius: '7px', background: 'var(--g600)', color: '#fff', border: 'none', cursor: 'pointer', flexShrink: 0, fontFamily: "'DM Sans', sans-serif" }}
-              >
-                Ir ao perfil →
-              </button>
+          {/* Bloco principal — análise IA completa */}
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
+              <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--gr5)', letterSpacing: '0.6px', textTransform: 'uppercase' }}>
+                Análise IA
+              </span>
+              {shownAnalysis && (
+                <span style={{ fontSize: '11px', color: 'var(--gr4)' }}>— {fmtDate(shownAnalysis.createdAt)}</span>
+              )}
+              {shownAnalysis?.id !== allAnalyses[0]?.id && allAnalyses[0] && (
+                <button
+                  onClick={() => setShownAnalysis(allAnalyses[0])}
+                  style={{ fontSize: '10px', color: 'var(--g600)', background: 'var(--g50)', border: '1px solid var(--g200)', padding: '1px 8px', borderRadius: '20px', fontWeight: 600, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}
+                >
+                  ← mais recente
+                </button>
+              )}
             </div>
-          )}
-
-          {/* Timeline de análises */}
-          <div className="card">
-            <div className="card-header">
-              <div>
-                <div className="card-title">Histórico de análises</div>
-                <div className="card-sub">Evolução ao longo do tempo</div>
-              </div>
-            </div>
-            <div style={{ padding: '0 20px 16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              {analyses.map((a, i) => {
-                const evo = EVOLUTION_INFO[a.evolution] || EVOLUTION_INFO.neutral
-                return (
-                  <div key={a.id} style={{
-                    display: 'flex', gap: '12px', alignItems: 'flex-start',
-                    padding: '12px 14px', borderRadius: '10px',
-                    background: i === 0 ? 'var(--g50)' : 'var(--ow)',
-                    border: `1px solid ${i === 0 ? 'var(--g100)' : 'var(--gr2)'}`,
-                  }}>
-                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', flexShrink: 0, paddingTop: '3px' }}>
-                      <div style={{ width: 10, height: 10, borderRadius: '50%', background: evo.dot }} />
-                      {i < analyses.length - 1 && (
-                        <div style={{ width: 1, height: 20, background: 'var(--gr2)', marginTop: '2px' }} />
-                      )}
-                    </div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '5px', flexWrap: 'wrap' }}>
-                        <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--d)' }}>{fmtDate(a.createdAt)}</span>
-                        {i === 0 && <span style={{ fontSize: '10px', color: 'var(--g600)', background: 'var(--g100)', padding: '1px 7px', borderRadius: '20px', fontWeight: 600 }}>Mais recente</span>}
-                        <span style={{ fontSize: '10px', padding: '1px 7px', borderRadius: '20px', background: evo.bg, color: evo.color, fontWeight: 600 }}>{evo.label}</span>
-                        {a.template && <span style={{ fontSize: '10px', color: 'var(--gr5)', background: 'var(--gr1)', padding: '1px 7px', borderRadius: '20px' }}>{a.template.replace(/_/g, ' ')}</span>}
-                        <span style={{ fontSize: '10px', color: 'var(--gr4)' }}>{SCOPE_LABEL[a.scope] || a.scope}</span>
-                      </div>
-                      {a.summary && (
-                        <p style={{ fontSize: '12px', color: 'var(--gr5)', margin: '0 0 6px', lineHeight: 1.5 }}>{a.summary}</p>
-                      )}
-                      <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-                        {a.hypothesisCount > 0 && (
-                          <span style={{ fontSize: '10px', color: 'var(--gr5)' }}>
-                            <strong style={{ color: 'var(--d)' }}>{a.hypothesisCount}</strong> hipótese{a.hypothesisCount !== 1 ? 's' : ''}
-                          </span>
-                        )}
-                        {a.patternCount > 0 && (
-                          <span style={{ fontSize: '10px', color: 'var(--gr5)' }}>
-                            <strong style={{ color: 'var(--d)' }}>{a.patternCount}</strong> padrão{a.patternCount !== 1 ? 'ões' : ''}
-                          </span>
-                        )}
-                        {a.alertCount > 0 && (
-                          <span style={{ fontSize: '10px', color: ALERT_COLOR.high, fontWeight: 600 }}>
-                            {a.alertCount} alerta{a.alertCount !== 1 ? 's' : ''}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
+            {loadingSwap
+              ? <Skeleton style={{ height: 300, width: '100%' }} />
+              : shownAnalysis && <AiAnalysisPanel analysis={shownAnalysis} createdAt={shownAnalysis.createdAt} />
+            }
           </div>
 
-          {/* Hipóteses — tendência */}
-          {hyps.length > 0 && (
+          {/* Timeline histórico — clicável para trocar no painel acima */}
+          {hasHistory && (
             <div className="card">
               <div className="card-header">
                 <div>
-                  <div className="card-title">Hipóteses ao longo do tempo</div>
+                  <div className="card-title">Histórico de análises</div>
+                  <div className="card-sub">Clique para visualizar qualquer análise completa</div>
+                </div>
+                <span style={{ fontSize: '11px', color: 'var(--gr4)', background: 'var(--gr1)', padding: '2px 8px', borderRadius: '20px' }}>
+                  {analyses.length} análises
+                </span>
+              </div>
+              <div style={{ padding: '0 20px 16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {analyses.map((a, i) => {
+                  const evo     = EVOLUTION_INFO[a.evolution] || EVOLUTION_INFO.neutral
+                  const isShown = shownAnalysis?.id === a.id
+                  return (
+                    <div
+                      key={a.id}
+                      onClick={() => switchToAnalysis(a.id)}
+                      style={{
+                        display: 'flex', gap: '12px', alignItems: 'flex-start',
+                        padding: '10px 14px', borderRadius: '10px',
+                        background: isShown ? 'var(--g50)' : 'var(--ow)',
+                        border: `1px solid ${isShown ? 'var(--g200)' : 'var(--gr2)'}`,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', flexShrink: 0, paddingTop: '3px' }}>
+                        <div style={{ width: 8, height: 8, borderRadius: '50%', background: evo.dot }} />
+                        {i < analyses.length - 1 && (
+                          <div style={{ width: 1, height: 16, background: 'var(--gr2)', marginTop: '2px' }} />
+                        )}
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '3px', flexWrap: 'wrap' }}>
+                          <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--d)' }}>{fmtDate(a.createdAt)}</span>
+                          {i === 0 && <span style={{ fontSize: '10px', color: 'var(--g600)', background: 'var(--g100)', padding: '1px 7px', borderRadius: '20px', fontWeight: 600 }}>Mais recente</span>}
+                          <span style={{ fontSize: '10px', padding: '1px 7px', borderRadius: '20px', background: evo.bg, color: evo.color, fontWeight: 600 }}>{evo.label}</span>
+                        </div>
+                        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                          {a.hypothesisCount > 0 && <span style={{ fontSize: '10px', color: 'var(--gr5)' }}><strong style={{ color: 'var(--d)' }}>{a.hypothesisCount}</strong> hipótese{a.hypothesisCount !== 1 ? 's' : ''}</span>}
+                          {a.patternCount > 0    && <span style={{ fontSize: '10px', color: 'var(--gr5)' }}><strong style={{ color: 'var(--d)' }}>{a.patternCount}</strong> padrão{a.patternCount !== 1 ? 'ões' : ''}</span>}
+                          {a.alertCount > 0      && <span style={{ fontSize: '10px', color: ALERT_COLOR.high, fontWeight: 600 }}>{a.alertCount} alerta{a.alertCount !== 1 ? 's' : ''}</span>}
+                        </div>
+                      </div>
+                      {isShown && (
+                        <div style={{ width: 3, alignSelf: 'stretch', borderRadius: '2px', background: 'var(--g400)', flexShrink: 0 }} />
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Tendência de hipóteses — só quando múltiplas análises */}
+          {hasHistory && hyps.length > 0 && (
+            <div className="card">
+              <div className="card-header">
+                <div>
+                  <div className="card-title">Tendência de hipóteses</div>
                   <div className="card-sub">Como cada hipótese evoluiu entre as análises</div>
                 </div>
               </div>
@@ -313,18 +332,14 @@ function PatientInsightsView({ patient, onBack, onGoToPatient, onOpenAnalysisHub
                         {trend === 'down'   && <span style={{ fontSize: '10px', color: '#16a34a', background: '#dcfce7', padding: '2px 8px', borderRadius: '20px', fontWeight: 600 }}>↓ reduzindo</span>}
                         {trend === 'stable' && <span style={{ fontSize: '10px', color: '#92400e', background: '#fef3c7', padding: '2px 8px', borderRadius: '20px', fontWeight: 600 }}>→ estável</span>}
                       </div>
-                      {/* Mini bar chart de probabilidade */}
                       <div style={{ display: 'flex', gap: '6px', alignItems: 'flex-end', height: 48 }}>
                         {sorted.map((occ, i) => {
-                          const pct = Math.max(0.05, occ.probability)
+                          const pct      = Math.max(0.05, occ.probability)
                           const barColor = occ.probability >= 0.7 ? '#dc2626' : occ.probability >= 0.5 ? '#d97706' : '#9ca3af'
                           return (
                             <div key={occ.analysisId + i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px', height: '100%', justifyContent: 'flex-end' }}>
                               <span style={{ fontSize: '9px', color: 'var(--gr4)', fontWeight: 600 }}>{Math.round(occ.probability * 100)}%</span>
-                              <div style={{
-                                width: '100%', borderRadius: '3px 3px 0 0',
-                                height: `${Math.round(pct * 32)}px`, background: barColor,
-                              }} />
+                              <div style={{ width: '100%', borderRadius: '3px 3px 0 0', height: `${Math.round(pct * 32)}px`, background: barColor }} />
                             </div>
                           )
                         })}
@@ -343,81 +358,26 @@ function PatientInsightsView({ patient, onBack, onGoToPatient, onOpenAnalysisHub
             </div>
           )}
 
-          {/* Padrões */}
-          {patterns.length > 0 && (
-            <div className="card">
-              <div className="card-header">
-                <div>
-                  <div className="card-title">Padrões detectados</div>
-                  <div className="card-sub">Comportamentos recorrentes identificados pela IA</div>
+          {/* CTA calibrar IA */}
+          {onGoToPatient && (
+            <div style={{
+              display: 'flex', alignItems: 'flex-start', gap: '12px',
+              padding: '12px 16px', borderRadius: '10px',
+              background: 'var(--g50)', border: '1px solid var(--g200)',
+            }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--g600)" strokeWidth="2" style={{ flexShrink: 0, marginTop: '1px' }}><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--g700)', marginBottom: '2px' }}>Calibrar a IA para este paciente</div>
+                <div style={{ fontSize: '11px', color: 'var(--g600)', lineHeight: 1.5 }}>
+                  Histórico familiar, medicações, objetivos terapêuticos? Adicione no perfil para que as próximas análises sejam mais precisas.
                 </div>
               </div>
-              <div style={{ padding: '0 20px 16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                {patterns.map((p) => {
-                  const info       = PATTERN_INFO[p.type] || { label: p.type, desc: '' }
-                  const persistent = p.firstSeen !== p.lastSeen
-                  return (
-                    <div key={p.type} style={{
-                      display: 'flex', alignItems: 'center', gap: '12px',
-                      padding: '10px 14px', borderRadius: '10px',
-                      background: 'var(--ow)', border: '1px solid var(--gr2)',
-                    }}>
-                      <div style={{
-                        width: 32, height: 32, borderRadius: '8px',
-                        background: 'var(--g100)', color: 'var(--g700)',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        fontFamily: "'Fraunces', serif", fontSize: '13px', fontWeight: 400, flexShrink: 0,
-                      }}>
-                        {p.count}×
-                      </div>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--d)' }}>{info.label}</div>
-                        <div style={{ fontSize: '11px', color: 'var(--gr5)', marginTop: '1px' }}>{info.desc}</div>
-                      </div>
-                      {persistent
-                        ? <span style={{ fontSize: '10px', color: '#dc2626', background: '#fee2e2', padding: '2px 8px', borderRadius: '20px', fontWeight: 600, flexShrink: 0 }}>persistente</span>
-                        : <span style={{ fontSize: '10px', color: '#92400e', background: '#fef3c7', padding: '2px 8px', borderRadius: '20px', fontWeight: 600, flexShrink: 0 }}>único</span>
-                      }
-                    </div>
-                  )
-                })}
-              </div>
-            </div>
-          )}
-
-          {/* Alertas */}
-          {alerts.length > 0 && (
-            <div className="card" style={{ marginBottom: 0 }}>
-              <div className="card-header">
-                <div>
-                  <div className="card-title">Alertas clínicos</div>
-                  <div className="card-sub">Sinais destacados para atenção do profissional</div>
-                </div>
-                <span style={{ fontSize: '11px', fontWeight: 600, padding: '3px 10px', borderRadius: '20px', background: 'var(--danger-l)', color: 'var(--danger)' }}>
-                  {alerts.length} alerta{alerts.length !== 1 ? 's' : ''}
-                </span>
-              </div>
-              <div style={{ padding: '0 20px 16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                {alerts.map((a, i) => {
-                  const color = ALERT_COLOR[a.level] || ALERT_COLOR.low
-                  return (
-                    <div key={i} style={{
-                      display: 'flex', gap: '10px', alignItems: 'flex-start',
-                      padding: '10px 14px', borderRadius: '10px',
-                      background: `${color}0d`, border: `1px solid ${color}33`,
-                    }}>
-                      <div style={{ width: 8, height: 8, borderRadius: '50%', background: color, flexShrink: 0, marginTop: '4px' }} />
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: '12px', color: 'var(--d)', lineHeight: 1.5 }}>{a.description}</div>
-                        <div style={{ fontSize: '10px', color: 'var(--gr4)', marginTop: '2px' }}>{fmtDate(a.date)}</div>
-                      </div>
-                      <span style={{ fontSize: '10px', color, fontWeight: 600, flexShrink: 0, textTransform: 'capitalize' }}>
-                        {a.level === 'critical' ? 'crítico' : a.level === 'high' ? 'alto' : a.level === 'medium' ? 'médio' : 'baixo'}
-                      </span>
-                    </div>
-                  )
-                })}
-              </div>
+              <button
+                onClick={() => onGoToPatient(patient)}
+                style={{ fontSize: '11px', fontWeight: 600, padding: '4px 10px', borderRadius: '7px', background: 'var(--g600)', color: '#fff', border: 'none', cursor: 'pointer', flexShrink: 0, fontFamily: "'DM Sans', sans-serif" }}
+              >
+                Ir ao perfil →
+              </button>
             </div>
           )}
         </div>
