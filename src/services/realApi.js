@@ -589,6 +589,10 @@ export const api = {
     return get('/api/v1/insights')
   },
 
+  async getPatientInsights(patientId) {
+    return get(`/api/v1/insights/patient/${patientId}`)
+  },
+
   // User profile
   async getUserProfile() {
     const data = await get('/api/v1/me')

@@ -972,6 +972,65 @@ export const api = {
     }
   },
 
+  async getPatientInsights(patientId) {
+    await delay(350)
+    const PATIENT_DATA = {
+      'p-001': {
+        patientId: 'p-001', patientName: 'Lucas Martins', totalSessions: 14,
+        analyses: [
+          { id: 'a-001', createdAt: '2026-05-17T16:32:00Z', evolution: 'negative', summary: 'Padrão de evitação ao tema familiar — 4 ocorrências. Ruminação noturna persistente.', scope: 'notebook', alertCount: 2, patternCount: 3, hypothesisCount: 2, template: null },
+          { id: 'a-001b', createdAt: '2026-04-10T14:00:00Z', evolution: 'neutral', summary: 'Primeiro contato com tema familiar. Resistência leve. Sem alarmes.', scope: 'notebook', alertCount: 0, patternCount: 2, hypothesisCount: 2, template: null },
+          { id: 'a-001c', createdAt: '2026-03-05T10:20:00Z', evolution: 'positive', summary: 'Sessão inicial de rapport. Boa adesão ao processo.', scope: 'note', alertCount: 0, patternCount: 1, hypothesisCount: 1, template: null },
+        ],
+        hypothesisTrend: [
+          { code: 'F41.1', label: 'Transtorno de Ansiedade Generalizada', occurrences: [
+            { analysisId: 'a-001', date: '2026-05-17T16:32:00Z', probability: 0.82 },
+            { analysisId: 'a-001b', date: '2026-04-10T14:00:00Z', probability: 0.70 },
+            { analysisId: 'a-001c', date: '2026-03-05T10:20:00Z', probability: 0.60 },
+          ]},
+          { code: 'F43.1', label: 'Reação ao estresse grave', occurrences: [
+            { analysisId: 'a-001', date: '2026-05-17T16:32:00Z', probability: 0.55 },
+            { analysisId: 'a-001b', date: '2026-04-10T14:00:00Z', probability: 0.48 },
+          ]},
+        ],
+        patternHistory: [
+          { type: 'avoidance', count: 3, firstSeen: '2026-03-05T10:20:00Z', lastSeen: '2026-05-17T16:32:00Z' },
+          { type: 'rumination', count: 2, firstSeen: '2026-04-10T14:00:00Z', lastSeen: '2026-05-17T16:32:00Z' },
+          { type: 'catastrophizing', count: 1, firstSeen: '2026-05-17T16:32:00Z', lastSeen: '2026-05-17T16:32:00Z' },
+        ],
+        alertHistory: [
+          { date: '2026-05-17T16:32:00Z', level: 'high', description: 'Evitação ao tema familiar persistente por 3+ sessões' },
+          { date: '2026-05-17T16:32:00Z', level: 'medium', description: 'Ruminação noturna intensa — impacto no sono' },
+        ],
+      },
+      'p-002': {
+        patientId: 'p-002', patientName: 'Carla Silva', totalSessions: 8,
+        analyses: [
+          { id: 'a-003', createdAt: '2026-05-04T11:38:00Z', evolution: 'positive', summary: 'Primeiro evento de exposição bem-sucedido. Fobia social em regressão.', scope: 'notebook', alertCount: 0, patternCount: 1, hypothesisCount: 1, template: null },
+          { id: 'a-003b', createdAt: '2026-03-22T09:00:00Z', evolution: 'neutral', summary: 'Resistência moderada à exposição gradual. Técnicas de respiração introduzidas.', scope: 'note', alertCount: 1, patternCount: 2, hypothesisCount: 1, template: null },
+        ],
+        hypothesisTrend: [
+          { code: 'F40.1', label: 'Fobia Social', occurrences: [
+            { analysisId: 'a-003', date: '2026-05-04T11:38:00Z', probability: 0.75 },
+            { analysisId: 'a-003b', date: '2026-03-22T09:00:00Z', probability: 0.88 },
+          ]},
+        ],
+        patternHistory: [
+          { type: 'avoidance', count: 2, firstSeen: '2026-03-22T09:00:00Z', lastSeen: '2026-05-04T11:38:00Z' },
+          { type: 'hypervigilance', count: 1, firstSeen: '2026-03-22T09:00:00Z', lastSeen: '2026-03-22T09:00:00Z' },
+        ],
+        alertHistory: [
+          { date: '2026-03-22T09:00:00Z', level: 'medium', description: 'Evitação social em situações de trabalho — impacto profissional' },
+        ],
+      },
+    }
+    const fallback = {
+      patientId, patientName: 'Paciente', totalSessions: 0,
+      analyses: [], hypothesisTrend: [], patternHistory: [], alertHistory: [],
+    }
+    return PATIENT_DATA[patientId] || fallback
+  },
+
   // Delete operations
   async deletePatient(id) {
     await delay(400)
