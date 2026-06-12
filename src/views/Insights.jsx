@@ -30,6 +30,11 @@ function Skeleton({ style }) {
   return <div className="skel-pulse" style={{ borderRadius: '6px', background: 'var(--gr2)', ...style }} />
 }
 
+function tryParse(raw, fallback = []) {
+  if (Array.isArray(raw)) return raw
+  try { return JSON.parse(raw || '[]') } catch { return fallback }
+}
+
 function fmtDate(iso) {
   if (!iso) return '—'
   return new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' })
@@ -291,6 +296,43 @@ function PatientInsightsView({ patient, onBack, onGoToPatient, onOpenAnalysisHub
                           {a.patternCount > 0    && <span style={{ fontSize: '10px', color: 'var(--gr5)' }}><strong style={{ color: 'var(--d)' }}>{a.patternCount}</strong> padrão{a.patternCount !== 1 ? 'ões' : ''}</span>}
                           {a.alertCount > 0      && <span style={{ fontSize: '10px', color: ALERT_COLOR.high, fontWeight: 600 }}>{a.alertCount} alerta{a.alertCount !== 1 ? 's' : ''}</span>}
                         </div>
+                        {/* Alertas inline — só quando este item está selecionado e a análise está carregada */}
+                        {isShown && shownAnalysis && (() => {
+                          const alerts = tryParse(shownAnalysis.riskAlerts)
+                          if (!alerts.length) return null
+                          const LEVEL_COLOR = { critical: '#dc2626', high: '#ea580c', medium: '#d97706', low: '#6b7280' }
+                          const LEVEL_LABEL = { critical: 'CRÍTICO', high: 'ALTO', medium: 'MODERADO', low: 'BAIXO' }
+                          return (
+                            <div style={{ marginTop: '10px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                              {alerts.map((r, ri) => {
+                                const color = LEVEL_COLOR[r.level] || LEVEL_COLOR.medium
+                                const label = LEVEL_LABEL[r.level] || r.level
+                                return (
+                                  <div key={ri} style={{
+                                    padding: '9px 12px', borderRadius: '8px',
+                                    background: `${color}0d`, border: `1px solid ${color}30`,
+                                    display: 'flex', gap: '8px', alignItems: 'flex-start',
+                                  }}>
+                                    <div style={{ width: 6, height: 6, borderRadius: '50%', background: color, flexShrink: 0, marginTop: '5px' }} />
+                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                      <div style={{ fontSize: '9px', fontWeight: 800, color, letterSpacing: '0.8px', textTransform: 'uppercase', marginBottom: '3px' }}>
+                                        {label}
+                                      </div>
+                                      <div style={{ fontSize: '11.5px', color: 'var(--d)', lineHeight: 1.5 }}>
+                                        {r.description}
+                                      </div>
+                                      {r.recommendedAction && (
+                                        <div style={{ fontSize: '11px', color: 'var(--gr5)', marginTop: '4px', lineHeight: 1.4, fontStyle: 'italic' }}>
+                                          → {r.recommendedAction}
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                )
+                              })}
+                            </div>
+                          )
+                        })()}
                       </div>
                       {isShown && (
                         <div style={{ width: 3, alignSelf: 'stretch', borderRadius: '2px', background: 'var(--g400)', flexShrink: 0 }} />
