@@ -20,8 +20,8 @@ createRoot(document.getElementById('root')).render(
   <AppErrorBoundary>
     <BrowserRouter>
       <Routes>
-        <Route path="/landing" element={<Landing />} />
-        <Route path="/*"       element={<App />} />
+        <Route path="/"   element={<Landing />} />
+        <Route path="/*" element={<App />} />
       </Routes>
     </BrowserRouter>
   </AppErrorBoundary>
