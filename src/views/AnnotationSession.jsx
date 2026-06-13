@@ -26,11 +26,23 @@ import { AES, enc as CryptoEnc } from 'crypto-js'
 import DOMPurify from 'dompurify'
 
 // FE-002: sanitização para editor de anotação clínica — permite formatação, bloqueia scripts
+// ALLOWED_ATTR:[] garante que DOMPurify remove todos os atributos, incluindo event handlers.
+// A segunda passagem regex é defesa em profundidade contra dados contaminados no backend.
+// TODO: migrar 'unsafe-inline' no CSP para nonce quando o build tool suportar.
 const ANNOT_SANITIZE = {
   ALLOWED_TAGS: ['p', 'br', 'b', 'strong', 'em', 'i', 'u', 'ul', 'ol', 'li', 'h3', 'h4', 'span', 'div'],
   ALLOWED_ATTR: [],
 }
-const sanitizeAnnotHtml = (html) => DOMPurify.sanitize(html || '', ANNOT_SANITIZE)
+const sanitizeAnnotHtml = (html) => {
+  if (!html) return ''
+  // Passagem 1: DOMPurify com allowlist restritiva (sem atributos = sem event handlers)
+  const purified = DOMPurify.sanitize(html, ANNOT_SANITIZE)
+  // Passagem 2 (defesa em profundidade): remove event handlers ou javascript: residuais
+  return purified
+    .replace(/\s+on\w+="[^"]*"/gi, '')
+    .replace(/\s+on\w+='[^']*'/gi, '')
+    .replace(/javascript:/gi, '')
+}
 
 // ── A4 dimensions ─────────────────────────────────────────────────────────────
 const PAGE_W = 794

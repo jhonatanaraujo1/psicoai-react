@@ -60,6 +60,8 @@ export default function Finance() {
   const [lancForm, setLancForm] = useState(LANC_FORM_DEFAULT)
   const [allPatients, setAllPatients] = useState([])
   const [lancSaving, setLancSaving] = useState(false)
+  const [deleteConfirm, setDeleteConfirm] = useState(null)
+  const [markingPaid, setMarkingPaid] = useState(new Set())
 
   useEffect(() => {
     setLoading(true)
@@ -159,27 +161,13 @@ export default function Finance() {
     }
   }
 
-  async function deleteLanc() {
-    const confirmed = await new Promise(resolve => {
-      const modal = document.createElement('div')
-      modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:9999;display:flex;align-items:center;justify-content:center'
-      modal.innerHTML = `<div style="background:var(--w,#fff);border-radius:12px;padding:28px 28px 24px;max-width:340px;width:90%;box-shadow:0 8px 40px rgba(0,0,0,0.18);font-family:'DM Sans',sans-serif">
-        <div style="font-size:16px;font-weight:600;color:var(--d,#1a1a1a);margin-bottom:8px">Excluir lançamento?</div>
-        <div style="font-size:13px;color:var(--gr5,#666);margin-bottom:22px">Esta ação não pode ser desfeita.</div>
-        <div style="display:flex;gap:10px;justify-content:flex-end">
-          <button id="cnc" style="padding:8px 18px;border:1px solid var(--gr2,#e0e0e0);border-radius:8px;background:none;font-size:13px;font-weight:600;cursor:pointer;color:var(--d,#1a1a1a);font-family:'DM Sans',sans-serif">Cancelar</button>
-          <button id="cnf" style="padding:8px 18px;border:none;border-radius:8px;background:var(--danger,#B03A2E);color:#fff;font-size:13px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif">Excluir</button>
-        </div>
-      </div>`
-      document.body.appendChild(modal)
-      modal.querySelector('#cnf').onclick = () => { document.body.removeChild(modal); resolve(true) }
-      modal.querySelector('#cnc').onclick = () => { document.body.removeChild(modal); resolve(false) }
-      modal.onclick = e => { if (e.target === modal) { document.body.removeChild(modal); resolve(false) } }
-    })
-    if (!confirmed) return
+  function deleteLanc() {
+    setDeleteConfirm(lancModal.data)
+  }
 
+  async function executarDelete(lancamento) {
     setLancSaving(true)
-    const removedId = lancModal.data.id
+    const removedId = lancamento.id
     closeLanc()
     setEvents(prev => prev.filter(e => e.id !== removedId))
     try {
@@ -348,8 +336,16 @@ export default function Finance() {
                           {r.status !== 'received' && (
                             <button
                               className="fin-action"
-                              style={{ color: 'var(--warn)', borderColor: '#F0D08A' }}
+                              style={{
+                                color: markingPaid.has(r.patientId) ? 'var(--gr4)' : 'var(--warn)',
+                                borderColor: markingPaid.has(r.patientId) ? 'var(--gr2)' : '#F0D08A',
+                                opacity: markingPaid.has(r.patientId) ? 0.6 : 1,
+                                cursor: markingPaid.has(r.patientId) ? 'not-allowed' : 'pointer',
+                              }}
+                              disabled={markingPaid.has(r.patientId)}
                               onClick={async () => {
+                                if (markingPaid.has(r.patientId)) return
+                                setMarkingPaid(prev => new Set(prev).add(r.patientId))
                                 const now = new Date().toISOString()
                                 try {
                                   if (r.eventId) {
@@ -369,10 +365,14 @@ export default function Finance() {
                                   const [evRes, recRes] = await Promise.all([api.getFinancialEvents(), api.getRecurringSummary()])
                                   setEvents(evRes.content || [])
                                   setRecurring(recRes || [])
-                                } catch { showToast('Erro ao registrar pagamento.', 'error') }
+                                } catch {
+                                  showToast('Erro ao registrar pagamento.', 'error')
+                                } finally {
+                                  setMarkingPaid(prev => { const s = new Set(prev); s.delete(r.patientId); return s })
+                                }
                               }}
                             >
-                              Marcar pago
+                              {markingPaid.has(r.patientId) ? 'Salvando…' : 'Marcar pago'}
                             </button>
                           )}
                         </td>
@@ -628,6 +628,28 @@ export default function Finance() {
                   {lancSaving ? 'Salvando…' : 'Salvar'}
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de confirmação de exclusão — React state, sem innerHTML */}
+      {deleteConfirm && (
+        <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.5)',zIndex:9999,display:'flex',alignItems:'center',justifyContent:'center'}}
+             onClick={() => setDeleteConfirm(null)}>
+          <div style={{background:'var(--w,#fff)',borderRadius:12,padding:'28px 32px',maxWidth:400,width:'90%',boxShadow:'0 8px 40px rgba(0,0,0,0.18)',fontFamily:"'DM Sans',sans-serif"}}
+               onClick={e => e.stopPropagation()}>
+            <p style={{fontWeight:600,fontSize:16,color:'var(--d,#1a1a1a)',marginBottom:8}}>Excluir lançamento?</p>
+            <p style={{color:'var(--gr5,#666)',fontSize:13,marginBottom:24}}>{deleteConfirm.description || 'Esta ação não pode ser desfeita.'}</p>
+            <div style={{display:'flex',gap:12,justifyContent:'flex-end'}}>
+              <button onClick={() => setDeleteConfirm(null)}
+                      style={{padding:'8px 16px',borderRadius:8,border:'1px solid var(--gr2,#ddd)',background:'transparent',cursor:'pointer',fontSize:13,fontWeight:600,fontFamily:"'DM Sans',sans-serif",color:'var(--d,#1a1a1a)'}}>
+                Cancelar
+              </button>
+              <button onClick={() => { executarDelete(deleteConfirm); setDeleteConfirm(null); }}
+                      style={{padding:'8px 16px',borderRadius:8,border:'none',background:'var(--danger,#B03A2E)',color:'#fff',cursor:'pointer',fontSize:13,fontWeight:600,fontFamily:"'DM Sans',sans-serif"}}>
+                Excluir
+              </button>
             </div>
           </div>
         </div>
