@@ -344,6 +344,7 @@ export const api = {
       recurringDurationMin:data.recurringDurationMin ? Number(data.recurringDurationMin): null,
       billingType:         data.billingType          || null,
       monthlyValue:        data.monthlyValue         ? Number(data.monthlyValue)         : null,
+      billingDay:          data.billingDay           ? Number(data.billingDay)           : null,
     })
   },
 
@@ -372,7 +373,7 @@ export const api = {
       recurringDurationMin: data.recurringDurationMin !== undefined ? (data.recurringDurationMin ? Number(data.recurringDurationMin) : null) : undefined,
       billingType:          data.billingType          !== undefined ? (data.billingType          || null) : undefined,
       monthlyValue:         data.monthlyValue         !== undefined ? (data.monthlyValue         ? Number(data.monthlyValue)         : null) : undefined,
-    }
+      billingDay:           data.billingDay           !== undefined ? (data.billingDay           ? Number(data.billingDay)           : null) : undefined,
     // Remove undefined — PATCH deve enviar apenas campos que mudaram
     const clean = Object.fromEntries(Object.entries(body).filter(([, v]) => v !== undefined))
     return patch(`/api/v1/patients/${id}`, clean)
@@ -551,6 +552,10 @@ export const api = {
   async deleteFinancialEvent(id) {
     // backend não expõe DELETE /financial — soft-delete via status:'cancelled'
     return patch(`/api/v1/financial/${id}`, { status: 'cancelled' })
+  },
+
+  async getRecurringSummary() {
+    return get('/api/v1/financial/recurring-summary')
   },
 
   // Forms

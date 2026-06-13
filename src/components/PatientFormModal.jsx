@@ -220,8 +220,7 @@ const emptyForm = {
   // Recorrência + cobrança
   recurringDayOfWeek: '', recurringTime: '', recurringDurationMin: '50',
   billingType: '',
-  // Valor — campo único, semântica muda com billingType
-  // billingType === 'monthly' → monthlyValue; caso contrário → sessionValue (valor)
+  billingDay: '',
   valor: '',
   monthlyValue: '',
 }
@@ -240,6 +239,7 @@ function formFromData(d) {
     recurringTime:        d.recurringTime         || '',
     recurringDurationMin: d.recurringDurationMin  ? String(d.recurringDurationMin) : '50',
     billingType:          d.billingType           || '',
+    billingDay:           d.billingDay            ? String(d.billingDay)            : '',
     monthlyValue:         d.monthlyValue          ? String(d.monthlyValue)         : '',
   }
 }
@@ -276,12 +276,13 @@ export default function PatientFormModal({ isOpen, onClose, onSave, initialData 
   }
 
   // Label e campo do valor dependem do modelo de cobrança
-  const isMonthly    = form.billingType === 'monthly'
   const isPerSession = form.billingType === 'per_session' || !form.billingType
-  const valueLabel   = isMonthly ? 'Valor mensal (R$)' : 'Valor por sessão (R$)'
-  const valueKey     = isMonthly ? 'monthlyValue' : 'valor'
-  const valueVal     = isMonthly ? form.monthlyValue : form.valor
-  const valuePlaceholder = isMonthly ? 'Ex: 800' : 'Ex: 200'
+  const isRecurring  = !isPerSession && form.billingType !== ''
+  const VALUE_LABELS = { weekly: 'Valor semanal (R$)', biweekly: 'Valor quinzenal (R$)', monthly: 'Valor mensal (R$)', quarterly: 'Valor trimestral (R$)', annual: 'Valor anual (R$)' }
+  const valueLabel   = isRecurring ? (VALUE_LABELS[form.billingType] || 'Valor do ciclo (R$)') : 'Valor por sessão (R$)'
+  const valueKey     = isRecurring ? 'monthlyValue' : 'valor'
+  const valueVal     = isRecurring ? form.monthlyValue : form.valor
+  const valuePlaceholder = isRecurring ? 'Ex: 800' : 'Ex: 200'
 
   return (
     <div style={{
@@ -408,13 +409,32 @@ export default function PatientFormModal({ isOpen, onClose, onSave, initialData 
                   value={form.billingType}
                   onChange={v => set('billingType', v)}
                   options={[
-                    { label: 'Não definido', value: '' },
-                    { label: 'Por sessão',   value: 'per_session' },
-                    { label: 'Mensalidade fixa', value: 'monthly' },
+                    { label: 'Não definido',    value: '' },
+                    { label: 'Por sessão',       value: 'per_session' },
+                    { label: 'Semanal',          value: 'weekly' },
+                    { label: 'Quinzenal',        value: 'biweekly' },
+                    { label: 'Mensal',           value: 'monthly' },
+                    { label: 'Trimestral',       value: 'quarterly' },
+                    { label: 'Anual',            value: 'annual' },
                   ]}
                   placeholder="Não definido"
                 />
               </Field>
+
+              {/* Dia do mês para vencimento — só aparece em recorrentes */}
+              {isRecurring && (
+                <Field label="Dia de vencimento" hint="Dia do mês em que a cobrança vence (1–28)">
+                  <input
+                    type="number"
+                    value={form.billingDay}
+                    onChange={e => set('billingDay', e.target.value)}
+                    placeholder="Ex: 5"
+                    onFocus={onFocus} onBlur={onBlur}
+                    style={inputStyle}
+                    min="1" max="28"
+                  />
+                </Field>
+              )}
 
               {/* Campo de valor — label e binding mudam com o modelo de cobrança */}
               <Field label={valueLabel}>

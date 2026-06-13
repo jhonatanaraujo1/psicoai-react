@@ -50,6 +50,7 @@ const LANC_FORM_DEFAULT = { patientId: '', patientName: '', description: '', amo
 export default function Finance() {
   const [events, setEvents] = useState([])
   const [summary, setSummary] = useState(null)
+  const [recurring, setRecurring] = useState([])
   const [loading, setLoading] = useState(true)
   const [reciboOpen, setReciboOpen] = useState(false)
   const [barData, setBarData] = useState(buildBarData)
@@ -65,11 +66,13 @@ export default function Finance() {
     Promise.allSettled([
       api.getFinancialEvents(),
       api.getFinancialSummary(),
-    ]).then(([evResult, sumResult]) => {
+      api.getRecurringSummary(),
+    ]).then(([evResult, sumResult, recResult]) => {
       const evList = evResult.status === 'fulfilled' ? (evResult.value.content || []) : []
       const sum    = sumResult.status === 'fulfilled' ? sumResult.value : null
       setEvents(evList)
       setSummary(sum)
+      setRecurring(recResult.status === 'fulfilled' ? (recResult.value || []) : [])
       // Atualiza barData com dados reais agrupados por mês
       setBarData(prev => {
         const updated = prev.map(b => {
@@ -275,6 +278,113 @@ export default function Finance() {
           </div>
         </div>
       </div>
+
+      {/* Recorrentes */}
+      {(recurring.length > 0 || loading) && (
+        <div className="card">
+          <div className="card-header">
+            <div>
+              <div className="card-title">Recorrentes — {CURRENT_MONTH_LABEL}</div>
+              <div className="card-sub">
+                {loading ? '…' : (() => {
+                  const paid = recurring.filter(r => r.status === 'received').length
+                  const total = recurring.length
+                  const totalVal = recurring.reduce((s, r) => s + (r.billingValue || 0), 0)
+                  return `${paid}/${total} pagos · ${fmtBRL(totalVal)} esperados`
+                })()}
+              </div>
+            </div>
+          </div>
+          <div className="card-body" style={{ padding: 0 }}>
+            {loading ? (
+              <div style={{ padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {[1,2,3].map(i => <Skeleton key={i} style={{ height: 52 }} />)}
+              </div>
+            ) : (
+              <table className="fin-table">
+                <thead>
+                  <tr>
+                    <th>Paciente</th>
+                    <th>Ciclo</th>
+                    <th>Vencimento</th>
+                    <th>Valor</th>
+                    <th>Status</th>
+                    <th>Ações</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {recurring.map(r => {
+                    const CYCLE_LABEL = { weekly: 'Semanal', biweekly: 'Quinzenal', monthly: 'Mensal', quarterly: 'Trimestral', annual: 'Anual' }
+                    const ss = r.status === 'received'
+                      ? STATUS_STYLE.received
+                      : r.status === 'overdue'
+                      ? STATUS_STYLE.overdue
+                      : STATUS_STYLE.pending
+                    const statusLabel = r.status === 'no_event' ? 'Pendente' : ss.label
+                    const statusBg    = r.status === 'no_event' ? STATUS_STYLE.pending.bg    : ss.bg
+                    const statusColor = r.status === 'no_event' ? STATUS_STYLE.pending.color : ss.color
+                    const statusDot   = r.status === 'no_event' ? STATUS_STYLE.pending.dot   : ss.dot
+
+                    return (
+                      <tr key={r.patientId}>
+                        <td>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                            <div style={{ width: 30, height: 30, borderRadius: '50%', background: r.avatarBg || 'var(--g50)', color: r.avatarColor || 'var(--g600)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, flexShrink: 0 }}>
+                              {r.initials || r.patientName?.slice(0,2).toUpperCase()}
+                            </div>
+                            <span style={{ fontWeight: 500, color: 'var(--d)', fontSize: 13 }}>{r.patientName}</span>
+                          </div>
+                        </td>
+                        <td style={{ fontSize: 12, color: 'var(--gr5)' }}>{CYCLE_LABEL[r.billingType] || r.billingType}</td>
+                        <td style={{ fontSize: 12, color: 'var(--gr5)' }}>{r.dueDate ? fmtDate(r.dueDate) : '—'}</td>
+                        <td style={{ fontFamily: "'Fraunces', serif", fontSize: 14, color: 'var(--d)' }}>{fmtBRL(r.billingValue)}</td>
+                        <td>
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 11, fontWeight: 600, padding: '3px 9px', borderRadius: 20, background: statusBg, color: statusColor }}>
+                            <span style={{ width: 5, height: 5, borderRadius: '50%', background: statusDot }} />
+                            {statusLabel}
+                          </span>
+                        </td>
+                        <td>
+                          {r.status !== 'received' && (
+                            <button
+                              className="fin-action"
+                              style={{ color: 'var(--warn)', borderColor: '#F0D08A' }}
+                              onClick={async () => {
+                                const now = new Date().toISOString()
+                                try {
+                                  if (r.eventId) {
+                                    await api.updateFinancialEvent(r.eventId, { status: 'received', paidAt: now })
+                                  } else {
+                                    await api.createFinancialEvent({
+                                      patientId: r.patientId,
+                                      type: 'session_payment',
+                                      description: `${CYCLE_LABEL[r.billingType] || 'Cobrança'} — ${r.patientName}`,
+                                      amount: r.billingValue,
+                                      direction: 'credit',
+                                      status: 'received',
+                                      dueDate: r.dueDate,
+                                      paidAt: now,
+                                    })
+                                  }
+                                  const [evRes, recRes] = await Promise.all([api.getFinancialEvents(), api.getRecurringSummary()])
+                                  setEvents(evRes.content || [])
+                                  setRecurring(recRes || [])
+                                } catch { showToast('Erro ao registrar pagamento.', 'error') }
+                              }}
+                            >
+                              Marcar pago
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Transactions table */}
       <div className="card">
