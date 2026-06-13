@@ -22,24 +22,24 @@ import PatientFormModal from './components/PatientFormModal'
 import AnalyzeSessionsModal from './components/AnalyzeSessionsModal'
 
 import Login from './views/Login'
-import Dashboard from './views/Dashboard'
-import Patients from './views/Patients'
-import Patient from './views/Patient'
-import MedicalRecordView from './views/MedicalRecordView'
-// Lazy: carrega apenas quando uma sessão é aberta
-const AnnotationSession = lazy(() => import('./views/AnnotationSession'))
-import Agenda from './views/Agenda'
-import Insights from './views/Insights'
-import Finance from './views/Finance'
-import Reminders from './views/Reminders'
-import Forms from './views/Forms'
-import Annotations from './views/Annotations'
-import Notebooks from './views/Notebooks'
-import Telehealth from './views/Telehealth'
-import Settings from './views/Settings'
-import TermsOfUse from './views/TermsOfUse'
-import PatientAnalysisHub from './views/PatientAnalysisHub'
-import AnalysisDetailView from './views/AnalysisDetailView'
+// Lazy: views de rotas secundárias — carregam sob demanda, não no boot
+const AnnotationSession   = lazy(() => import('./views/AnnotationSession'))
+const Dashboard           = lazy(() => import('./views/Dashboard'))
+const Patients            = lazy(() => import('./views/Patients'))
+const Patient             = lazy(() => import('./views/Patient'))
+const MedicalRecordView   = lazy(() => import('./views/MedicalRecordView'))
+const Agenda              = lazy(() => import('./views/Agenda'))
+const Insights            = lazy(() => import('./views/Insights'))
+const Finance             = lazy(() => import('./views/Finance'))
+const Reminders           = lazy(() => import('./views/Reminders'))
+const Forms               = lazy(() => import('./views/Forms'))
+const Annotations         = lazy(() => import('./views/Annotations'))
+const Notebooks           = lazy(() => import('./views/Notebooks'))
+const Telehealth          = lazy(() => import('./views/Telehealth'))
+const Settings            = lazy(() => import('./views/Settings'))
+const TermsOfUse          = lazy(() => import('./views/TermsOfUse'))
+const PatientAnalysisHub  = lazy(() => import('./views/PatientAnalysisHub'))
+const AnalysisDetailView  = lazy(() => import('./views/AnalysisDetailView'))
 import AnalysisConfigModal from './components/AnalysisConfigModal'
 
 const safeStorage = {
@@ -1100,7 +1100,7 @@ export default function App() {
           openSessionsCount={totalOpenSessions}
           onSessionsBadgeClick={() => setSessionsPanelOpen(o => !o)}
         />
-        <div className="content">{renderView()}</div>
+        <div className="content"><Suspense fallback={null}>{renderView()}</Suspense></div>
       </div>
 
       {/* Bottom navigation — visível em ≤768px, substitui o hamburger no celular */}

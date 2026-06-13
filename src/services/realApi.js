@@ -484,10 +484,14 @@ export const api = {
     // Se já veio completo (análise muito rápida ou resposta legada), retorna direto
     if (!initial?.id || initial.status === 'completed' || !initial.status) return initial
 
-    // Polling: verifica a cada 3 segundos por até 3 minutos
+    // Polling: verifica a cada 3 segundos por até 60 segundos (20 tentativas)
+    // Além disso o usuário recebe mensagem clara em vez de esperar 3 minutos sem feedback.
     const analysisId = initial.id
-    for (let attempt = 0; attempt < 60; attempt++) {
+    for (let attempt = 0; attempt < 20; attempt++) {
       await new Promise(r => setTimeout(r, 3000))
+      if (attempt >= 20) {
+        throw new Error('A análise está demorando mais que o esperado. Recarregue a página ou tente novamente em alguns minutos.')
+      }
       const status = await get(`/api/v1/analyses/${analysisId}/status`).catch(() => null)
       if (!status) continue  // erro de rede transitório — tenta de novo
       if (status.status === 'completed') return get(`/api/v1/analyses/${analysisId}`)
@@ -496,7 +500,7 @@ export const api = {
       }
       // status === 'processing' → continua polling
     }
-    throw new Error('Tempo de análise excedido. O servidor pode estar sobrecarregado. Tente novamente em instantes.')
+    throw new Error('A análise está demorando mais que o esperado. Recarregue a página ou tente novamente em alguns minutos.')
   },
 
   async retryAnalysis(analysisId) {
