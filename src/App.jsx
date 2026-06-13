@@ -42,6 +42,12 @@ import PatientAnalysisHub from './views/PatientAnalysisHub'
 import AnalysisDetailView from './views/AnalysisDetailView'
 import AnalysisConfigModal from './components/AnalysisConfigModal'
 
+const safeStorage = {
+  get:    (key)      => { try { return localStorage.getItem(key) }    catch { return null } },
+  set:    (key, val) => { try { localStorage.setItem(key, val) }      catch {} },
+  remove: (key)      => { try { localStorage.removeItem(key) }        catch {} },
+}
+
 const UNLIMITED = 2147483647
 
 export default function App() {
@@ -53,7 +59,7 @@ export default function App() {
 
   const handleLogin = (user) => {
     setCurrentUser(user)
-    if (!localStorage.getItem('psicoai_onboarding_seen')) {
+    if (!safeStorage.get('psicoai_onboarding_seen')) {
       setOnboardingOpen(true)
     }
   }
@@ -144,7 +150,7 @@ export default function App() {
       const needsPatient = ['paciente']
       if (saved && needsPatient.includes(saved)) {
         const hasPat = !!sessionStorage.getItem('psicoai_nav_patient') ||
-                       !!JSON.parse(localStorage.getItem('psicoai_active_session') || 'null')?.patient
+                       !!JSON.parse(safeStorage.get('psicoai_active_session') || 'null')?.patient
         return hasPat ? saved : 'agenda'
       }
       return saved || 'agenda'
@@ -216,10 +222,10 @@ export default function App() {
   // Inicializa do localStorage — prioridade: sessão ativa (canvas/text) > quicknote > nav context
   const [currentPatient, setCurrentPatientRaw] = useState(() => {
     try {
-      const s = JSON.parse(localStorage.getItem('psicoai_active_session') || 'null')
+      const s = JSON.parse(safeStorage.get('psicoai_active_session') || 'null')
       if (s?.patient) return s.patient
       // Fallback: quicknote
-      const qn = JSON.parse(localStorage.getItem('psicoai_quicknote_state') || 'null')
+      const qn = JSON.parse(safeStorage.get('psicoai_quicknote_state') || 'null')
       if (qn?.open && qn?.patientId) return { id: qn.patientId, name: qn.patientName }
       // Fallback: contexto de navegação da sessão anterior
       const nav = JSON.parse(sessionStorage.getItem('psicoai_nav_patient') || 'null')
@@ -241,11 +247,11 @@ export default function App() {
 
   const [activeSessionId, setActiveSessionId] = useState(() => {
     try {
-      const s = JSON.parse(localStorage.getItem('psicoai_active_session') || 'null')
+      const s = JSON.parse(safeStorage.get('psicoai_active_session') || 'null')
       if (!s?.sessionId) return null
       // Ignora sessões com mais de 8 horas (provável abandono)
       const age = Date.now() - (s.startedAt || 0)
-      if (age > 8 * 60 * 60 * 1000) { localStorage.removeItem('psicoai_active_session'); return null }
+      if (age > 8 * 60 * 60 * 1000) { safeStorage.remove('psicoai_active_session'); return null }
       activeSessionRef.current = s.sessionId
       return s.sessionId
     } catch { return null }
@@ -253,7 +259,7 @@ export default function App() {
 
   const [activeSessionType, setActiveSessionType] = useState(() => {
     try {
-      const s = JSON.parse(localStorage.getItem('psicoai_active_session') || 'null')
+      const s = JSON.parse(safeStorage.get('psicoai_active_session') || 'null')
       return s?.sessionType || null
     } catch { return null }
   })
@@ -276,9 +282,9 @@ export default function App() {
   useEffect(() => {
     if (activeSessionId) {
       // Persiste no localStorage
-      const current = (() => { try { return JSON.parse(localStorage.getItem('psicoai_active_session') || 'null') } catch { return null } })()
+      const current = (() => { try { return JSON.parse(safeStorage.get('psicoai_active_session') || 'null') } catch { return null } })()
       const pat = currentPatient || current?.patient || null
-      localStorage.setItem('psicoai_active_session', JSON.stringify({
+      safeStorage.set('psicoai_active_session', JSON.stringify({
         sessionId:   activeSessionId,
         sessionType: activeSessionType,
         patientId:   pat?.id || current?.patientId || null,
@@ -292,7 +298,7 @@ export default function App() {
       window.history.replaceState({}, '', `${window.location.pathname}?${params}`)
     } else {
       // Limpa localStorage e URL
-      localStorage.removeItem('psicoai_active_session')
+      safeStorage.remove('psicoai_active_session')
       const params = new URLSearchParams(window.location.search)
       if (params.has('sessao')) {
         params.delete('sessao')
@@ -314,7 +320,7 @@ export default function App() {
   // Inicializa do localStorage — sobrevive refresh, deploy do Vercel, fechar aba
   const [canvasOpen, setCanvasOpen] = useState(() => {
     try {
-      const s = JSON.parse(localStorage.getItem('psicoai_active_session') || 'null')
+      const s = JSON.parse(safeStorage.get('psicoai_active_session') || 'null')
       if (!s?.patientId) return false
       return (Date.now() - (s.startedAt || 0)) < 8 * 3600 * 1000
     } catch { return false }
@@ -400,7 +406,7 @@ export default function App() {
     setActiveSessionType('canvas')
     setCanvasInitialPageType('text')
     if (pat) {
-      localStorage.setItem('psicoai_active_session', JSON.stringify({
+      safeStorage.set('psicoai_active_session', JSON.stringify({
         sessionId:   null,
         sessionType: 'canvas',
         patientId:   pat.id,
@@ -423,7 +429,7 @@ export default function App() {
     setActiveSessionType('canvas')
     setCanvasInitialPageType('draw')
     if (pat) {
-      localStorage.setItem('psicoai_active_session', JSON.stringify({
+      safeStorage.set('psicoai_active_session', JSON.stringify({
         sessionId:   null,
         sessionType: 'canvas',
         patientId:   pat.id,
@@ -480,10 +486,8 @@ export default function App() {
 
   // Verifica se paciente já tem anotações salvas no localStorage
   const _hasAnnotations = (patientId) => {
-    try {
-      const raw = localStorage.getItem(`psicoai_canvas3_p${patientId}`)
-      return !!raw  // dados criptografados — só verifica existência
-    } catch { return false }
+    const raw = safeStorage.get(`psicoai_canvas3_p${patientId}`)
+    return !!raw  // dados criptografados — só verifica existência
   }
 
   // Abre o caderno do paciente. Se localStorage vazio (ex: notas rápidas anteriores),
@@ -501,7 +505,7 @@ export default function App() {
 
     // Limpa localStorage stale do paciente para forçar uso dos dados frescos do backend.
     // O AnnotationSession vai receber initialCanvasData via prop e ignorar localStorage vazio.
-    try { localStorage.removeItem(`psicoai_canvas3_p${pat?.id}`) } catch {}
+    safeStorage.remove(`psicoai_canvas3_p${pat?.id}`)
 
     // Carrega caderno completo do backend — notebook retorna NoteResponse com htmlContent/textContent.
     if (pat?.id) {
@@ -536,7 +540,7 @@ export default function App() {
     }
 
     if (pat) {
-      localStorage.setItem('psicoai_active_session', JSON.stringify({
+      safeStorage.set('psicoai_active_session', JSON.stringify({
         sessionId: null, sessionType: 'canvas', patientId: pat.id,
         patient: { id: pat.id, name: pat.name }, startedAt: Date.now(),
       }))
@@ -597,7 +601,7 @@ export default function App() {
     setActiveSessionType(type)
     // Persiste patient imediatamente — o sessionId chega async via createSession
     if (currentPatient) {
-      localStorage.setItem('psicoai_active_session', JSON.stringify({
+      safeStorage.set('psicoai_active_session', JSON.stringify({
         sessionId:   null,
         sessionType: type,
         patient:     { id: currentPatient.id, name: currentPatient.name },

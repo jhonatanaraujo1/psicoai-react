@@ -268,40 +268,52 @@ export default function Finance() {
       </div>
 
       {/* Recorrentes */}
-      {(recurring.length > 0 || loading) && (
-        <div className="card">
-          <div className="card-header">
-            <div>
-              <div className="card-title">Recorrentes — {CURRENT_MONTH_LABEL}</div>
-              <div className="card-sub">
-                {loading ? '…' : (() => {
-                  const paid = recurring.filter(r => r.status === 'received').length
-                  const total = recurring.length
-                  const totalVal = recurring.reduce((s, r) => s + (r.billingValue || 0), 0)
-                  return `${paid}/${total} pagos · ${fmtBRL(totalVal)} esperados`
-                })()}
-              </div>
+      <div className="card">
+        <div className="card-header">
+          <div>
+            <div className="card-title">Recorrentes — {CURRENT_MONTH_LABEL}</div>
+            <div className="card-sub">
+              {loading ? '…' : (() => {
+                const paid = recurring.filter(r => r.status === 'received').length
+                const total = recurring.length
+                const totalVal = recurring.reduce((s, r) => s + (r.billingValue || 0), 0)
+                return total > 0 ? `${paid}/${total} pagos · ${fmtBRL(totalVal)} esperados` : 'Nenhum paciente recorrente configurado'
+              })()}
             </div>
           </div>
-          <div className="card-body" style={{ padding: 0 }}>
-            {loading ? (
-              <div style={{ padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 10 }}>
-                {[1,2,3].map(i => <Skeleton key={i} style={{ height: 52 }} />)}
-              </div>
-            ) : (
-              <table className="fin-table">
-                <thead>
-                  <tr>
-                    <th>Paciente</th>
-                    <th>Ciclo</th>
-                    <th>Vencimento</th>
-                    <th>Valor</th>
-                    <th>Status</th>
-                    <th>Ações</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {recurring.map(r => {
+        </div>
+        <div className="card-body" style={{ padding: 0 }}>
+          {loading ? (
+            <div style={{ padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {[1,2,3].map(i => <Skeleton key={i} style={{ height: 52 }} />)}
+            </div>
+          ) : recurring.length === 0 ? (
+            <div style={{
+              textAlign: 'center',
+              padding: '32px 24px',
+              color: 'var(--gr5, #888)',
+              fontSize: 14,
+              border: '1px dashed var(--gr2, #e5e7eb)',
+              borderRadius: 10,
+              margin: '12px 16px 16px',
+            }}>
+              <p style={{ margin: '0 0 6px', fontWeight: 500 }}>Nenhuma cobrança recorrente configurada</p>
+              <p style={{ margin: 0, fontSize: 13 }}>Adicione pacientes com frequência fixa (mensal, semanal etc.) para acompanhar quem pagou e quem está pendente.</p>
+            </div>
+          ) : (
+            <table className="fin-table">
+              <thead>
+                <tr>
+                  <th>Paciente</th>
+                  <th>Ciclo</th>
+                  <th>Vencimento</th>
+                  <th>Valor</th>
+                  <th>Status</th>
+                  <th>Ações</th>
+                </tr>
+              </thead>
+              <tbody>
+                {recurring.map(r => {
                     const CYCLE_LABEL = { weekly: 'Semanal', biweekly: 'Quinzenal', monthly: 'Mensal', quarterly: 'Trimestral', annual: 'Anual' }
                     const ss = r.status === 'received'
                       ? STATUS_STYLE.received
@@ -381,10 +393,9 @@ export default function Finance() {
                   })}
                 </tbody>
               </table>
-            )}
-          </div>
+          )}
         </div>
-      )}
+      </div>
 
       {/* Transactions table */}
       <div className="card">
