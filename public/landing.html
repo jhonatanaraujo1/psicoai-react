@@ -21,11 +21,6 @@
 html{scroll-behavior:smooth}
 body{font-family:'DM Sans',sans-serif;background:var(--ow);color:var(--d);line-height:1.6;overflow-x:hidden}
 
-body::after{
-  content:'';position:fixed;inset:0;pointer-events:none;z-index:9999;
-  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
-  opacity:0.028;mix-blend-mode:multiply;background-size:180px 180px;
-}
 
 /* NAV */
 nav{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(245,242,236,0.88);backdrop-filter:blur(16px);border-bottom:1px solid transparent;transition:border-color 0.3s,box-shadow 0.3s;padding:0 40px}
@@ -344,7 +339,7 @@ footer{background:var(--g900);padding:48px 40px 32px;border-top:1px solid rgba(2
 
 /* RESPONSIVE */
 @media(max-width:900px){
-  .hero{grid-template-columns:1fr;padding:120px 24px 60px;gap:40px}
+  .hero{grid-template-columns:1fr;padding:100px 24px 60px;gap:40px}
   .hero-right{order:-1}
   .problema-grid,.testimonials,.pricing-grid{grid-template-columns:1fr}
   .feat-layout{grid-template-columns:1fr}
@@ -355,7 +350,31 @@ footer{background:var(--g900);padding:48px 40px 32px;border-top:1px solid rgba(2
   .hero-mockup-wrap{animation:none}
 }
 @media(max-width:600px){
+  nav{padding:0 16px}
+  .nav-links#nav-links-guest .nav-link{display:none}
+  .nav-links#nav-links-guest .nav-cta{display:inline-flex;margin-left:0}
+  .nav-inner{gap:0;justify-content:space-between}
+  .hero{padding:86px 16px 48px;gap:28px}
+  .hero-h1{font-size:32px;letter-spacing:-0.5px}
+  .hero-sub{font-size:14px}
+  .hero-actions{gap:10px}
+  .btn-primary,.btn-ghost{font-size:13px;padding:12px 18px}
+  .floating-badge,.floating-badge2{display:none}
+  .hero-mockup{max-width:100%}
+  section{padding:48px 16px}
+  .section-title{font-size:26px}
+  .section-sub{font-size:14px}
+  .pain-card{padding:20px 16px}
+  .plan-card{padding:24px 20px}
+  .plan-num{font-size:40px}
   .testimonials{grid-template-columns:1fr}
+  .cta-form{flex-direction:column;gap:8px}
+  .cta-input,.btn-cta{width:100%}
+  footer{padding:36px 16px 24px}
+  .footer-top{gap:24px}
+  .footer-bottom{flex-direction:column;gap:12px}
+  #cta-final{padding:72px 20px}
+  .trust-section{display:none}
 }
 </style>
 
@@ -392,7 +411,7 @@ fbq('track', 'PageView');
   <div class="nav-inner">
     <a href="#" class="nav-logo">
       <div class="nav-psi">Psi</div>
-      <div class="nav-brand">Psico<span>AI</span></div>
+      <div class="nav-brand">Psic<span>Notes</span></div>
     </a>
     <div class="nav-links" id="nav-links-guest">
       <a href="#funcionalidades" class="nav-link">Funcionalidades</a>
