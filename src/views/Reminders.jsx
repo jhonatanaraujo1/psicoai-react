@@ -193,19 +193,6 @@ export default function Reminders() {
         {/* ── Esquerda: config + templates ─────────────────────────────── */}
         <div>
 
-          {/* Banner informativo — honesto sobre o estado do sistema */}
-          <div style={{
-            display: 'flex', alignItems: 'flex-start', gap: '10px',
-            background: 'var(--g50)', border: '1px solid var(--g100)',
-            borderRadius: 'var(--r)', padding: '12px 16px', marginBottom: '16px',
-          }}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--g600)" strokeWidth="2" style={{ flexShrink: 0, marginTop: 1 }}>
-              <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
-            </svg>
-            <div style={{ fontSize: '12px', color: 'var(--g700)', lineHeight: 1.6 }}>
-              <strong>E-mail via Resend está ativo.</strong> Os lembretes abaixo são disparados automaticamente para os pacientes conforme a agenda. Canal único por ora — WhatsApp em backlog.
-            </div>
-          </div>
 
           {/* Config */}
           <div className="card" style={{ marginBottom: '20px' }}>
