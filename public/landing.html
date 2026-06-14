@@ -120,19 +120,20 @@ nav.scrolled{border-bottom-color:var(--gr2);box-shadow:0 2px 20px rgba(28,28,28,
 .mock-dot{width:10px;height:10px;border-radius:50%}
 .mock-patient{font-size:11px;color:rgba(255,255,255,0.5);margin-left:8px;font-family:'DM Sans',sans-serif}
 .mock-timer{font-size:11px;color:rgba(255,255,255,0.6);margin-left:auto;background:rgba(255,255,255,0.1);padding:3px 10px;border-radius:20px;font-variant-numeric:tabular-nums}
-.mock-body{padding:14px;background:var(--ow)}
-.mock-warn{background:var(--warn-l);border:1px solid #F0D08A;border-radius:8px;padding:8px 10px;font-size:10px;color:var(--warn);line-height:1.5;margin-bottom:10px}
-.mock-section{background:var(--w);border-radius:8px;border:1px solid var(--gr2);margin-bottom:8px;overflow:hidden}
-.mock-sec-head{padding:8px 10px;font-size:9px;font-weight:600;color:var(--gr4);letter-spacing:0.8px;text-transform:uppercase;border-bottom:1px solid var(--gr1);background:var(--gr1)}
+.mock-body{padding:14px;background:#1E3328}
+.mock-warn{background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:7px 10px;font-size:9.5px;color:rgba(255,255,255,0.45);line-height:1.5;margin-bottom:10px}
+.mock-section{background:rgba(255,255,255,0.05);border-radius:8px;border:1px solid rgba(255,255,255,0.08);margin-bottom:8px;overflow:hidden}
+.mock-sec-head{padding:7px 10px;font-size:8.5px;font-weight:700;color:var(--g300);letter-spacing:1px;text-transform:uppercase;border-bottom:1px solid rgba(255,255,255,0.07)}
 .mock-sec-body{padding:10px}
 .mock-hyp-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
 .mock-hyp-row:last-child{margin-bottom:0}
-.mock-hyp-name{font-size:11px;font-weight:500;color:var(--d)}
-.mock-hyp-code{font-size:10px;color:var(--gr4)}
-.mock-hyp-pct{font-family:'Instrument Serif',serif;font-size:18px;color:var(--g600);min-width:42px;text-align:right}
+.mock-hyp-name{font-size:11px;font-weight:500;color:#fff}
+.mock-hyp-code{font-size:10px;color:rgba(255,255,255,0.35)}
+.mock-hyp-pct{font-family:'Instrument Serif',serif;font-size:18px;color:var(--g300);min-width:42px;text-align:right}
 .mock-bar-wrap{flex:1;margin:0 10px}
-.mock-bar-track{height:4px;background:var(--gr2);border-radius:2px;overflow:hidden}
-.mock-bar-fill{height:100%;border-radius:2px;background:linear-gradient(90deg,var(--g600),var(--g500));transform-origin:left;animation:barGrow 1s cubic-bezier(0.22,1,0.36,1) 0.8s both}
+.mock-bar-track{height:4px;background:rgba(255,255,255,0.1);border-radius:2px;overflow:hidden}
+.mock-bar-fill{height:100%;border-radius:2px;background:linear-gradient(90deg,#E74C3C,#C0392B);transform-origin:left;animation:barGrow 1s cubic-bezier(0.22,1,0.36,1) 0.8s both}
+.mock-bar-fill-2{height:100%;border-radius:2px;background:linear-gradient(90deg,#E67E22,#CA6F1E);transform-origin:left;animation:barGrow 1s cubic-bezier(0.22,1,0.36,1) 1s both}
 @keyframes barGrow{from{transform:scaleX(0)}to{transform:scaleX(1)}}
 .mock-footer{background:var(--g800);padding:9px 14px;display:flex;align-items:center;justify-content:space-between}
 .mock-save{font-size:10px;color:rgba(255,255,255,0.4);display:flex;align-items:center;gap:5px}
@@ -519,9 +520,9 @@ fbq('track', 'PageView');
                       <div class="mock-hyp-code">F41.1 · CID-11 6B00</div>
                     </div>
                     <div class="mock-bar-wrap">
-                      <div class="mock-bar-track"><div class="mock-bar-fill" style="width:45%"></div></div>
+                      <div class="mock-bar-track"><div class="mock-bar-fill-2" style="width:45%"></div></div>
                     </div>
-                    <div class="mock-hyp-pct" style="font-size:15px;color:var(--gr5)">45%</div>
+                    <div class="mock-hyp-pct" style="font-size:15px;color:rgba(255,255,255,0.4)">45%</div>
                   </div>
                 </div>
               </div>
@@ -544,7 +545,7 @@ fbq('track', 'PageView');
               <div class="mock-save"><div class="mock-save-dot"></div> Salvo automaticamente</div>
               <button class="mock-analyze-btn">
                 <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-                Analisar com IA
+                Analisar
               </button>
             </div>
           </div>
@@ -877,32 +878,86 @@ const featContents = [
   {
     title:'Hipoteses diagnosticas com probabilidade',
     body:'Apos cada sessao analisada, o PsicNotes apresenta hipoteses mapeadas para DSM-5 e CID-11 com probabilidade ponderada. Baseia-se no conteudo da sessao e no historico do paciente. Voce decide. O PsicNotes apoia — nunca substitui.',
-    demo:`<div class="fp-demo-label">Resultado da analise — Lucas M. · S14</div>
-      <div style="margin-bottom:12px">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-          <div><div style="font-size:12px;font-weight:600;color:var(--d)">TEPT</div><div style="font-size:10px;color:var(--gr4)">F43.1 · CID-11 6B40</div></div>
-          <div style="font-family:'Instrument Serif',serif;font-size:24px;color:var(--g600)">72%</div>
+    demo:`<div style="border-radius:10px;overflow:hidden;border:1px solid rgba(255,255,255,0.08)">
+      <div style="background:#1E3328;padding:12px 14px">
+        <div style="font-size:8.5px;font-weight:700;color:#8BB89A;letter-spacing:1px;text-transform:uppercase;margin-bottom:10px">Hipoteses diagnosticas &nbsp;·&nbsp; <span style="color:rgba(255,255,255,0.3)">DSM-5 · CID-11</span></div>
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">
+          <div style="position:relative;width:44px;height:44px;flex-shrink:0">
+            <svg width="44" height="44" viewBox="0 0 44 44"><circle cx="22" cy="22" r="18" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="4"/><circle cx="22" cy="22" r="18" fill="none" stroke="#E74C3C" stroke-width="4" stroke-dasharray="113" stroke-dashoffset="31" stroke-linecap="round" transform="rotate(-90 22 22)"/></svg>
+            <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:'Instrument Serif',serif;font-size:13px;color:#fff">72%</div>
+          </div>
+          <div style="flex:1">
+            <div style="font-size:12px;font-weight:600;color:#fff;margin-bottom:2px">Transtorno de Ansiedade Generalizada com Ansiedade de Performance</div>
+            <div style="font-size:9.5px;color:rgba(255,255,255,0.35)">F41.1 · CID-11</div>
+            <div style="font-size:9px;font-weight:600;color:#E67E22;margin-top:4px;background:rgba(230,126,34,0.15);border:1px solid rgba(230,126,34,0.3);padding:2px 7px;border-radius:20px;display:inline-block">Evidencia moderada</div>
+          </div>
         </div>
-        <div style="height:5px;background:var(--gr2);border-radius:3px;overflow:hidden"><div style="width:72%;height:100%;background:linear-gradient(90deg,var(--g600),var(--g500));border-radius:3px;animation:barGrow 1s cubic-bezier(0.22,1,0.36,1) both"></div></div>
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">
+          <div style="position:relative;width:44px;height:44px;flex-shrink:0">
+            <svg width="44" height="44" viewBox="0 0 44 44"><circle cx="22" cy="22" r="18" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="4"/><circle cx="22" cy="22" r="18" fill="none" stroke="#E67E22" stroke-width="4" stroke-dasharray="113" stroke-dashoffset="48" stroke-linecap="round" transform="rotate(-90 22 22)"/></svg>
+            <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:'Instrument Serif',serif;font-size:13px;color:#fff">58%</div>
+          </div>
+          <div style="flex:1">
+            <div style="font-size:12px;font-weight:600;color:#fff;margin-bottom:2px">Transtorno de Ansiedade Relacionado ao Estresse</div>
+            <div style="font-size:9.5px;color:rgba(255,255,255,0.35)">F43.1 · CID-11</div>
+            <div style="font-size:9px;font-weight:600;color:#E67E22;margin-top:4px;background:rgba(230,126,34,0.15);border:1px solid rgba(230,126,34,0.3);padding:2px 7px;border-radius:20px;display:inline-block">Evidencia moderada</div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px">
+          <div style="position:relative;width:44px;height:44px;flex-shrink:0">
+            <svg width="44" height="44" viewBox="0 0 44 44"><circle cx="22" cy="22" r="18" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="4"/><circle cx="22" cy="22" r="18" fill="none" stroke="#6B7280" stroke-width="4" stroke-dasharray="113" stroke-dashoffset="62" stroke-linecap="round" transform="rotate(-90 22 22)"/></svg>
+            <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:'Instrument Serif',serif;font-size:13px;color:rgba(255,255,255,0.5)">45%</div>
+          </div>
+          <div style="flex:1">
+            <div style="font-size:12px;font-weight:500;color:rgba(255,255,255,0.6);margin-bottom:2px">Depressao Recorrente</div>
+            <div style="font-size:9.5px;color:rgba(255,255,255,0.25)">F33.1 · CID-11</div>
+            <div style="font-size:9px;font-weight:600;color:rgba(255,255,255,0.35);margin-top:4px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);padding:2px 7px;border-radius:20px;display:inline-block">Evidencia fraca</div>
+          </div>
+        </div>
       </div>
-      <div>
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-          <div><div style="font-size:12px;font-weight:600;color:var(--d)">TAG</div><div style="font-size:10px;color:var(--gr4)">F41.1 · CID-11 6B00</div></div>
-          <div style="font-family:'Instrument Serif',serif;font-size:24px;color:var(--gr5)">45%</div>
-        </div>
-        <div style="height:5px;background:var(--gr2);border-radius:3px;overflow:hidden"><div style="width:45%;height:100%;background:var(--gr4);border-radius:3px;animation:barGrow 1s cubic-bezier(0.22,1,0.36,1) 0.1s both"></div></div>
-      </div>`
+    </div>`
   },
   {
     title:'Alertas de padrao comportamental',
     body:'O PsicNotes detecta evitacao recorrente, ruminacao persistente e sinais de risco antes que virem crise. Os alertas aparecem no dashboard apenas para pacientes com analise IA gerada — sem ruido, sem falso positivo.',
-    demo:`<div class="fp-demo-label">Dashboard · Alertas ativos</div>
-      <div style="display:flex;align-items:flex-start;gap:10px;padding:10px;border-radius:8px;background:var(--danger-l);border:1px solid #F5C6C3;margin-bottom:8px">
-        <div><div style="font-size:12px;font-weight:600;color:var(--d)">Lucas M. — Padrao de evitacao</div><div style="font-size:11px;color:var(--gr5);margin-top:3px">4 sessoes com comportamento evasivo ao tema familiar</div><div style="font-size:10px;color:var(--danger);margin-top:5px;font-weight:600">Alta prioridade · Sessao: 17 mai</div></div>
+    demo:`<div style="border-radius:10px;overflow:hidden;border:1px solid rgba(255,255,255,0.08)">
+      <div style="background:#1E3328;padding:12px 14px">
+        <div style="font-size:8.5px;font-weight:700;color:#8BB89A;letter-spacing:1px;text-transform:uppercase;margin-bottom:10px">Padroes detectados</div>
+        <div style="margin-bottom:8px;border-radius:8px;overflow:hidden;border:1px solid rgba(255,255,255,0.07);background:rgba(255,255,255,0.04)">
+          <div style="display:flex;align-items:stretch">
+            <div style="width:3px;background:#E67E22;flex-shrink:0"></div>
+            <div style="padding:9px 11px;flex:1">
+              <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+                <span style="font-size:8px;font-weight:700;color:#E67E22;writing-mode:vertical-lr;transform:rotate(180deg);letter-spacing:0.5px;text-transform:uppercase">MODERADA</span>
+                <div>
+                  <div style="font-size:11.5px;font-weight:600;color:#fff">Catastrofizacao</div>
+                  <div style="font-size:9.5px;color:rgba(255,255,255,0.4);margin-top:2px">Padrao recorrente em S3, S14 e sessao atual</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div style="margin-bottom:8px;border-radius:8px;overflow:hidden;border:1px solid rgba(255,255,255,0.07);background:rgba(255,255,255,0.04)">
+          <div style="display:flex;align-items:stretch">
+            <div style="width:3px;background:#5C8F6A;flex-shrink:0"></div>
+            <div style="padding:9px 11px;flex:1">
+              <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+                <span style="font-size:8px;font-weight:700;color:#5C8F6A;writing-mode:vertical-lr;transform:rotate(180deg);letter-spacing:0.5px;text-transform:uppercase">BAIXA</span>
+                <div>
+                  <div style="font-size:11.5px;font-weight:600;color:#fff">Evitacao comportamental</div>
+                  <div style="font-size:9.5px;color:rgba(255,255,255,0.4);margin-top:2px">Revertendo — retomada de academia registrada</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div style="font-size:8.5px;font-weight:700;color:#8BB89A;letter-spacing:1px;text-transform:uppercase;margin:12px 0 8px">Alertas clinicos</div>
+        <div style="border-radius:8px;border:1px solid rgba(230,126,34,0.3);background:rgba(230,126,34,0.07);padding:9px 11px">
+          <div style="font-size:9px;font-weight:700;color:#E67E22;letter-spacing:0.5px;text-transform:uppercase;margin-bottom:5px">MODERADO</div>
+          <div style="font-size:11px;color:rgba(255,255,255,0.75);line-height:1.5">Vulnerabilidade residual a gatilhos de performance — investigar crenca central na proxima sessao</div>
+        </div>
       </div>
-      <div style="display:flex;align-items:flex-start;gap:10px;padding:10px;border-radius:8px;background:var(--warn-l);border:1px solid #F0D08A">
-        <div><div style="font-size:12px;font-weight:600;color:var(--d)">Rafael F. — Ruminacao detectada</div><div style="font-size:11px;color:var(--gr5);margin-top:3px">Mencoes recorrentes sem progressao. F41.1 TAG · 64%</div><div style="font-size:10px;color:var(--warn);margin-top:5px;font-weight:600">Moderado · Sessao: 17 mai</div></div>
-      </div>`
+    </div>`
   },
   {
     title:'Canvas de anotacoes — o jeito que voce pensa',
