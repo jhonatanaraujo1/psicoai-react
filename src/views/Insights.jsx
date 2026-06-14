@@ -516,7 +516,7 @@ function InsightsPortfolio({ onSelectPatient, onOpenAnalysisHub }) {
               Os insights aparecem conforme você analisa os pacientes
             </div>
             <div style={{ fontSize: '13px', color: 'var(--g600)', lineHeight: 1.6 }}>
-              Abra um paciente, clique em <strong>"Analisar com IA"</strong> e os padrões, hipóteses e alertas aparecem aqui automaticamente.
+              Abra um paciente, gere uma análise clínica e os padrões, hipóteses e alertas da sua carteira ficam disponíveis aqui.
             </div>
           </div>
         </div>

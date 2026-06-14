@@ -223,7 +223,7 @@ export default function RegisterFlow({ onLogin, onBack, initialEmail = '' }) {
 
           <div className="login-form-header">
             <h2>{step === 1 ? 'Criar conta gratuita' : 'Seu consultório'}</h2>
-            <p>{step === 1 ? '14 dias grátis · Sem cartão de crédito' : 'Personaliza o assistente para a sua prática'}</p>
+            <p>{step === 1 ? '14 dias grátis · Sem cartão de crédito' : 'Configura o raciocínio clínico para a sua abordagem'}</p>
           </div>
 
           <StepBar step={step} />

@@ -200,7 +200,7 @@ function TabPlano({ profile }) {
 
       <div style={{ background: 'var(--g50)', border: '1px solid var(--g100)', borderRadius: 'var(--r)', padding: '12px 16px', fontSize: '13px', color: 'var(--g700)', marginBottom: '16px', display: 'flex', gap: '10px', alignItems: 'center' }}>
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-        Análises IA acionadas por você — nunca automáticas. Consulte os planos disponíveis para ver os pacotes de análise.
+        O raciocínio clínico é gerado quando você aciona — nunca de forma automática ou sem sua revisão. Consulte os planos disponíveis para ver os pacotes de análise.
       </div>
 
       {false && (
@@ -447,7 +447,7 @@ function TabAjuda({ onOpenOnboarding, onOpenTermos }) {
   }
 
   const FAQS = [
-    { q: 'Como funciona a análise IA?', a: 'Ao encerrar uma sessão (Canvas ou Texto), você aciona a análise. A IA processa as anotações e gera hipóteses diagnósticas DSM-5/CID-11 com probabilidade, detecta padrões comportamentais e emite alertas graduados.' },
+    { q: 'Como funciona a análise IA?', a: 'O PsicNotes lê suas anotações e devolve hipóteses diagnósticas DSM-5/CID-11 com probabilidade ponderada, padrões comportamentais detectados e alertas graduados — tudo baseado no que você mesmo registrou, sem automatismo.' },
     { q: 'A IA substitui meu diagnóstico?', a: 'Não. O PsicNotes é um assistente de raciocínio clínico. Todo output é explicitamente marcado como "suporte clínico" e o diagnóstico final é sempre responsabilidade exclusiva do psicólogo.' },
     { q: 'Meus dados são seguros?', a: 'Sim. Seus dados são criptografados em repouso e em trânsito. Cumprimos a LGPD e a Resolução CFP 09/2024. Nenhum dado clínico é usado para treinar modelos de IA.' },
     { q: 'Como cancelar o plano?', a: 'Sem burocracia — basta acessar a aba "Plano & Cobrança" e clicar em "Cancelar assinatura". Você mantém acesso até o fim do período pago.' },

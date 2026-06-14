@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 
 const STEP_LABELS = [
   'Lendo suas anotações clínicas…',
-  'Identificando padrões nas suas observações…',
+  'Reconhecendo padrões clínicos no histórico do paciente…',
   'Formulando hipóteses baseadas no seu relato…',
   'Preparando sugestões para a próxima sessão…',
 ]
@@ -53,7 +53,7 @@ function LoadingState() {
         ))}
       </div>
       <div style={{ marginTop: '24px', fontSize: '11px', color: 'var(--gr4)', textAlign: 'center', lineHeight: 1.6 }}>
-        A IA organiza o que você já observou — não substitui seu julgamento.<br/>
+        O PsicNotes organiza o que você já observou — não substitui seu julgamento clínico.<br/>
         <span style={{ color: 'var(--g500)', fontWeight: 600 }}>Baseado nas suas anotações · ~30 segundos</span>
       </div>
     </div>
