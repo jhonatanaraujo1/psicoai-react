@@ -163,7 +163,7 @@ export function assertSafeRedirectUrl(url) {
 
 const get    = (path, params) => {
   const qs = params ? '?' + new URLSearchParams(Object.fromEntries(
-    Object.entries(params).filter(([, v]) => v !== undefined && v !== null && v !== '')
+    Object.entries(params).filter(([_k, v]) => v !== undefined && v !== null && v !== '')
   )).toString() : ''
   return req('GET', path + qs)
 }

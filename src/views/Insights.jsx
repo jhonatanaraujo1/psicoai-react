@@ -486,7 +486,7 @@ function InsightsPortfolio({ onSelectPatient, onOpenAnalysisHub }) {
     if (!acc[p.type] || acc[p.type] < p.count) acc[p.type] = p.count
     return acc
   }, {})
-  const topPatterns  = Object.entries(patternSummary).sort(([, a], [, b]) => b - a).slice(0, 3)
+  const topPatterns  = Object.entries(patternSummary).sort(([_ka, a], [_kb, b]) => b - a).slice(0, 3)
   const topHypotheses = (data?.topHypotheses || []).slice(0, 3)
 
   return (
