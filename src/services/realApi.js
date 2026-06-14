@@ -374,6 +374,7 @@ export const api = {
       billingType:          data.billingType          !== undefined ? (data.billingType          || null) : undefined,
       monthlyValue:         data.monthlyValue         !== undefined ? (data.monthlyValue         ? Number(data.monthlyValue)         : null) : undefined,
       billingDay:           data.billingDay           !== undefined ? (data.billingDay           ? Number(data.billingDay)           : null) : undefined,
+    }
     // Remove undefined — PATCH deve enviar apenas campos que mudaram
     const clean = Object.fromEntries(Object.entries(body).filter(([_k, v]) => v !== undefined))
     return patch(`/api/v1/patients/${id}`, clean)
