@@ -43,7 +43,7 @@ function LoadingState() {
   return (
     <div className="ai-loading-wrap">
       <div className="ai-spinner" />
-      <div className="ai-loading-text">PsicoAI está analisando as anotações…</div>
+      <div className="ai-loading-text">PsicNotes está analisando as anotações…</div>
       <div className="ai-loading-steps">
         {STEP_LABELS.map((s, i) => (
           <div key={i} className="ai-step" style={{ opacity: i <= step ? 1 : 0.35, transition: 'opacity 0.4s' }}>

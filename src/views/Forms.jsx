@@ -288,7 +288,7 @@ export default function Forms() {
     if (!suggText.trim()) return
     // TODO: wired to backend quando endpoint estiver pronto
     // Por agora: registra no console + fecha com feedback positivo
-    console.info('[PsicoAI] Sugestão de formulário recebida:', suggText.trim())
+    console.info('[PsicNotes] Sugestão de formulário recebida:', suggText.trim())
     setSuggSent(true)
     setTimeout(() => {
       setSuggOpen(false)
