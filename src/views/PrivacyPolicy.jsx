@@ -45,13 +45,13 @@ export default function PrivacyPolicy({ onClose }) {
           <li style={{marginBottom:6}}>Prestação do serviço de prontuário e análise clínica</li>
           <li style={{marginBottom:6}}>Processamento de pagamentos via Stripe</li>
           <li style={{marginBottom:6}}>Envio de notificações transacionais por email (Resend)</li>
-          <li style={{marginBottom:6}}>Geração de análises clínicas via Anthropic Claude (textos de anotações processados em tempo real, sem armazenamento pela Anthropic conforme contrato de API)</li>
+          <li style={{marginBottom:6}}>Geração de análises clínicas por motor de IA próprio do PsicNotes (textos processados em tempo real, sem armazenamento permanente pelo processador de IA)</li>
         </ul>
 
         <h2 style={{fontSize:18,fontWeight:500,margin:'32px 0 12px'}}>3. Compartilhamento de dados</h2>
         <p style={{marginBottom:8}}>Dados são compartilhados apenas com subprocessadores necessários:</p>
         <ul style={{paddingLeft:20,marginBottom:16}}>
-          <li style={{marginBottom:6}}><strong>Anthropic</strong> — processamento de análises IA (sem retenção de dados clínicos)</li>
+          <li style={{marginBottom:6}}><strong>Motor de IA PsicNotes</strong> — processamento de análises clínicas (sem retenção de dados clínicos pelo processador)</li>
           <li style={{marginBottom:6}}><strong>Stripe</strong> — processamento de pagamentos</li>
           <li style={{marginBottom:6}}><strong>Resend</strong> — envio de emails transacionais</li>
           <li style={{marginBottom:6}}><strong>Railway</strong> — hospedagem do servidor e banco de dados (PostgreSQL criptografado em repouso)</li>
