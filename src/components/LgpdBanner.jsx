@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { api } from '../services'
 
 const STORAGE_KEY = 'psicoai_lgpd_consent'
 
@@ -12,8 +13,6 @@ function recordConsent(accepted) {
       userAgent: navigator.userAgent.slice(0, 120),
     })
     localStorage.setItem(STORAGE_KEY, record)
-    // TODO (médio prazo): POST /api/v1/auth/consent com { accepted, version, timestamp }
-    // para registrar no backend conforme LGPD Art. 7
   } catch { /* localStorage bloqueado */ }
 }
 
@@ -29,9 +28,13 @@ export default function LgpdBanner({ onShowTermos }) {
     } catch { /* localStorage bloqueado */ }
   }, [])
 
-  const accept = () => {
+  const accept = async () => {
     recordConsent(true)
     setVisible(false)
+    // Persiste no backend (best-effort, não bloqueia UI)
+    try {
+      await api.consentLgpd('v1')
+    } catch { /* silencia — localStorage já foi salvo */ }
   }
 
   // SEC-004: recusar deve bloquear uso do app (dados de saúde exigem consentimento)

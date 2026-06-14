@@ -265,6 +265,12 @@ export default function PatientFormModal({ isOpen, onClose, onSave, initialData 
     if (!form.genero) e.genero = true
     if (!form.queixa.trim()) e.queixa = true
     if (!form.abordagem) e.abordagem = true
+    if (form.email && form.email.trim()) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+      if (!emailRegex.test(form.email.trim())) {
+        e.email = 'Email inválido'
+      }
+    }
     setErrors(e)
     return Object.keys(e).length === 0
   }
@@ -330,7 +336,8 @@ export default function PatientFormModal({ isOpen, onClose, onSave, initialData 
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                 <Field label="E-mail">
-                  <CadastroInput value={form.email} onChange={e => set('email', e.target.value)} placeholder="email@exemplo.com" type="email" />
+                  <CadastroInput value={form.email} onChange={e => set('email', e.target.value)} placeholder="email@exemplo.com" type="email" error={!!errors.email} />
+                  {errors.email && <span style={{ fontSize: '11px', color: 'var(--danger)', marginTop: '2px' }}>{errors.email}</span>}
                 </Field>
                 <Field label="Telefone / WhatsApp">
                   <CadastroInput value={form.telefone} onChange={e => set('telefone', e.target.value)} placeholder="(11) 99999-9999" />

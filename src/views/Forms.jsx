@@ -278,25 +278,6 @@ export default function Forms() {
   const [builderOpen, setBuilderOpen] = useState(false)
   const [editingForm, setEditingForm] = useState(null) // null = new, obj = edit
 
-  // ── Sugestão de formulário ────────────────────────────────────────────────
-  const [suggOpen, setSuggOpen] = useState(false)
-  const [suggText, setSuggText] = useState('')
-  const [suggSent, setSuggSent] = useState(false)
-  const SUGG_MAX = 1000
-
-  const handleSuggSubmit = () => {
-    if (!suggText.trim()) return
-    // TODO: wired to backend quando endpoint estiver pronto
-    // Por agora: registra no console + fecha com feedback positivo
-    console.info('[PsicNotes] Sugestão de formulário recebida:', suggText.trim())
-    setSuggSent(true)
-    setTimeout(() => {
-      setSuggOpen(false)
-      setSuggText('')
-      setSuggSent(false)
-    }, 1800)
-  }
-
   const handleSaveCustomForm = (form) => {
     const updated = editingForm
       ? customForms.map(f => f.id === form.id ? form : f)
@@ -406,16 +387,6 @@ export default function Forms() {
             Meus formulários
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            {/* Sugestão de formulário */}
-            <button
-              onClick={() => setSuggOpen(true)}
-              style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '7px 12px', border: '1px solid var(--gr2)', borderRadius: 'var(--r)', background: 'var(--w)', color: 'var(--gr5)', cursor: 'pointer', fontSize: '12px', fontWeight: 500, fontFamily: "'DM Sans', sans-serif", transition: 'all 0.15s' }}
-              onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--g300)'; e.currentTarget.style.color = 'var(--g600)' }}
-              onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--gr2)'; e.currentTarget.style.color = 'var(--gr5)' }}
-            >
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-              Sugerir formulário
-            </button>
             <button
               onClick={() => openBuilder(null)}
               style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '7px 14px', border: 'none', borderRadius: 'var(--r)', background: 'var(--g500)', color: '#fff', cursor: 'pointer', fontSize: '12px', fontWeight: 600, fontFamily: "'DM Sans', sans-serif" }}
@@ -614,100 +585,6 @@ export default function Forms() {
         onClose={() => { setBuilderOpen(false); setEditingForm(null) }}
       />
 
-      {/* ── Modal: Sugestão de formulário ─────────────────────────────────── */}
-      {suggOpen && (
-        <div
-          onClick={e => { if (e.target === e.currentTarget) { setSuggOpen(false); setSuggText(''); setSuggSent(false) } }}
-          style={{
-            position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.38)', zIndex: 500,
-            display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16,
-          }}
-        >
-          <div style={{
-            background: 'var(--w)', borderRadius: 16, width: '100%', maxWidth: 480,
-            boxShadow: '0 20px 60px rgba(0,0,0,0.22)', overflow: 'hidden',
-            animation: 'scaleIn 0.18s ease',
-          }}>
-            {/* Header */}
-            <div style={{ padding: '20px 24px 16px', borderBottom: '1px solid var(--gr1)' }}>
-              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
-                <div>
-                  <div style={{ fontFamily: "'Fraunces', serif", fontSize: 18, color: 'var(--d)', fontWeight: 400, marginBottom: 4 }}>
-                    Sugerir formulário
-                  </div>
-                  <div style={{ fontSize: 12, color: 'var(--gr5)', lineHeight: 1.5 }}>
-                    Tem algum formulário, escala ou instrumento clínico que deveria estar aqui? Conta pra gente.
-                  </div>
-                </div>
-                <button
-                  onClick={() => { setSuggOpen(false); setSuggText(''); setSuggSent(false) }}
-                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--gr4)', padding: 4, borderRadius: 6, flexShrink: 0, marginTop: 2 }}
-                >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                </button>
-              </div>
-            </div>
-
-            {/* Body */}
-            <div style={{ padding: '20px 24px' }}>
-              {suggSent ? (
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, padding: '20px 0' }}>
-                  <div style={{ width: 44, height: 44, borderRadius: '50%', background: 'var(--g50)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--g500)" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-                  </div>
-                  <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--d)' }}>Sugestão enviada!</div>
-                  <div style={{ fontSize: 12, color: 'var(--gr5)', textAlign: 'center' }}>Obrigado — a equipe vai avaliar a inclusão.</div>
-                </div>
-              ) : (
-                <>
-                  <textarea
-                    value={suggText}
-                    onChange={e => setSuggText(e.target.value.slice(0, SUGG_MAX))}
-                    placeholder="Ex: PHQ-A (versão adolescente), PCL-5 para trauma, AUDIT para triagem de álcool…&#10;&#10;Qualquer sugestão é bem-vinda."
-                    style={{
-                      width: '100%', minHeight: 140, maxHeight: 260,
-                      border: '1.5px solid var(--gr2)', borderRadius: 'var(--r)',
-                      padding: '12px 14px', fontSize: 13, color: 'var(--d)',
-                      fontFamily: "'DM Sans', sans-serif", lineHeight: 1.6,
-                      outline: 'none', resize: 'vertical', background: 'var(--ow)',
-                      boxSizing: 'border-box', transition: 'border-color 0.15s',
-                    }}
-                    onFocus={e => e.target.style.borderColor = 'var(--g300)'}
-                    onBlur={e => e.target.style.borderColor = 'var(--gr2)'}
-                    autoFocus
-                  />
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 10 }}>
-                    <span style={{ fontSize: 11, color: suggText.length > SUGG_MAX * 0.9 ? 'var(--warn)' : 'var(--gr4)' }}>
-                      {suggText.length}/{SUGG_MAX}
-                    </span>
-                    <div style={{ display: 'flex', gap: 8 }}>
-                      <button
-                        onClick={() => { setSuggOpen(false); setSuggText(''); setSuggSent(false) }}
-                        style={{ padding: '8px 16px', border: '1px solid var(--gr2)', borderRadius: 'var(--r)', background: 'none', color: 'var(--gr5)', fontSize: 12, fontWeight: 500, cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}
-                      >
-                        Cancelar
-                      </button>
-                      <button
-                        onClick={handleSuggSubmit}
-                        disabled={!suggText.trim()}
-                        style={{
-                          padding: '8px 18px', border: 'none', borderRadius: 'var(--r)',
-                          background: suggText.trim() ? 'var(--g500)' : 'var(--gr2)',
-                          color: suggText.trim() ? '#fff' : 'var(--gr4)',
-                          fontSize: 12, fontWeight: 600, cursor: suggText.trim() ? 'pointer' : 'not-allowed',
-                          fontFamily: "'DM Sans', sans-serif", transition: 'background 0.15s',
-                        }}
-                      >
-                        Enviar sugestão
-                      </button>
-                    </div>
-                  </div>
-                </>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   )
 }

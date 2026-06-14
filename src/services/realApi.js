@@ -640,6 +640,10 @@ export const api = {
     return post('/api/v1/billing/coupon/validate', { code: code.trim().toUpperCase(), planId })
   },
 
+  async consentLgpd(version = 'v1') {
+    return post('/api/v1/auth/consent', { version, acceptedAt: new Date().toISOString() })
+  },
+
   // ── Mock-only features (sem endpoint backend ainda) ─────────────────────────
   // Lembretes, Teleatendimento e Relatórios são features futuras do backend.
   // Por ora retornam dados mock mesmo quando o backend está ativo.

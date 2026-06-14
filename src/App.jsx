@@ -38,6 +38,7 @@ const Notebooks           = lazy(() => import('./views/Notebooks'))
 const Telehealth          = lazy(() => import('./views/Telehealth'))
 const Settings            = lazy(() => import('./views/Settings'))
 const TermsOfUse          = lazy(() => import('./views/TermsOfUse'))
+const PrivacyPolicy       = lazy(() => import('./views/PrivacyPolicy'))
 const PatientAnalysisHub  = lazy(() => import('./views/PatientAnalysisHub'))
 const AnalysisDetailView  = lazy(() => import('./views/AnalysisDetailView'))
 import AnalysisConfigModal from './components/AnalysisConfigModal'
@@ -140,6 +141,11 @@ export default function App() {
   // sessionStorage sobrevive reload mas não fechar aba — comportamento correto
   const [currentView, setCurrentViewRaw] = useState(() => {
     try {
+      // Priority 0: URL path-based public routes (/terms, /privacy)
+      const path = window.location.pathname
+      if (path === '/terms')   return 'termos'
+      if (path === '/privacy') return 'privacidade'
+
       // Priority 1: URL params (link compartilhado de análise)
       const params = new URLSearchParams(window.location.search)
       const urlView = params.get('view')
@@ -949,12 +955,20 @@ export default function App() {
       case 'teleatendimento': return <Telehealth onGoToPatient={(patient) => handleSetView('paciente', patient)} onNewSession={(patient) => handleSetView('paciente', patient)} />
       case 'configuracoes': return <Settings currentUser={currentUser} onProfileUpdate={(data) => setCurrentUser(u => ({ ...u, ...data }))} onOpenOnboarding={() => setOnboardingOpen(true)} onOpenTermos={() => setCurrentView('termos')} />
       case 'termos':      return <TermsOfUse onClose={() => setCurrentView('configuracoes')} />
+      case 'privacidade': return <PrivacyPolicy onClose={() => setCurrentView('configuracoes')} />
       default:            return <Agenda currentUser={currentUser} />
     }
   }
 
   // ── Not authenticated ─────────────────────────────────────────────────────
   if (!currentUser) {
+    // Rotas públicas acessíveis sem login
+    if (currentView === 'termos') {
+      return <Suspense fallback={null}><TermsOfUse onClose={() => { window.history.back() }} /></Suspense>
+    }
+    if (currentView === 'privacidade') {
+      return <Suspense fallback={null}><PrivacyPolicy onClose={() => { window.history.back() }} /></Suspense>
+    }
     return <Login onLogin={handleLogin} />
   }
 
@@ -1286,7 +1300,7 @@ export default function App() {
       {paymentRequired && <PaymentModal onLogout={handleLogout} />}
 
       {/* Banner LGPD — aparece uma vez, salvo em localStorage */}
-      <LgpdBanner onShowTermos={() => setCurrentView('termos')} />
+      <LgpdBanner onShowTermos={() => setCurrentView('privacidade')} />
 
       {/* Banner de inadimplência em período de graça */}
       {currentUser?.graceDaysRemaining > 0 && !paymentRequired && (

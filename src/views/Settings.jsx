@@ -118,7 +118,7 @@ function TabPlano({ profile }) {
   const isClinico = true // plano único — todos têm acesso completo
   const used = profile?.analysesUsedThisMonth || 0
   const remaining = profile?.analysesRemaining ?? 15
-  const total = profile?.plan === 'especialista' ? 40 : 15
+  const total = profile?.plan === 'especialista' ? 40 : 15  // 15 Consultório, 40 Especialista
   const [billingLoading, setBillingLoading] = useState(false)
   const [coupon, setCoupon] = useState('')
   const [couponState, setCouponState] = useState(null)

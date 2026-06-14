@@ -671,15 +671,6 @@ export default function CanvasSession({
           </button>
         ))}
 
-        <div style={{ width: 1, height: 24, background: 'rgba(255,255,255,0.1)', margin: '0 4px' }} />
-
-        {/* Desfazer / Refazer — placeholder (TODO: implementar history) */}
-        <ToolBtn active={false} onClick={() => document.execCommand?.('undo')} title="Desfazer (Ctrl+Z)">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/>
-          </svg>
-        </ToolBtn>
-
         <div style={{ marginLeft: 'auto', display: 'flex', gap: 6 }}>
           <ToolBtn active={false} onClick={addPage} title="Nova página">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
