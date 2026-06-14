@@ -739,6 +739,80 @@ function FaqItem({ q, a }) {
   )
 }
 
+// ── Termos & Privacidade ──────────────────────────────────────────────────────
+function TabTermos({ profile, onConsentRecorded }) {
+  const [recording, setRecording] = useState(false)
+
+  const consentDate = profile?.lgpdConsentAt
+    ? new Date(profile.lgpdConsentAt).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })
+    : null
+
+  const handleConsent = async () => {
+    setRecording(true)
+    try {
+      await api.consentLgpd('v1')
+      onConsentRecorded && onConsentRecorded()
+      showToast('Consentimento registrado com sucesso', 'success')
+    } catch {
+      showToast('Erro ao registrar consentimento. Tente novamente.', 'error')
+    } finally {
+      setRecording(false)
+    }
+  }
+
+  return (
+    <div>
+      <Divider title="Termos e Privacidade" sub="Documentos legais e registro do seu consentimento" />
+
+      {consentDate ? (
+        <div style={{ background: '#F0FDF4', border: '1px solid #BBF7D0', borderRadius: 'var(--r)', padding: '14px 18px', marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#16A34A" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+          <div>
+            <div style={{ fontSize: '13px', fontWeight: 600, color: '#15803D' }}>Termos aceitos</div>
+            <div style={{ fontSize: '12px', color: '#16A34A', marginTop: '2px' }}>Consentimento registrado em {consentDate} · Versão v1</div>
+          </div>
+        </div>
+      ) : (
+        <div style={{ background: '#FFF7ED', border: '1px solid #FED7AA', borderRadius: 'var(--r)', padding: '14px 18px', marginBottom: '24px' }}>
+          <div style={{ fontSize: '13px', fontWeight: 600, color: '#92400E', marginBottom: '4px' }}>Consentimento pendente</div>
+          <div style={{ fontSize: '12px', color: '#B45309', marginBottom: '12px', lineHeight: 1.5 }}>
+            Você ainda não registrou seu aceite dos Termos de Uso e Política de Privacidade.
+          </div>
+          <button onClick={handleConsent} disabled={recording} style={{ padding: '8px 16px', background: '#D97706', color: '#fff', border: 'none', borderRadius: 'var(--r)', fontSize: '12px', fontWeight: 600, cursor: recording ? 'default' : 'pointer', fontFamily: "'DM Sans', sans-serif", opacity: recording ? 0.7 : 1 }}>
+            {recording ? 'Registrando…' : 'Registrar meu aceite'}
+          </button>
+        </div>
+      )}
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+        {[
+          { label: 'Termos de Uso', sub: 'Condições de uso, limitações e responsabilidades', href: '/terms' },
+          { label: 'Política de Privacidade', sub: 'Como seus dados são coletados, usados e protegidos (LGPD)', href: '/privacy' },
+        ].map(doc => (
+          <a key={doc.href} href={doc.href} target="_blank" rel="noopener noreferrer"
+            style={{ display: 'flex', alignItems: 'center', gap: '14px', padding: '14px 16px', background: 'var(--ow)', border: '1px solid var(--gr2)', borderRadius: 'var(--r)', textDecoration: 'none', transition: 'border-color 0.15s' }}
+            onMouseOver={e => e.currentTarget.style.borderColor = 'var(--g300)'}
+            onMouseOut={e => e.currentTarget.style.borderColor = 'var(--gr2)'}>
+            <div style={{ width: 36, height: 36, borderRadius: '8px', background: 'var(--g50)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--g600)" strokeWidth="1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+            </div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--d)' }}>{doc.label}</div>
+              <div style={{ fontSize: '12px', color: 'var(--gr5)', marginTop: '2px' }}>{doc.sub}</div>
+            </div>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--gr4)" strokeWidth="1.8"><line x1="7" y1="17" x2="17" y2="7"/><polyline points="7 7 17 7 17 17"/></svg>
+          </a>
+        ))}
+      </div>
+
+      <div style={{ marginTop: '20px', padding: '13px 16px', background: 'var(--ow)', border: '1px solid var(--gr2)', borderRadius: 'var(--r)', fontSize: '12px', color: 'var(--gr5)', lineHeight: 1.6 }}>
+        Para exercer seus direitos LGPD (acesso, correção, exclusão, portabilidade), envie email para{' '}
+        <strong>contato@psicnotes.com</strong>. Conforme LGPD Art. 18, atendemos em até 15 dias.
+      </div>
+    </div>
+  )
+}
+
 // ── Main ─────────────────────────────────────────────────────────────────────
 // SEC-010: ícones como JSX direto — sem dangerouslySetInnerHTML
 const TABS = [
@@ -747,6 +821,7 @@ const TABS = [
   { id: 'preferencias', label: 'Preferências',      icon: <><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M4.93 4.93a10 10 0 0 0 0 14.14"/></> },
   { id: 'seguranca',    label: 'Segurança',          icon: <><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></> },
   { id: 'integracoes',  label: 'Integrações',        icon: <><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></> },
+  { id: 'termos',       label: 'Termos & Privacidade', icon: <><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></> },
   { id: 'ajuda',        label: 'Ajuda & Guia',       icon: <><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></> },
 ]
 
@@ -789,6 +864,7 @@ export default function Settings({ currentUser, onProfileUpdate, onOpenOnboardin
           {tab === 'preferencias' && <TabPreferencias profile={profile} onSaved={handleSaved} />}
           {tab === 'seguranca' && <TabSeguranca userEmail={profile?.email || currentUser?.email} />}
           {tab === 'integracoes' && <TabIntegracoes />}
+          {tab === 'termos' && <TabTermos profile={profile} onConsentRecorded={() => api.getUserProfile().then(p => setProfile(p))} />}
           {tab === 'ajuda' && <TabAjuda onOpenOnboarding={onOpenOnboarding} onOpenTermos={onOpenTermos} />}
         </div>
       </div>

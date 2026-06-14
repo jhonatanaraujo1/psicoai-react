@@ -80,6 +80,7 @@ export default function RegisterFlow({ onLogin, onBack, initialEmail = '' }) {
   const [showPass, setShowPass] = useState(false)
   const [errors, setErrors] = useState({})
   const [registeredUser, setRegisteredUser] = useState(null)
+  const [termsAccepted, setTermsAccepted] = useState(false)
   const [form, setForm] = useState({
     name: '', crp: '', email: initialEmail, password: '',
     specialty: '', approach: '', clinicName: '', city: '',
@@ -94,6 +95,7 @@ export default function RegisterFlow({ onLogin, onBack, initialEmail = '' }) {
       if (!form.name.trim()) e.name = 'Informe seu nome completo'
       if (!form.email.trim() || !/\S+@\S+\.\S+/.test(form.email)) e.email = 'E-mail inválido'
       if (form.password.length < 8) e.password = 'Mínimo 8 caracteres'
+      if (!termsAccepted) e.terms = 'Você precisa aceitar os Termos de Uso para continuar'
       if (Object.keys(e).length) { setErrors(e); return }
       setStep(2)
       return
@@ -110,6 +112,7 @@ export default function RegisterFlow({ onLogin, onBack, initialEmail = '' }) {
           email: form.email.trim().toLowerCase(),
           password: form.password,
           crp: form.crp.trim() || undefined,
+          lgpdConsentVersion: 'v1',
         })
         setRegisteredUser(result.user)
         setStep(3)
@@ -281,6 +284,27 @@ export default function RegisterFlow({ onLogin, onBack, initialEmail = '' }) {
                   <div style={{ fontSize: '11px', color: 'var(--g600)', lineHeight: 1.5 }}>Acesso completo. Sem cartão. Cancele quando quiser.</div>
                 </div>
               </div>
+
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
+                <input
+                  type="checkbox"
+                  id="terms-check"
+                  checked={termsAccepted}
+                  onChange={e => { setTermsAccepted(e.target.checked); setErrors(er => ({ ...er, terms: undefined })) }}
+                  style={{ marginTop: '2px', width: '16px', height: '16px', flexShrink: 0, accentColor: 'var(--g600)', cursor: 'pointer' }}
+                />
+                <label htmlFor="terms-check" style={{ fontSize: '12px', color: '#6B7280', lineHeight: 1.5, cursor: 'pointer' }}>
+                  Li e aceito os{' '}
+                  <a href="/terms" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--g700)', fontWeight: 500, textDecoration: 'underline' }} onClick={e => e.stopPropagation()}>
+                    Termos de Uso
+                  </a>
+                  {' '}e a{' '}
+                  <a href="/privacy" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--g700)', fontWeight: 500, textDecoration: 'underline' }} onClick={e => e.stopPropagation()}>
+                    Política de Privacidade
+                  </a>
+                </label>
+              </div>
+              {errors.terms && <Err msg={errors.terms} />}
             </div>
           )}
 
