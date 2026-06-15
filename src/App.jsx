@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef, lazy, Suspense } from 'react'
-import './styles/globals.css'
 
 import { auth, api } from './services'
 import { showToast, dismissToast, ToastContainer } from './components/Toast'

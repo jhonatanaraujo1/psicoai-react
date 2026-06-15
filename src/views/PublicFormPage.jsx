@@ -146,13 +146,15 @@ export default function PublicFormPage() {
   }
 
   return (
-    <div style={{ minHeight: '100dvh', background: '#F0EDE8', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '32px 16px 64px' }}>
+    <div style={{ minHeight: '100dvh', background: '#F0EDE8', padding: '32px 16px 64px', boxSizing: 'border-box' }}>
+      <div style={{ width: '100%', maxWidth: '560px', margin: '0 auto' }}>
+
       {/* Brand header */}
       <div style={{ marginBottom: '32px', textAlign: 'center' }}>
         <div style={{ fontFamily: 'Georgia, serif', fontSize: '22px', color: '#2D4A38', letterSpacing: '-0.3px' }}>Ψ PsicoNotes</div>
       </div>
 
-      <div style={{ width: '100%', maxWidth: '560px' }}>
+      <div>
 
         {state === 'loading' && (
           <div style={{ background: '#fff', borderRadius: '14px', padding: '48px 32px', textAlign: 'center', boxShadow: '0 2px 16px rgba(0,0,0,0.07)' }}>
@@ -226,9 +228,12 @@ export default function PublicFormPage() {
         )}
       </div>
 
+      </div>
+
       <style>{`
         @keyframes spin { to { transform: rotate(360deg) } }
       `}</style>
+      </div>
     </div>
   )
 }
