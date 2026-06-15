@@ -582,6 +582,10 @@ export const api = {
     ]
   },
 
+  async getForm(id) {
+    return get(`/api/v1/forms/${id}`)
+  },
+
   async createForm(data) {
     return post('/api/v1/forms', data)
   },

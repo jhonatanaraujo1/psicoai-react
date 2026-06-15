@@ -264,6 +264,119 @@ function fmtDate(iso) {
 
 const allPreviews = { ...formPreviews, ...formPreviews_extra }
 
+const TEMPLATE_FIELDS = {
+  anamnese: [
+    { id: 'nome', label: 'Nome completo', type: 'text', required: true },
+    { id: 'nascimento', label: 'Data de nascimento', type: 'text', required: true },
+    { id: 'profissao', label: 'Profissão', type: 'text', required: false },
+    { id: 'estado_civil', label: 'Estado civil', type: 'select', required: false, options: ['Solteiro(a)', 'Casado(a)', 'Divorciado(a)', 'Viúvo(a)'] },
+    { id: 'queixa', label: 'O que te trouxe à terapia?', type: 'textarea', required: true },
+    { id: 'tempo_sintomas', label: 'Há quanto tempo sente isso?', type: 'text', required: false },
+    { id: 'tratamento_anterior', label: 'Tratamentos psicológicos anteriores?', type: 'radio', required: false, options: ['Sim', 'Não'] },
+    { id: 'condicoes_saude', label: 'Condições de saúde relevantes', type: 'textarea', required: false },
+    { id: 'medicamentos', label: 'Uso de medicamentos', type: 'textarea', required: false },
+    { id: 'historico_familiar', label: 'Histórico familiar de saúde mental', type: 'textarea', required: false },
+    { id: 'contato_emergencia', label: 'Contato de emergência', type: 'text', required: false },
+    { id: 'como_conheceu', label: 'Como nos encontrou?', type: 'text', required: false },
+  ],
+  tcle: [
+    { id: 'autoriza_prontuario', label: 'Autorizo o registro em prontuário eletrônico', type: 'radio', required: true, options: ['Sim, autorizo', 'Não autorizo'] },
+    { id: 'autoriza_ia', label: 'Autorizo análise de IA como suporte clínico', type: 'radio', required: true, options: ['Sim, autorizo', 'Não autorizo'] },
+    { id: 'assinatura', label: 'Assinatura digital (nome completo)', type: 'text', required: true },
+    { id: 'cpf', label: 'CPF', type: 'text', required: true },
+    { id: 'ciencia', label: 'Declaro que li e compreendi os termos do atendimento', type: 'radio', required: true, options: ['Sim, declaro'] },
+  ],
+  beck: [
+    { id: 'tristeza', label: '1. Tristeza', type: 'radio', required: true, options: ['0 - Não me sinto triste', '1 - Me sinto triste com frequência', '2 - Me sinto muito triste o tempo todo', '3 - Não consigo suportar a tristeza'] },
+    { id: 'pessimismo', label: '2. Pessimismo', type: 'radio', required: true, options: ['0 - Não estou pessimista', '1 - Tenho mais motivos para pessimismo', '2 - Não espero que as coisas melhorem', '3 - O futuro é sem esperança'] },
+    { id: 'fracasso', label: '3. Fracasso', type: 'radio', required: true, options: ['0 - Não me sinto fracassado', '1 - Fracassei mais do que deveria', '2 - Quando olho atrás, vejo muitos fracassos', '3 - Sou um completo fracasso'] },
+    { id: 'perda_prazer', label: '4. Perda de prazer', type: 'radio', required: true, options: ['0 - Sinto tanto prazer quanto antes', '1 - Sinto menos prazer nas coisas', '2 - Não consigo sentir prazer na maioria das coisas', '3 - Não consigo sentir prazer em nada'] },
+    { id: 'culpa', label: '5. Sentimentos de culpa', type: 'radio', required: true, options: ['0 - Não me sinto culpado', '1 - Me sinto culpado por muitas coisas', '2 - Me sinto culpado na maior parte do tempo', '3 - Me sinto culpado o tempo todo'] },
+    { id: 'punicao', label: '6. Sentimentos de punição', type: 'radio', required: true, options: ['0 - Não me sinto sendo punido', '1 - Posso estar sendo punido', '2 - Espero ser punido', '3 - Sinto que estou sendo punido'] },
+    { id: 'autoavaliacao', label: '7. Autoavaliação negativa', type: 'radio', required: true, options: ['0 - Sinto o mesmo sobre mim', '1 - Perdi a confiança em mim mesmo', '2 - Estou desapontado comigo mesmo', '3 - Não gosto de mim mesmo'] },
+    { id: 'autocritica', label: '8. Autocrítica', type: 'radio', required: true, options: ['0 - Não me critico mais do que antes', '1 - Sou mais autocrítico do que antes', '2 - Critico-me por todas as minhas falhas', '3 - Me culpo por tudo de ruim que acontece'] },
+    { id: 'suicidio', label: '9. Pensamentos suicidas', type: 'radio', required: true, options: ['0 - Não tenho pensamentos de me machucar', '1 - Às vezes penso em me machucar, mas não faria', '2 - Gostaria de me matar', '3 - Me mataria se tivesse oportunidade'] },
+    { id: 'choro', label: '10. Choro', type: 'radio', required: true, options: ['0 - Não choro mais do que antes', '1 - Choro mais do que antes', '2 - Choro por qualquer coisa', '3 - Tenho vontade de chorar mas não consigo'] },
+    { id: 'agitacao', label: '11. Agitação', type: 'radio', required: true, options: ['0 - Não estou mais agitado do que antes', '1 - Estou mais agitado do que antes', '2 - Estou muito agitado e tenho dificuldade de me acalmar', '3 - Estou tão agitado que preciso ficar em movimento'] },
+    { id: 'perda_interesse', label: '12. Perda de interesse', type: 'radio', required: true, options: ['0 - Não perdi o interesse nas outras pessoas', '1 - Estou menos interessado nas outras pessoas', '2 - Perdi a maior parte do interesse nas outras pessoas', '3 - Não tenho mais interesse nas outras pessoas'] },
+    { id: 'indecisao', label: '13. Indecisão', type: 'radio', required: true, options: ['0 - Tomo decisões tão bem quanto antes', '1 - Tomo decisões com mais dificuldade', '2 - Tenho muita dificuldade em tomar decisões', '3 - Não consigo mais tomar decisões'] },
+    { id: 'desvalorizacao', label: '14. Desvalorização', type: 'radio', required: true, options: ['0 - Não me sinto sem valor', '1 - Não me sinto tão valioso quanto antes', '2 - Me sinto sem valor comparado a outros', '3 - Me sinto completamente sem valor'] },
+    { id: 'perda_energia', label: '15. Perda de energia', type: 'radio', required: true, options: ['0 - Tenho tanta energia quanto antes', '1 - Tenho menos energia do que antes', '2 - Não tenho energia suficiente para muito', '3 - Não tenho energia suficiente para nada'] },
+    { id: 'sono', label: '16. Mudanças no sono', type: 'radio', required: true, options: ['0 - Sem mudanças no sono', '1 - Durmo um pouco mais/menos do que antes', '2 - Durmo muito mais/menos do que antes', '3 - Não consigo dormir ou durmo quase o dia todo'] },
+    { id: 'irritabilidade', label: '17. Irritabilidade', type: 'radio', required: true, options: ['0 - Não estou mais irritado', '1 - Estou mais irritado do que antes', '2 - Estou muito mais irritado do que antes', '3 - Estou irritado o tempo todo'] },
+    { id: 'apetite', label: '18. Mudanças no apetite', type: 'radio', required: true, options: ['0 - Meu apetite não mudou', '1 - Meu apetite está um pouco diferente', '2 - Meu apetite está muito diferente', '3 - Não tenho apetite ou só quero comer'] },
+    { id: 'concentracao', label: '19. Dificuldade de concentração', type: 'radio', required: true, options: ['0 - Concentro-me tão bem quanto antes', '1 - Não consigo me concentrar tão bem', '2 - É difícil manter minha atenção por muito tempo', '3 - Não consigo me concentrar em nada'] },
+    { id: 'cansaco', label: '20. Cansaço', type: 'radio', required: true, options: ['0 - Não estou mais cansado do que antes', '1 - Fico cansado mais facilmente', '2 - Fico cansado ao fazer qualquer coisa', '3 - Estou cansado demais para qualquer coisa'] },
+    { id: 'interesse_sexo', label: '21. Interesse em sexo', type: 'radio', required: true, options: ['0 - Sem mudança no interesse por sexo', '1 - Estou menos interessado em sexo', '2 - Estou muito menos interessado em sexo', '3 - Perdi completamente o interesse em sexo'] },
+  ],
+  phq: [
+    { id: 'q1', label: '1. Pouco interesse ou prazer em fazer as coisas', type: 'radio', required: true, options: ['0 - Nunca', '1 - Alguns dias', '2 - Mais da metade dos dias', '3 - Quase todos os dias'] },
+    { id: 'q2', label: '2. Se sentiu para baixo, deprimido(a) ou sem perspectiva', type: 'radio', required: true, options: ['0 - Nunca', '1 - Alguns dias', '2 - Mais da metade dos dias', '3 - Quase todos os dias'] },
+    { id: 'q3', label: '3. Dificuldade para adormecer ou dormindo demais', type: 'radio', required: true, options: ['0 - Nunca', '1 - Alguns dias', '2 - Mais da metade dos dias', '3 - Quase todos os dias'] },
+    { id: 'q4', label: '4. Se sentiu cansado(a) ou com pouca energia', type: 'radio', required: true, options: ['0 - Nunca', '1 - Alguns dias', '2 - Mais da metade dos dias', '3 - Quase todos os dias'] },
+    { id: 'q5', label: '5. Apetite diminuído ou aumentado', type: 'radio', required: true, options: ['0 - Nunca', '1 - Alguns dias', '2 - Mais da metade dos dias', '3 - Quase todos os dias'] },
+    { id: 'q6', label: '6. Se sentiu mal sobre si mesmo(a) ou que é um fracasso', type: 'radio', required: true, options: ['0 - Nunca', '1 - Alguns dias', '2 - Mais da metade dos dias', '3 - Quase todos os dias'] },
+    { id: 'q7', label: '7. Dificuldade para se concentrar', type: 'radio', required: true, options: ['0 - Nunca', '1 - Alguns dias', '2 - Mais da metade dos dias', '3 - Quase todos os dias'] },
+    { id: 'q8', label: '8. Se moveu ou falou devagar (ou o oposto)', type: 'radio', required: true, options: ['0 - Nunca', '1 - Alguns dias', '2 - Mais da metade dos dias', '3 - Quase todos os dias'] },
+    { id: 'q9', label: '9. Pensamentos de que seria melhor estar morto(a)', type: 'radio', required: true, options: ['0 - Nunca', '1 - Alguns dias', '2 - Mais da metade dos dias', '3 - Quase todos os dias'] },
+  ],
+  srs: [
+    { id: 'relacionamento', label: 'Relacionamento — Me senti ouvido(a), compreendido(a) e respeitado(a)', type: 'scale', required: true },
+    { id: 'objetivos', label: 'Objetivos e tópicos — Trabalhamos nas questões que eu queria trabalhar', type: 'scale', required: true },
+    { id: 'abordagem', label: 'Abordagem — A abordagem do terapeuta foi adequada para mim', type: 'scale', required: true },
+    { id: 'geral', label: 'Geral — A sessão de hoje foi adequada para mim', type: 'scale', required: true },
+  ],
+  gad7: [
+    { id: 'q1', label: '1. Se sentiu nervoso(a), ansioso(a) ou muito tenso(a)', type: 'radio', required: true, options: ['0 - Nunca', '1 - Alguns dias', '2 - Mais da metade dos dias', '3 - Quase todos os dias'] },
+    { id: 'q2', label: '2. Não conseguiu parar ou controlar as preocupações', type: 'radio', required: true, options: ['0 - Nunca', '1 - Alguns dias', '2 - Mais da metade dos dias', '3 - Quase todos os dias'] },
+    { id: 'q3', label: '3. Preocupou-se muito com diversas coisas', type: 'radio', required: true, options: ['0 - Nunca', '1 - Alguns dias', '2 - Mais da metade dos dias', '3 - Quase todos os dias'] },
+    { id: 'q4', label: '4. Teve dificuldade para relaxar', type: 'radio', required: true, options: ['0 - Nunca', '1 - Alguns dias', '2 - Mais da metade dos dias', '3 - Quase todos os dias'] },
+    { id: 'q5', label: '5. Ficou tão agitado(a) que ficou difícil ficar parado(a)', type: 'radio', required: true, options: ['0 - Nunca', '1 - Alguns dias', '2 - Mais da metade dos dias', '3 - Quase todos os dias'] },
+    { id: 'q6', label: '6. Irritou-se ou ficou facilmente aborrecido(a)', type: 'radio', required: true, options: ['0 - Nunca', '1 - Alguns dias', '2 - Mais da metade dos dias', '3 - Quase todos os dias'] },
+    { id: 'q7', label: '7. Sentiu medo, como se algo terrível fosse acontecer', type: 'radio', required: true, options: ['0 - Nunca', '1 - Alguns dias', '2 - Mais da metade dos dias', '3 - Quase todos os dias'] },
+  ],
+  dass21: [
+    { id: 'q1', label: '1. Achei difícil me acalmar', type: 'radio', required: true, options: ['0 - Não se aplicou', '1 - Às vezes', '2 - Bastante frequente', '3 - Sempre'] },
+    { id: 'q2', label: '2. Percebi que minha boca estava seca', type: 'radio', required: true, options: ['0 - Não se aplicou', '1 - Às vezes', '2 - Bastante frequente', '3 - Sempre'] },
+    { id: 'q3', label: '3. Não conseguia ter nenhum sentimento positivo', type: 'radio', required: true, options: ['0 - Não se aplicou', '1 - Às vezes', '2 - Bastante frequente', '3 - Sempre'] },
+    { id: 'q4', label: '4. Tive dificuldade em respirar', type: 'radio', required: true, options: ['0 - Não se aplicou', '1 - Às vezes', '2 - Bastante frequente', '3 - Sempre'] },
+    { id: 'q5', label: '5. Achei difícil ter iniciativa para fazer as coisas', type: 'radio', required: true, options: ['0 - Não se aplicou', '1 - Às vezes', '2 - Bastante frequente', '3 - Sempre'] },
+    { id: 'q6', label: '6. Tendi a reagir de forma exagerada às situações', type: 'radio', required: true, options: ['0 - Não se aplicou', '1 - Às vezes', '2 - Bastante frequente', '3 - Sempre'] },
+    { id: 'q7', label: '7. Senti tremores nas mãos', type: 'radio', required: true, options: ['0 - Não se aplicou', '1 - Às vezes', '2 - Bastante frequente', '3 - Sempre'] },
+    { id: 'q8', label: '8. Me senti consumindo muita energia nervosa', type: 'radio', required: true, options: ['0 - Não se aplicou', '1 - Às vezes', '2 - Bastante frequente', '3 - Sempre'] },
+    { id: 'q9', label: '9. Me preocupei com situações de pânico', type: 'radio', required: true, options: ['0 - Não se aplicou', '1 - Às vezes', '2 - Bastante frequente', '3 - Sempre'] },
+    { id: 'q10', label: '10. Senti que não tinha nada pelo que esperar', type: 'radio', required: true, options: ['0 - Não se aplicou', '1 - Às vezes', '2 - Bastante frequente', '3 - Sempre'] },
+    { id: 'q11', label: '11. Me senti agitado(a)', type: 'radio', required: true, options: ['0 - Não se aplicou', '1 - Às vezes', '2 - Bastante frequente', '3 - Sempre'] },
+    { id: 'q12', label: '12. Achei difícil relaxar', type: 'radio', required: true, options: ['0 - Não se aplicou', '1 - Às vezes', '2 - Bastante frequente', '3 - Sempre'] },
+    { id: 'q13', label: '13. Me senti para baixo e melancólico(a)', type: 'radio', required: true, options: ['0 - Não se aplicou', '1 - Às vezes', '2 - Bastante frequente', '3 - Sempre'] },
+    { id: 'q14', label: '14. Fui intolerante com o que me impedia de agir', type: 'radio', required: true, options: ['0 - Não se aplicou', '1 - Às vezes', '2 - Bastante frequente', '3 - Sempre'] },
+    { id: 'q15', label: '15. Senti que estava quase entrando em pânico', type: 'radio', required: true, options: ['0 - Não se aplicou', '1 - Às vezes', '2 - Bastante frequente', '3 - Sempre'] },
+    { id: 'q16', label: '16. Não consegui me entusiasmar com nada', type: 'radio', required: true, options: ['0 - Não se aplicou', '1 - Às vezes', '2 - Bastante frequente', '3 - Sempre'] },
+    { id: 'q17', label: '17. Senti que não tinha muito valor como pessoa', type: 'radio', required: true, options: ['0 - Não se aplicou', '1 - Às vezes', '2 - Bastante frequente', '3 - Sempre'] },
+    { id: 'q18', label: '18. Me senti bastante irritadiço(a)', type: 'radio', required: true, options: ['0 - Não se aplicou', '1 - Às vezes', '2 - Bastante frequente', '3 - Sempre'] },
+    { id: 'q19', label: '19. Percebi minha ação cardíaca acelerada', type: 'radio', required: true, options: ['0 - Não se aplicou', '1 - Às vezes', '2 - Bastante frequente', '3 - Sempre'] },
+    { id: 'q20', label: '20. Me senti com medo sem motivo razoável', type: 'radio', required: true, options: ['0 - Não se aplicou', '1 - Às vezes', '2 - Bastante frequente', '3 - Sempre'] },
+    { id: 'q21', label: '21. Senti que a vida não tinha sentido', type: 'radio', required: true, options: ['0 - Não se aplicou', '1 - Às vezes', '2 - Bastante frequente', '3 - Sempre'] },
+  ],
+  ors: [
+    { id: 'individual', label: 'Individualmente — Bem-estar pessoal', type: 'scale', required: true },
+    { id: 'interpessoal', label: 'Interpessoalmente — Família, relacionamentos íntimos', type: 'scale', required: true },
+    { id: 'social', label: 'Socialmente — Trabalho, escola, amizades', type: 'scale', required: true },
+    { id: 'geral', label: 'Geral — Bem-estar global', type: 'scale', required: true },
+  ],
+  contrato: [
+    { id: 'nome_paciente', label: 'Nome completo do paciente', type: 'text', required: true },
+    { id: 'cpf', label: 'CPF', type: 'text', required: true },
+    { id: 'frequencia', label: 'Frequência das sessões', type: 'select', required: true, options: ['Semanal', 'Quinzenal', 'Mensal'] },
+    { id: 'duracao', label: 'Duração da sessão', type: 'select', required: true, options: ['45 min', '50 min', '60 min'] },
+    { id: 'honorarios', label: 'Honorários (R$)', type: 'text', required: true },
+    { id: 'pagamento', label: 'Forma de pagamento', type: 'select', required: true, options: ['PIX', 'Cartão de crédito', 'Transferência bancária', 'Dinheiro'] },
+    { id: 'cancelamento', label: 'Prazo mínimo de aviso para cancelamento', type: 'select', required: true, options: ['12 horas', '24 horas', '48 horas', '72 horas'] },
+    { id: 'cobranca_falta', label: 'Cobrança em caso de falta sem aviso', type: 'radio', required: true, options: ['Sim, cobro 100% do valor', 'Sim, cobro 50% do valor', 'Não cobro'] },
+    { id: 'assinatura', label: 'Assinatura digital (nome completo)', type: 'text', required: true },
+  ],
+}
+
 export default function Forms() {
   const [preview, setPreview] = useState(null)
   const [allForms, setAllForms] = useState([])
@@ -272,6 +385,7 @@ export default function Forms() {
   const [sendFormType, setSendFormType] = useState('')
   const [sendPatients, setSendPatients] = useState([])
   const [sending, setSending] = useState(false)
+  const [viewForm, setViewForm] = useState(null) // { id, title, fields, response, patientName }
 
   // ── Custom forms (localStorage) ───────────────────────────────────────────
   const [customForms, setCustomForms] = useState(() => loadCustomForms())
@@ -472,13 +586,33 @@ export default function Forms() {
                       </span>
                     </td>
                     <td>
-                      <button
-                        className="fin-action"
-                        style={row.status === 'pending' ? { color: 'var(--g600)', borderColor: 'var(--g300)' } : {}}
-                        onClick={() => row.status === 'pending' && (navigator.clipboard?.writeText(row.link || window.location.origin + '/f/' + row.id).catch(() => null), showToast('Link copiado para envio!', 'success'))}
-                      >
-                        {row.status === 'answered' ? 'Ver resposta' : 'Reenviar'}
-                      </button>
+                      {row.status === 'answered' ? (
+                        <button
+                          className="fin-action"
+                          onClick={async () => {
+                            try {
+                              const full = await api.getForm(row.id)
+                              let fields = []
+                              let response = {}
+                              try { fields = JSON.parse(full.fields) } catch (_) {}
+                              try { response = JSON.parse(full.response || '{}') } catch (_) {}
+                              setViewForm({ id: full.id, title: full.title, patientName: full.patientName, fields, response })
+                            } catch (_) {
+                              showToast('Erro ao carregar resposta.', 'error')
+                            }
+                          }}
+                        >Ver resposta</button>
+                      ) : (
+                        <button
+                          className="fin-action"
+                          style={{ color: 'var(--g600)', borderColor: 'var(--g300)' }}
+                          onClick={() => {
+                            const link = window.location.origin + '/f/' + (row.token || row.id)
+                            navigator.clipboard?.writeText(link).catch(() => null)
+                            showToast('Link copiado! Envie para o paciente.', 'success')
+                          }}
+                        >Copiar link</button>
+                      )}
                     </td>
                   </tr>
                 )
@@ -536,9 +670,14 @@ export default function Forms() {
                   if (!sendPatient || !sendFormType) return
                   setSending(true)
                   try {
-                    const title = [...formTemplates, ...customForms].find(t => t.id === sendFormType)?.name || sendFormType
-                    const created = await api.createForm({ patientId: sendPatient, type: sendFormType, title })
+                    const tpl = [...formTemplates, ...customForms].find(t => t.id === sendFormType)
+                    const title = tpl?.name || sendFormType
+                    const fields = TEMPLATE_FIELDS[sendFormType]
+                      || tpl?.fields  // custom form fields from localStorage
+                      || [{ id: 'resposta', label: 'Resposta', type: 'textarea', required: true }]
+                    const created = await api.createForm({ patientId: sendPatient, type: sendFormType, title, fields })
                     if (created) setAllForms(prev => [created, ...prev])
+                    showToast('Formulário enviado! O paciente receberá um link por email.', 'success')
                     setSendModal(false)
                   } catch (e) {
                     console.error('Erro ao criar formulário:', e)
@@ -584,6 +723,39 @@ export default function Forms() {
         onSave={handleSaveCustomForm}
         onClose={() => { setBuilderOpen(false); setEditingForm(null) }}
       />
+
+      {/* Ver resposta modal */}
+      {viewForm && (
+        <div
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}
+          onClick={e => e.target === e.currentTarget && setViewForm(null)}
+        >
+          <div style={{ background: 'var(--w)', borderRadius: 'var(--r2)', boxShadow: '0 8px 32px rgba(0,0,0,0.2)', width: '100%', maxWidth: '540px', maxHeight: '85vh', display: 'flex', flexDirection: 'column' }}>
+            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', padding: '18px 20px 16px', borderBottom: '1px solid var(--gr2)', flexShrink: 0 }}>
+              <div>
+                <div style={{ fontFamily: "'Fraunces', serif", fontSize: '16px', fontWeight: 400, color: 'var(--d)' }}>{viewForm.title}</div>
+                <div style={{ fontSize: '12px', color: 'var(--gr4)', marginTop: '2px' }}>Respondido por {viewForm.patientName}</div>
+              </div>
+              <button style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '22px', color: 'var(--gr5)', lineHeight: 1, marginLeft: '12px', flexShrink: 0 }} onClick={() => setViewForm(null)}>×</button>
+            </div>
+            <div style={{ overflowY: 'auto', padding: '20px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              {viewForm.fields.length === 0 ? (
+                <div style={{ textAlign: 'center', color: 'var(--gr4)', padding: '24px' }}>Sem campos definidos para este formulário.</div>
+              ) : viewForm.fields.map(field => {
+                const val = viewForm.response[field.id]
+                return (
+                  <div key={field.id}>
+                    <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--gr5)', letterSpacing: '0.4px', marginBottom: '5px' }}>{field.label.toUpperCase()}</div>
+                    <div style={{ fontSize: '13px', color: val !== undefined ? 'var(--d)' : 'var(--gr4)', background: 'var(--ow)', border: '1px solid var(--gr2)', borderRadius: 'var(--r)', padding: '8px 12px', minHeight: '36px', wordBreak: 'break-word' }}>
+                      {val !== undefined ? String(val) : <em>Não respondido</em>}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   )
