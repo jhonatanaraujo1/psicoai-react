@@ -477,7 +477,10 @@ export default function Forms() {
         </div>
         <div className="form-template-grid">
           {formTemplates.map(t => (
-            <div key={t.id} className={`form-template-card ${t.type}`} onClick={() => allPreviews[t.id] && setPreview(t.id)}>
+            <div key={t.id} className={`form-template-card ${t.type}`}
+              style={{ cursor: 'pointer', position: 'relative' }}
+              onClick={() => { setSendFormType(t.id); setSendPatient(''); setSendModal(true) }}
+            >
               <div className="form-template-icon" style={t.type === 'anamnese' ? { background: 'var(--g50)' } : t.type === 'tcle' ? { background: '#EBF3FD' } : t.type === 'beck' ? { background: 'var(--warn-l)' } : t.type === 'phq' ? { background: '#F5EEF8' } : t.type === 'srs' ? { background: 'var(--g50)' } : { background: 'var(--danger-l)' }}>
                 {t.icon}
               </div>
@@ -485,10 +488,17 @@ export default function Forms() {
               <div className="form-template-desc">{t.desc}</div>
               <div className="form-template-footer">
                 <span className="form-template-count">{t.meta}</span>
-                <span className={`card-badge ${t.badgeClass}`} style={t.badgeStyle ? { background: t.badgeStyle.split(';')[0].split(':')[1], color: t.badgeStyle.split(';')[1].split(':')[1] } : {}}>
-                  {t.badge}
-                </span>
+                <span className={`card-badge ${t.badgeClass}`}>{t.badge}</span>
               </div>
+              {allPreviews[t.id] && (
+                <button
+                  onClick={e => { e.stopPropagation(); setPreview(t.id) }}
+                  style={{ position: 'absolute', top: '8px', right: '8px', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--gr4)', padding: '4px', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0.7 }}
+                  title="Pré-visualizar"
+                >
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                </button>
+              )}
             </div>
           ))}
         </div>
@@ -530,7 +540,9 @@ export default function Forms() {
           <div className="form-template-grid">
             {customForms.map(f => (
               <div key={f.id} className="form-template-card custom"
-                style={{ position: 'relative', cursor: 'default' }}>
+                style={{ position: 'relative', cursor: 'pointer' }}
+                onClick={() => { setSendFormType(f.id); setSendPatient(''); setSendModal(true) }}
+              >
                 <div className="form-template-icon" style={{ background: 'var(--ow)', fontSize: '20px' }}>🗒️</div>
                 <div className="form-template-name">{f.name}</div>
                 <div className="form-template-desc">{f.desc || 'Formulário personalizado'}</div>
@@ -538,13 +550,12 @@ export default function Forms() {
                   <span className="form-template-count">{f.meta}</span>
                   <span className="card-badge badge-gray">Personalizado</span>
                 </div>
-                {/* Actions overlay */}
                 <div style={{ display: 'flex', gap: '6px', marginTop: '10px' }}>
-                  <button onClick={() => openBuilder(f)}
+                  <button onClick={e => { e.stopPropagation(); openBuilder(f) }}
                     style={{ flex: 1, fontSize: '11px', padding: '5px 0', border: '1px solid var(--gr2)', borderRadius: 'var(--r)', background: 'var(--w)', color: 'var(--g600)', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", fontWeight: 600 }}>
                     Editar
                   </button>
-                  <button onClick={() => handleDeleteCustomForm(f.id)}
+                  <button onClick={e => { e.stopPropagation(); handleDeleteCustomForm(f.id) }}
                     style={{ width: '32px', fontSize: '14px', padding: '5px 0', border: '1px solid var(--danger-l)', borderRadius: 'var(--r)', background: 'none', color: 'var(--danger)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
                   </button>
@@ -626,73 +637,148 @@ export default function Forms() {
       </div>
 
       {/* Send form modal */}
-      {sendModal && (
-        <div
-          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px', touchAction: 'none', overscrollBehavior: 'none' }}
-          onClick={e => e.target === e.currentTarget && setSendModal(false)}
-        >
-          <div style={{ background: 'var(--w)', borderRadius: 'var(--r2)', boxShadow: '0 8px 32px rgba(0,0,0,0.18)', width: '100%', maxWidth: '460px', maxHeight: 'min(90dvh,90svh,90vh)', overflowY: 'auto' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 20px 16px', borderBottom: '1px solid var(--gr2)' }}>
-              <div style={{ fontFamily: "'Fraunces', serif", fontSize: '16px', fontWeight: 400, color: 'var(--d)' }}>Enviar Formulário ao Paciente</div>
-              <button style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '22px', color: 'var(--gr5)', lineHeight: 1 }} onClick={() => setSendModal(false)}>×</button>
-            </div>
-            <div style={{ padding: '20px' }}>
-              <div style={{ marginBottom: '16px' }}>
-                <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--gr5)', letterSpacing: '0.5px', marginBottom: '8px' }}>PACIENTE</div>
-                <CustomSelect
-                  value={sendPatient}
-                  onChange={v => setSendPatient(v)}
-                  options={[{ label: 'Selecione um paciente…', value: '' }, ...sendPatients.map(p => ({ label: p.name, value: p.id }))]}
-                  placeholder="Selecione um paciente…"
-                />
+      {sendModal && (() => {
+        const allTemplates = [...formTemplates, ...customForms]
+        const selectedTpl = allTemplates.find(t => t.id === sendFormType)
+        const doSend = async () => {
+          if (!sendPatient || !sendFormType) return
+          setSending(true)
+          try {
+            const tpl = allTemplates.find(t => t.id === sendFormType)
+            const title = tpl?.name || sendFormType
+            const fields = TEMPLATE_FIELDS[sendFormType] || tpl?.fields
+              || [{ id: 'resposta', label: 'Resposta', type: 'textarea', required: true }]
+            const created = await api.createForm({ patientId: sendPatient, type: sendFormType, title, fields })
+            if (created) setAllForms(prev => [created, ...prev])
+            showToast('Formulário enviado! O paciente receberá o link por email.', 'success')
+            setSendModal(false)
+          } catch (e) {
+            showToast('Erro ao enviar formulário. Tente novamente.', 'error')
+          } finally {
+            setSending(false)
+          }
+        }
+        return (
+          <div
+            style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}
+            onClick={e => e.target === e.currentTarget && setSendModal(false)}
+          >
+            <div style={{ background: 'var(--w)', borderRadius: '16px', boxShadow: '0 16px 48px rgba(0,0,0,0.22)', width: '100%', maxWidth: '420px', overflow: 'hidden' }}>
+
+              {/* Header verde */}
+              <div style={{ background: 'var(--g700, #1E3328)', padding: '20px 22px 18px', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+                <div>
+                  <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.5)', letterSpacing: '0.8px', fontWeight: 600, marginBottom: '4px' }}>ENVIAR FORMULÁRIO</div>
+                  {selectedTpl ? (
+                    <div style={{ fontFamily: "'Fraunces', serif", fontSize: '17px', color: '#fff', fontWeight: 400 }}>
+                      {selectedTpl.icon && <span style={{ marginRight: '8px' }}>{selectedTpl.icon}</span>}{selectedTpl.name}
+                    </div>
+                  ) : (
+                    <div style={{ fontFamily: "'Fraunces', serif", fontSize: '17px', color: '#fff', fontWeight: 400 }}>Escolha o formulário</div>
+                  )}
+                </div>
+                <button onClick={() => setSendModal(false)} style={{ background: 'rgba(255,255,255,0.12)', border: 'none', cursor: 'pointer', color: '#fff', width: '28px', height: '28px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px', flexShrink: 0, marginLeft: '12px' }}>×</button>
               </div>
-              <div style={{ marginBottom: '20px' }}>
-                <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--gr5)', letterSpacing: '0.5px', marginBottom: '8px' }}>FORMULÁRIO</div>
-                <CustomSelect
-                  value={sendFormType}
-                  onChange={v => setSendFormType(v)}
-                  options={[
-                    { label: 'Selecione um formulário…', value: '' },
-                    ...formTemplates.map(t => ({ label: t.name, value: t.id })),
-                    ...customForms.map(f => ({ label: f.name, value: f.id })),
-                  ]}
-                  placeholder="Selecione um formulário…"
-                />
+
+              <div style={{ padding: '20px 22px' }}>
+
+                {/* Se não tem template selecionado, mostra o seletor de formulário */}
+                {!sendFormType && (
+                  <div style={{ marginBottom: '16px' }}>
+                    <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--gr5)', letterSpacing: '0.5px', marginBottom: '8px' }}>FORMULÁRIO</div>
+                    <CustomSelect
+                      value={sendFormType}
+                      onChange={v => setSendFormType(v)}
+                      options={[
+                        { label: 'Selecione um formulário…', value: '' },
+                        ...formTemplates.map(t => ({ label: `${t.icon} ${t.name}`, value: t.id })),
+                        ...customForms.map(f => ({ label: f.name, value: f.id })),
+                      ]}
+                      placeholder="Selecione um formulário…"
+                    />
+                  </div>
+                )}
+
+                {/* Se tem template selecionado mas usuário quer trocar */}
+                {sendFormType && (
+                  <div style={{ marginBottom: '14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div style={{ fontSize: '12px', color: 'var(--gr4)' }}>
+                      {selectedTpl?.meta} · {selectedTpl?.badge}
+                    </div>
+                    <button
+                      onClick={() => setSendFormType('')}
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '12px', color: 'var(--g600)', fontFamily: "'DM Sans', sans-serif", padding: 0, textDecoration: 'underline' }}
+                    >Trocar</button>
+                  </div>
+                )}
+
+                {/* Seletor de paciente */}
+                <div>
+                  <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--gr5)', letterSpacing: '0.5px', marginBottom: '8px' }}>PARA QUAL PACIENTE?</div>
+                  {sendPatients.length === 0 ? (
+                    <div style={{ padding: '12px', background: 'var(--ow)', borderRadius: 'var(--r)', fontSize: '13px', color: 'var(--gr4)', textAlign: 'center' }}>
+                      Carregando pacientes…
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '200px', overflowY: 'auto' }}>
+                      {sendPatients.map(p => (
+                        <button
+                          key={p.id}
+                          onClick={() => setSendPatient(p.id)}
+                          style={{
+                            display: 'flex', alignItems: 'center', gap: '10px',
+                            padding: '10px 14px', borderRadius: 'var(--r)',
+                            border: `1.5px solid ${sendPatient === p.id ? 'var(--g500)' : 'var(--gr2)'}`,
+                            background: sendPatient === p.id ? 'var(--g50)' : 'var(--w)',
+                            cursor: 'pointer', textAlign: 'left', width: '100%',
+                            fontFamily: "'DM Sans', sans-serif', transition: 'all 0.12s'",
+                          }}
+                        >
+                          <div style={{ width: '30px', height: '30px', borderRadius: '50%', background: sendPatient === p.id ? 'var(--g500)' : 'var(--gr2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: 700, color: sendPatient === p.id ? '#fff' : 'var(--gr5)', flexShrink: 0 }}>
+                            {(p.name || '?')[0].toUpperCase()}
+                          </div>
+                          <div>
+                            <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--d)' }}>{p.name}</div>
+                            {p.email && <div style={{ fontSize: '11px', color: 'var(--gr4)' }}>{p.email}</div>}
+                          </div>
+                          {sendPatient === p.id && (
+                            <svg style={{ marginLeft: 'auto', flexShrink: 0 }} width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--g500)" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {!sendPatient && sendFormType && sendPatients.length > 0 && (
+                  <div style={{ marginTop: '10px', fontSize: '12px', color: 'var(--gr4)', textAlign: 'center' }}>
+                    Selecione um paciente acima para enviar
+                  </div>
+                )}
               </div>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', padding: '14px 20px', borderTop: '1px solid var(--gr2)', background: 'var(--ow)' }}>
-              <button className="btn-outline" style={{ fontSize: '13px' }} onClick={() => setSendModal(false)}>Cancelar</button>
-              <button
-                className="btn-primary"
-                style={{ fontSize: '13px' }}
-                disabled={!sendPatient || !sendFormType || sending}
-                onClick={async () => {
-                  if (!sendPatient || !sendFormType) return
-                  setSending(true)
-                  try {
-                    const tpl = [...formTemplates, ...customForms].find(t => t.id === sendFormType)
-                    const title = tpl?.name || sendFormType
-                    const fields = TEMPLATE_FIELDS[sendFormType]
-                      || tpl?.fields  // custom form fields from localStorage
-                      || [{ id: 'resposta', label: 'Resposta', type: 'textarea', required: true }]
-                    const created = await api.createForm({ patientId: sendPatient, type: sendFormType, title, fields })
-                    if (created) setAllForms(prev => [created, ...prev])
-                    showToast('Formulário enviado! O paciente receberá um link por email.', 'success')
-                    setSendModal(false)
-                  } catch (e) {
-                    console.error('Erro ao criar formulário:', e)
-                    showToast('Erro ao criar formulário. Tente novamente.', 'error')
-                  } finally {
-                    setSending(false)
-                  }
-                }}
-              >
-                {sending ? 'Enviando…' : 'Enviar'}
-              </button>
+
+              {/* Footer */}
+              <div style={{ padding: '14px 22px 20px', borderTop: '1px solid var(--gr2)', display: 'flex', gap: '10px' }}>
+                <button
+                  onClick={() => setSendModal(false)}
+                  style={{ flex: 1, padding: '11px', border: '1px solid var(--gr2)', borderRadius: 'var(--r)', background: 'var(--w)', color: 'var(--d)', cursor: 'pointer', fontSize: '13px', fontWeight: 600, fontFamily: "'DM Sans', sans-serif" }}
+                >Cancelar</button>
+                <button
+                  onClick={doSend}
+                  disabled={!sendPatient || !sendFormType || sending}
+                  style={{ flex: 2, padding: '11px', border: 'none', borderRadius: 'var(--r)', background: (!sendPatient || !sendFormType || sending) ? 'var(--gr2)' : 'var(--g500)', color: (!sendPatient || !sendFormType || sending) ? 'var(--gr4)' : '#fff', cursor: (!sendPatient || !sendFormType || sending) ? 'not-allowed' : 'pointer', fontSize: '13px', fontWeight: 600, fontFamily: "'DM Sans', sans-serif", transition: 'background 0.15s', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+                >
+                  {sending ? (
+                    <><span style={{ width: '13px', height: '13px', border: '2px solid rgba(255,255,255,0.3)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.7s linear infinite', display: 'inline-block' }} />Enviando…</>
+                  ) : (
+                    <><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>Enviar formulário</>
+                  )}
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )
+      })()}
 
       {/* Preview modal */}
       <div className={`form-preview-modal${preview ? ' open' : ''}`} onClick={e => e.target === e.currentTarget && setPreview(null)}>
