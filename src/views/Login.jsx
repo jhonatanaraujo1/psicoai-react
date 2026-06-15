@@ -51,7 +51,7 @@ export default function Login({ onLogin }) {
       if (!forgotEmail.trim()) { setError('Informe seu e-mail.'); return }
       setLoading(true); setError('')
       try {
-        await api.forgotPassword(forgotEmail.trim())
+        await auth.forgotPassword(forgotEmail.trim())
         setForgotSent(true)
       } catch (err) {
         // Mostra mensagem genérica — não revela se email existe

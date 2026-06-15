@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { api, assertSafeRedirectUrl } from '../services'
+import { api, auth, assertSafeRedirectUrl } from '../services'
 import { showToast } from '../components/Toast'
 import { CustomSelect } from '../components/DateTimePickers'
 
@@ -357,7 +357,7 @@ function TabSeguranca({ userEmail }) {
   const handleForgot = async () => {
     setForgotSending(true)
     try {
-      await api.forgotPassword(userEmail)
+      await auth.forgotPassword(userEmail)
       setForgotSent(true)
     } catch {
       setForgotSent(true) // anti-enumeration — sempre mostra sucesso
