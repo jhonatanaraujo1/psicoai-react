@@ -109,7 +109,7 @@ export default function Login({ onLogin }) {
       if (newPassword !== newPasswordConfirm) { setError('As senhas não coincidem.'); return }
       setLoading(true); setError('')
       try {
-        await api.resetPassword(resetToken, newPassword)
+        await auth.resetPassword(resetToken, newPassword)
         setResetDone(true)
         window.history.replaceState({}, '', window.location.pathname)
       } catch (err) {
