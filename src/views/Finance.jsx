@@ -51,7 +51,7 @@ function Skeleton({ style }) {
 const LANC_FORM_DEFAULT = { patientId: '', patientName: '', description: '', amount: '', direction: 'credit', status: 'pending', dueDate: '', paymentMethod: 'pix', rescheduledDueDate: '' }
 
 // ── ReciboModal ──────────────────────────────────────────────────────────────
-function ReciboModal({ events, form, setForm, onClose }) {
+function ReciboModal({ events, form, setForm, onClose, fmt = fmtBRL }) {
   const receivedEvents = events.filter(e => e.status === 'received' && e.direction === 'credit' && e.patientName)
 
   const selectedEvent = receivedEvents.find(e => String(e.id) === form.eventId)
@@ -869,6 +869,7 @@ export default function Finance({ currentUser }) {
         form={reciboForm}
         setForm={setReciboForm}
         onClose={() => setReciboOpen(false)}
+        fmt={fmt}
       />}
     </div>
   )
