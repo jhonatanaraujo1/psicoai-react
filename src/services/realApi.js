@@ -628,6 +628,10 @@ export const api = {
     return patch('/api/v1/me/password', { currentPassword, newPassword })
   },
 
+  async deleteAccount() {
+    return del('/api/v1/me')
+  },
+
   // Billing
   async createCheckoutSession({ planId, successUrl, cancelUrl, couponCode = null }) {
     return post('/api/v1/billing/checkout', { planId, successUrl, cancelUrl, couponCode })

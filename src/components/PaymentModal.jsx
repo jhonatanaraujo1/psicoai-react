@@ -53,11 +53,30 @@ const CHECK = () => (
   </svg>
 )
 
-export default function PaymentModal({ onLogout }) {
+export default function PaymentModal({ onLogout, currentUser }) {
   const [loading, setLoading] = useState(null) // 'base' | 'clinico' | 'portal'
   const [coupon, setCoupon] = useState('')
   const [couponState, setCouponState] = useState(null) // null | { valid, message, discountType, discountValue }
   const [couponChecking, setCouponChecking] = useState(false)
+  const [deleteConfirm, setDeleteConfirm] = useState(false)
+  const [deleteLoading, setDeleteLoading] = useState(false)
+
+  // Trial expirado = nunca teve assinatura ativa (sem stripeSubscriptionId no contexto)
+  // Heurística: status blocked + plan base/consultorio + sem graceDaysRemaining
+  const isTrialExpired = currentUser?.subscriptionStatus === 'blocked'
+    && !currentUser?.graceDaysRemaining
+
+  const handleDeleteAccount = async () => {
+    if (!deleteConfirm) { setDeleteConfirm(true); return }
+    setDeleteLoading(true)
+    try {
+      await api.deleteAccount()
+      onLogout()
+    } catch {
+      setDeleteLoading(false)
+      setDeleteConfirm(false)
+    }
+  }
 
   const checkCoupon = async () => {
     const code = coupon.trim()
@@ -142,33 +161,37 @@ export default function PaymentModal({ onLogout }) {
                 fontFamily: "'Fraunces', serif", fontSize: '22px',
                 color: '#fff', fontWeight: 300, marginBottom: '5px',
               }}>
-                Sua assinatura expirou
+                {isTrialExpired ? 'Seu período gratuito encerrou' : 'Sua assinatura expirou'}
               </div>
               <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.55)', lineHeight: 1.5 }}>
-                Seus prontuários e anotações estão intactos — renove abaixo
-                para retomar o acesso completo em segundos.
+                {isTrialExpired
+                  ? 'Seus dados estão seguros. Assine um plano para continuar usando o PsicNotes.'
+                  : 'Seus prontuários e anotações estão intactos — renove abaixo para retomar o acesso completo em segundos.'
+                }
               </div>
             </div>
           </div>
 
-          {/* Promo banner */}
-          <div style={{
-            marginTop: '18px',
-            background: 'rgba(255,255,255,0.08)',
-            border: '1px solid rgba(255,255,255,0.15)',
-            borderRadius: '10px', padding: '12px 16px',
-            display: 'flex', alignItems: 'center', gap: '10px',
-          }}>
-            <span style={{ fontSize: '18px' }}>🎁</span>
-            <div>
-              <div style={{ fontSize: '13px', fontWeight: 600, color: '#fff', marginBottom: '2px' }}>
-                Oferta de retomada: 1ª renovação com 15% de desconto
-              </div>
-              <div style={{ fontSize: '11.5px', color: 'rgba(255,255,255,0.5)' }}>
-                Aplicado automaticamente no checkout · Válido por 48h
+          {/* Promo banner — só para inadimplentes, não para trial expirado */}
+          {!isTrialExpired && (
+            <div style={{
+              marginTop: '18px',
+              background: 'rgba(255,255,255,0.08)',
+              border: '1px solid rgba(255,255,255,0.15)',
+              borderRadius: '10px', padding: '12px 16px',
+              display: 'flex', alignItems: 'center', gap: '10px',
+            }}>
+              <span style={{ fontSize: '18px' }}>🎁</span>
+              <div>
+                <div style={{ fontSize: '13px', fontWeight: 600, color: '#fff', marginBottom: '2px' }}>
+                  Oferta de retomada: 1ª renovação com 15% de desconto
+                </div>
+                <div style={{ fontSize: '11.5px', color: 'rgba(255,255,255,0.5)' }}>
+                  Aplicado automaticamente no checkout · Válido por 48h
+                </div>
               </div>
             </div>
-          </div>
+          )}
         </div>
 
         {/* Plans */}
@@ -263,7 +286,7 @@ export default function PaymentModal({ onLogout }) {
               >
                 {loading === plan.id
                   ? 'Redirecionando...'
-                  : `Retomar com ${plan.name}`}
+                  : isTrialExpired ? `Assinar ${plan.name}` : `Retomar com ${plan.name}`}
               </button>
             </div>
           ))}
@@ -352,6 +375,29 @@ export default function PaymentModal({ onLogout }) {
             >
               {loading === 'portal' ? 'Abrindo portal…' : 'Atualizar dados de cobrança'}
             </button>
+          </div>
+
+          {/* Excluir conta */}
+          <div style={{ textAlign: 'center' }}>
+            {deleteConfirm ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'center' }}>
+                <div style={{ fontSize: '12px', color: '#b91c1c', fontWeight: 500 }}>
+                  Isso excluirá permanentemente todos os seus dados. Confirma?
+                </div>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button onClick={() => setDeleteConfirm(false)} disabled={deleteLoading} style={{ padding: '6px 14px', background: 'none', border: '1px solid var(--gr2)', borderRadius: '6px', fontSize: '12px', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>
+                    Cancelar
+                  </button>
+                  <button onClick={handleDeleteAccount} disabled={deleteLoading} style={{ padding: '6px 14px', background: '#b91c1c', color: '#fff', border: 'none', borderRadius: '6px', fontSize: '12px', fontWeight: 600, cursor: deleteLoading ? 'not-allowed' : 'pointer', opacity: deleteLoading ? 0.7 : 1, fontFamily: "'DM Sans', sans-serif" }}>
+                    {deleteLoading ? 'Excluindo…' : 'Sim, excluir tudo'}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button onClick={handleDeleteAccount} style={{ background: 'none', border: 'none', padding: '6px', fontSize: '12px', color: 'var(--danger)', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>
+                Excluir minha conta e dados
+              </button>
+            )}
           </div>
 
           {/* Logout */}

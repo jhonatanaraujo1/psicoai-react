@@ -1115,7 +1115,7 @@ export default function App() {
         <ProgressBar />
         <ConfirmDialog />
         <ToastContainer />
-        {paymentRequired && <PaymentModal onLogout={handleLogout} />}
+        {paymentRequired && <PaymentModal onLogout={handleLogout} currentUser={currentUser} />}
       </>
     )
   }
@@ -1366,7 +1366,7 @@ export default function App() {
       <ToastContainer />
 
       {/* Bloqueio por inadimplência — modal de planos com promoção de retomada */}
-      {paymentRequired && <PaymentModal onLogout={handleLogout} />}
+      {paymentRequired && <PaymentModal onLogout={handleLogout} currentUser={currentUser} />}
 
       {/* Banner LGPD — aparece uma vez, salvo em localStorage */}
       <LgpdBanner onShowTermos={() => setCurrentView('privacidade')} />
