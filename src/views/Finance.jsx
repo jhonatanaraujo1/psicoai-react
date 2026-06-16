@@ -3,9 +3,12 @@ import { api } from '../services'
 import { DatePicker, CustomSelect } from '../components/DateTimePickers'
 import { showToast } from '../components/Toast'
 
-function fmtBRL(n) {
-  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(n || 0)
+function makeFmt(currency) {
+  const locale = currency === 'EUR' ? 'pt-PT' : 'pt-BR'
+  return (n) => new Intl.NumberFormat(locale, { style: 'currency', currency: currency || 'BRL' }).format(n || 0)
 }
+// fallback enquanto user não carregou
+const fmtBRL = makeFmt('BRL')
 
 function fmtDate(iso) {
   if (!iso) return '—'
@@ -65,7 +68,7 @@ function ReciboModal({ events, form, setForm, onClose }) {
     const amount = form.customAmount
       ? parseFloat(form.customAmount.replace(',', '.'))
       : evt?.amount || 0
-    const amountFmt = fmtBRL(amount)
+    const amountFmt = fmt(amount)
     const sessionDate = form.sessionDate
       ? new Date(form.sessionDate + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })
       : '—'
@@ -162,7 +165,7 @@ function ReciboModal({ events, form, setForm, onClose }) {
             <option value="">Selecione um lançamento…</option>
             {receivedEvents.map(e => (
               <option key={e.id} value={String(e.id)}>
-                {e.patientName} — {e.description} ({fmtBRL(e.amount)})
+                {e.patientName} — {e.description} ({fmt(e.amount)})
               </option>
             ))}
           </select>
@@ -175,7 +178,7 @@ function ReciboModal({ events, form, setForm, onClose }) {
           </div>
           <div>
             <label style={{ fontSize: '10px', fontWeight: 600, letterSpacing: '0.8px', textTransform: 'uppercase', color: 'var(--gr4)', display: 'block', marginBottom: '6px' }}>VALOR (deixe em branco para usar o lançamento)</label>
-            <input type="text" placeholder={selectedEvent ? fmtBRL(selectedEvent.amount) : 'R$ 0,00'} value={form.customAmount} onChange={e => setForm(f => ({ ...f, customAmount: e.target.value }))} style={inputSt} />
+            <input type="text" placeholder={selectedEvent ? fmt(selectedEvent.amount) : fmt(0)} value={form.customAmount} onChange={e => setForm(f => ({ ...f, customAmount: e.target.value }))} style={inputSt} />
           </div>
         </div>
 
@@ -201,7 +204,7 @@ function ReciboModal({ events, form, setForm, onClose }) {
             <div style={{ fontWeight: 600, marginBottom: '6px' }}>Pré-visualização do recibo</div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px 12px', fontSize: '12px', color: 'var(--gr5)' }}>
               <span>Paciente: <strong style={{ color: 'var(--d)' }}>{selectedEvent.patientName}</strong></span>
-              <span>Valor: <strong style={{ color: 'var(--g600)' }}>{form.customAmount ? fmtBRL(parseFloat(form.customAmount.replace(',','.')) || 0) : fmtBRL(selectedEvent.amount)}</strong></span>
+              <span>Valor: <strong style={{ color: 'var(--g600)' }}>{form.customAmount ? fmt(parseFloat(form.customAmount.replace(',','.')) || 0) : fmt(selectedEvent.amount)}</strong></span>
               <span>Método: <strong style={{ color: 'var(--d)' }}>{METHOD_LABELS[selectedEvent.paymentMethod] || 'PIX'}</strong></span>
               <span>Nº: <strong style={{ color: 'var(--d)' }}>{reciboNum}</strong></span>
             </div>
@@ -220,7 +223,8 @@ function ReciboModal({ events, form, setForm, onClose }) {
   )
 }
 
-export default function Finance() {
+export default function Finance({ currentUser }) {
+  const fmt = makeFmt(currentUser?.currency || 'BRL')
   const [events, setEvents] = useState([])
   const [summary, setSummary] = useState(null)
   const [recurring, setRecurring] = useState([])
@@ -384,10 +388,10 @@ export default function Finance() {
       {/* Stats — SEC-010: ícones como JSX direto, sem dangerouslySetInnerHTML */}
       <div className="stats-row">
         {[
-          { icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>, cls: 'green', val: loading ? '…' : fmtBRL(received), label: `Receita — ${CURRENT_MONTH_LABEL}`, delta: '' },
+          { icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>, cls: 'green', val: loading ? '…' : fmt(received), label: `Receita — ${CURRENT_MONTH_LABEL}`, delta: '' },
           { icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><polyline points="20 6 9 17 4 12"/></svg>, cls: 'green', val: loading ? '…' : events.filter(e => e.status === 'received' && e.direction === 'credit').length, label: 'Pagamentos recebidos', delta: `de ${events.filter(e => e.direction === 'credit').length} lançamentos`, deltaColor: 'var(--gr4)' },
-          { icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/></svg>, cls: overdueN > 0 ? 'warn' : 'green', val: loading ? '…' : fmtBRL(pending), label: `Em aberto (${overdueN} atrasado${overdueN !== 1 ? 's' : ''})`, delta: overdueN > 0 ? 'Enviar cobrança' : 'Sem atrasos', deltaColor: overdueN > 0 ? 'var(--warn)' : 'var(--g600)' },
-          { icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>, cls: 'blue', val: loading ? '…' : (() => { const creditReceived = events.filter(e => e.direction === 'credit' && e.status === 'received' && e.amount > 0); return creditReceived.length > 0 ? fmtBRL(creditReceived.reduce((a, e) => a + e.amount, 0) / creditReceived.length) : '—' })(), label: 'Ticket médio', delta: 'por sessão recebida' },
+          { icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/></svg>, cls: overdueN > 0 ? 'warn' : 'green', val: loading ? '…' : fmt(pending), label: `Em aberto (${overdueN} atrasado${overdueN !== 1 ? 's' : ''})`, delta: overdueN > 0 ? 'Enviar cobrança' : 'Sem atrasos', deltaColor: overdueN > 0 ? 'var(--warn)' : 'var(--g600)' },
+          { icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>, cls: 'blue', val: loading ? '…' : (() => { const creditReceived = events.filter(e => e.direction === 'credit' && e.status === 'received' && e.amount > 0); return creditReceived.length > 0 ? fmt(creditReceived.reduce((a, e) => a + e.amount, 0) / creditReceived.length) : '—' })(), label: 'Ticket médio', delta: 'por sessão recebida' },
         ].map(({ icon, cls, val, label, delta, deltaColor }, i) => (
           <div key={i} className="stat-card">
             <div className={`stat-icon ${cls}`}>{icon}</div>
@@ -412,7 +416,7 @@ export default function Finance() {
             <div className="chart-bar-manual">
               {barData.map(({ label, val, h, current }) => (
                 <div key={label} className="chart-bar-col">
-                  <div className="chart-bar-val" style={current ? { color: 'var(--g500)', fontWeight: 600 } : {}}>{fmtBRL(val)}</div>
+                  <div className="chart-bar-val" style={current ? { color: 'var(--g500)', fontWeight: 600 } : {}}>{fmt(val)}</div>
                   <div className="chart-bar-fill" style={{ height: h, ...(current ? { background: 'linear-gradient(180deg, var(--g400), var(--g600))' } : {}) }} />
                   <div className="chart-bar-label" style={current ? { color: 'var(--g500)', fontWeight: 600 } : {}}>{label}</div>
                 </div>
@@ -431,11 +435,11 @@ export default function Finance() {
                 <>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', background: 'var(--g50)', borderRadius: 'var(--r)', border: '1px solid var(--g100)' }}>
                     <span style={{ fontSize: '13px', color: 'var(--g700)', fontWeight: 500 }}>Receita realizada</span>
-                    <span style={{ fontFamily: "'Fraunces', serif", fontSize: '20px', color: 'var(--g600)' }}>{fmtBRL(received)}</span>
+                    <span style={{ fontFamily: "'Fraunces', serif", fontSize: '20px', color: 'var(--g600)' }}>{fmt(received)}</span>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', background: 'var(--ow)', borderRadius: 'var(--r)', border: '1px solid var(--gr2)' }}>
                     <span style={{ fontSize: '13px', color: 'var(--gr5)' }}>Em aberto / pendente</span>
-                    <span style={{ fontFamily: "'Fraunces', serif", fontSize: '17px', color: 'var(--warn)' }}>{fmtBRL(pending)}</span>
+                    <span style={{ fontFamily: "'Fraunces', serif", fontSize: '17px', color: 'var(--warn)' }}>{fmt(pending)}</span>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', background: 'var(--ow)', borderRadius: 'var(--r)', border: '1px solid var(--gr2)' }}>
                     <span style={{ fontSize: '13px', color: 'var(--gr5)' }}>Atrasados</span>
@@ -446,7 +450,7 @@ export default function Finance() {
                   <div style={{ height: '1px', background: 'var(--gr2)' }} />
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--d)' }}>Total previsto</span>
-                    <span style={{ fontFamily: "'Fraunces', serif", fontSize: '20px', color: 'var(--d)' }}>{fmtBRL(received + pending)}</span>
+                    <span style={{ fontFamily: "'Fraunces', serif", fontSize: '20px', color: 'var(--d)' }}>{fmt(received + pending)}</span>
                   </div>
                 </>
               )}
@@ -465,7 +469,7 @@ export default function Finance() {
                 const paid = recurring.filter(r => r.status === 'received').length
                 const total = recurring.length
                 const totalVal = recurring.reduce((s, r) => s + (r.billingValue || 0), 0)
-                return total > 0 ? `${paid}/${total} pagos · ${fmtBRL(totalVal)} esperados` : 'Nenhum paciente recorrente configurado'
+                return total > 0 ? `${paid}/${total} pagos · ${fmt(totalVal)} esperados` : 'Nenhum paciente recorrente configurado'
               })()}
             </div>
           </div>
@@ -525,7 +529,7 @@ export default function Finance() {
                         </td>
                         <td style={{ fontSize: 12, color: 'var(--gr5)' }}>{CYCLE_LABEL[r.billingType] || r.billingType}</td>
                         <td style={{ fontSize: 12, color: 'var(--gr5)' }}>{r.dueDate ? fmtDate(r.dueDate) : '—'}</td>
-                        <td style={{ fontFamily: "'Fraunces', serif", fontSize: 14, color: 'var(--d)' }}>{fmtBRL(r.billingValue)}</td>
+                        <td style={{ fontFamily: "'Fraunces', serif", fontSize: 14, color: 'var(--d)' }}>{fmt(r.billingValue)}</td>
                         <td>
                           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 11, fontWeight: 600, padding: '3px 9px', borderRadius: 20, background: statusBg, color: statusColor }}>
                             <span style={{ width: 5, height: 5, borderRadius: '50%', background: statusDot }} />
@@ -622,7 +626,7 @@ export default function Finance() {
               style={{ minWidth: 160 }}
             />
             <div className="fin-summary-chip">
-              {loading ? '…' : `${events.filter(e => e.status === 'received').length} recebidos · ${fmtBRL(received)}`}
+              {loading ? '…' : `${events.filter(e => e.status === 'received').length} recebidos · ${fmt(received)}`}
             </div>
           </div>
           <div style={{ overflowX: 'auto', padding: '12px 0 0' }}>
@@ -681,7 +685,7 @@ export default function Finance() {
                           ) : fmtDate(row.dueDate)}
                         </td>
                         <td style={{ fontFamily: "'Fraunces', serif", fontSize: '14px', color: row.amount === 0 ? 'var(--gr4)' : isExpense ? 'var(--danger)' : 'var(--d)' }}>
-                          {row.amount === 0 ? 'Convênio' : (isExpense ? '- ' : '') + fmtBRL(row.amount)}
+                          {row.amount === 0 ? 'Convênio' : (isExpense ? '- ' : '') + fmt(row.amount)}
                         </td>
                         <td style={{ fontSize: '12px', color: 'var(--gr5)' }}>
                           {row.paymentMethod ? METHOD_LABELS[row.paymentMethod] || row.paymentMethod : '—'}

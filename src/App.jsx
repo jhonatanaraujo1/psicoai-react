@@ -951,7 +951,7 @@ export default function App() {
         onBack={() => setCurrentView('analise-paciente')}
         onNewAnalysis={handleOpenAnalysisConfig}
       />
-      case 'financeiro':  return <Finance />
+      case 'financeiro':  return <Finance currentUser={currentUser} />
       case 'lembretes':   return <Reminders />
       case 'formularios': return <Forms />
       // Cadernos: cada paciente é um caderno. Clicar abre o canvas diretamente.

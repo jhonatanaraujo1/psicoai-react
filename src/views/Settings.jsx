@@ -47,12 +47,12 @@ function BtnSave({ saving, saved, onClick }) {
 
 // ────────────────────────────────────────────────────────────────────────────
 function TabPerfil({ profile, onSaved }) {
-  const [form, setForm] = useState({ name: '', crp: '', specialty: '', email: '', phone: '', clinicName: '', address: '', bio: '' })
+  const [form, setForm] = useState({ name: '', crp: '', specialty: '', email: '', phone: '', clinicName: '', address: '', bio: '', country: 'BR' })
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
 
   useEffect(() => {
-    if (profile) setForm({ name: profile.name || '', crp: profile.crp || '', specialty: profile.specialty || '', email: profile.email || '', phone: profile.phone || '', clinicName: profile.clinicName || '', address: profile.address || '', bio: profile.bio || '' })
+    if (profile) setForm({ name: profile.name || '', crp: profile.crp || '', specialty: profile.specialty || '', email: profile.email || '', phone: profile.phone || '', clinicName: profile.clinicName || '', address: profile.address || '', bio: profile.bio || '', country: profile.country || 'BR' })
   }, [profile])
 
   const set = (k, v) => { setForm(f => ({ ...f, [k]: v })); setSaved(false) }
@@ -105,6 +105,38 @@ function TabPerfil({ profile, onSaved }) {
       <Field label="Biografia profissional" hint="Aparece no link de agendamento público (em breve)">
         <textarea style={{ ...st.input, resize: 'vertical', lineHeight: 1.6, minHeight: '80px' }} value={form.bio} onChange={e => set('bio', e.target.value)} onFocus={onFocus} onBlur={onBlur} placeholder="Psicóloga com foco em..." />
       </Field>
+
+      <Divider title="Localização e moeda" sub="Define timezone, moeda exibida e compliance aplicável (LGPD / RGPD)" />
+      <div style={{ display: 'flex', gap: '10px', marginBottom: '8px' }}>
+        {[
+          { code: 'BR', flag: '🇧🇷', label: 'Brasil', detail: 'R$ · Brasília · LGPD' },
+          { code: 'PT', flag: '🇵🇹', label: 'Portugal', detail: '€ · Lisboa · RGPD' },
+        ].map(({ code, flag, label, detail }) => (
+          <button
+            key={code}
+            type="button"
+            onClick={() => set('country', code)}
+            style={{
+              flex: 1, display: 'flex', alignItems: 'center', gap: '10px',
+              padding: '12px 14px', borderRadius: '10px', cursor: 'pointer',
+              border: `2px solid ${form.country === code ? 'var(--g400)' : 'var(--gr2)'}`,
+              background: form.country === code ? 'var(--g50)' : 'var(--ow)',
+              transition: 'all 0.15s', textAlign: 'left',
+            }}
+          >
+            <span style={{ fontSize: '22px', lineHeight: 1 }}>{flag}</span>
+            <div>
+              <div style={{ fontSize: '13px', fontWeight: form.country === code ? 600 : 500, color: form.country === code ? 'var(--g700)' : 'var(--d)' }}>{label}</div>
+              <div style={{ fontSize: '11px', color: 'var(--gr5)', marginTop: '1px' }}>{detail}</div>
+            </div>
+          </button>
+        ))}
+      </div>
+      {form.country !== (profile?.country || 'BR') && (
+        <div style={{ background: 'var(--warn-l)', border: '1px solid var(--warn)', borderRadius: '8px', padding: '10px 13px', fontSize: '12px', color: 'var(--warn)', marginBottom: '8px' }}>
+          ⚠ Ao trocar o país, a moeda exibida e o fuso horário são atualizados imediatamente. Planos de pagamento em andamento não são afetados neste ciclo.
+        </div>
+      )}
 
       <div style={{ marginTop: '24px', paddingTop: '20px', borderTop: '1px solid var(--gr2)' }}>
         <BtnSave saving={saving} saved={saved} onClick={save} />

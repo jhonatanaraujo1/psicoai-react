@@ -84,6 +84,7 @@ export default function RegisterFlow({ onLogin, onBack, initialEmail = '' }) {
   const [form, setForm] = useState({
     name: '', crp: '', email: initialEmail, password: '',
     specialty: '', approach: '', clinicName: '', city: '',
+    country: 'BR',
   })
 
   const set = (k, v) => { setForm(f => ({ ...f, [k]: v })); setErrors(e => ({ ...e, [k]: undefined, _global: undefined })) }
@@ -113,6 +114,7 @@ export default function RegisterFlow({ onLogin, onBack, initialEmail = '' }) {
           password: form.password,
           crp: form.crp.trim() || undefined,
           lgpdConsentVersion: 'v1',
+          country: form.country,
         })
         setRegisteredUser(result.user)
         setStep(3)
@@ -237,6 +239,37 @@ export default function RegisterFlow({ onLogin, onBack, initialEmail = '' }) {
           {/* ── Step 1 ── */}
           {step === 1 && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <div>
+                <Lbl>País</Lbl>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  {[
+                    { code: 'BR', flag: '🇧🇷', label: 'Brasil' },
+                    { code: 'PT', flag: '🇵🇹', label: 'Portugal' },
+                  ].map(({ code, flag, label }) => (
+                    <button
+                      key={code}
+                      type="button"
+                      onClick={() => set('country', code)}
+                      style={{
+                        flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        gap: '7px', padding: '9px 12px', borderRadius: '8px', cursor: 'pointer',
+                        border: `2px solid ${form.country === code ? 'var(--g400)' : '#E5E7EB'}`,
+                        background: form.country === code ? 'var(--g50)' : '#fff',
+                        color: form.country === code ? 'var(--g700)' : '#6B7280',
+                        fontWeight: form.country === code ? 600 : 400,
+                        fontSize: '13px', fontFamily: "'DM Sans', sans-serif",
+                        transition: 'all 0.15s',
+                      }}
+                    >
+                      <span style={{ fontSize: '18px', lineHeight: 1 }}>{flag}</span>
+                      {label}
+                    </button>
+                  ))}
+                </div>
+                <div style={{ fontSize: '11px', color: '#9CA3AF', marginTop: '5px' }}>
+                  {form.country === 'PT' ? 'Moeda: € Euro · Fuso: Lisboa · Compliance: RGPD' : 'Moeda: R$ Real · Fuso: Brasília · Compliance: LGPD'}
+                </div>
+              </div>
               <div>
                 <Lbl>Nome completo</Lbl>
                 <input autoFocus style={inputSt(errors.name)} value={form.name}
