@@ -91,6 +91,16 @@ export default function App() {
     }
   }, [])
 
+  // Atualiza perfil do usuário no mount para garantir trialDaysRemaining,
+  // subscriptionStatus e analysesRemaining sempre frescos (localStorage pode estar stale).
+  useEffect(() => {
+    if (!currentUser) return
+    api.getUserProfile()
+      .then(updated => { if (updated) setCurrentUser(prev => ({ ...prev, ...updated })) })
+      .catch(() => {})
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   // ── Stripe / Google OAuth return handlers ─────────────────────────────────
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
