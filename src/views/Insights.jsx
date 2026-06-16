@@ -438,11 +438,19 @@ function PatientInsightsView({ patient, onBack, onGoToPatient, onOpenAnalysisHub
 // ── InsightsPortfolio — carteira action-oriented ──────────────────────────────
 
 function InsightsPortfolio({ onSelectPatient, onOpenAnalysisHub }) {
-  const [data, setData]       = useState(null)
-  const [loading, setLoading] = useState(true)
+  const [data, setData]         = useState(null)
+  const [loading, setLoading]   = useState(true)
+  const [planGate, setPlanGate] = useState(false)
 
   useEffect(() => {
-    api.getInsights().then(setData).finally(() => setLoading(false))
+    api.getInsights()
+      .then(setData)
+      .catch(e => {
+        if (e?.message?.toLowerCase().includes('especialista') || e?.message?.includes('upgrade')) {
+          setPlanGate(true)
+        }
+      })
+      .finally(() => setLoading(false))
   }, [])
 
   const totalCount      = data?.totalPatients    ?? 0
@@ -501,8 +509,34 @@ function InsightsPortfolio({ onSelectPatient, onOpenAnalysisHub }) {
         </div>
       </div>
 
+      {/* Banner — gate de plano Especialista */}
+      {!loading && planGate && (
+        <div style={{
+          background: 'linear-gradient(135deg, #1a2e1a 0%, #0f1f0f 100%)',
+          border: '1px solid var(--primary)', borderRadius: '12px',
+          padding: '24px', marginBottom: '24px',
+        }}>
+          <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-start', marginBottom: '16px' }}>
+            <div style={{ width: 40, height: 40, borderRadius: '10px', background: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.8"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>
+            </div>
+            <div>
+              <div style={{ fontSize: '15px', fontWeight: 600, color: '#fff', marginBottom: '4px' }}>
+                Insights da Carteira — plano Especialista
+              </div>
+              <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.7)', lineHeight: 1.6 }}>
+                Suas análises estão sendo geradas normalmente. O painel de carteira completa — padrões, alertas e hipóteses agregadas — é exclusivo do plano Especialista.
+              </div>
+            </div>
+          </div>
+          <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.6)', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '12px' }}>
+            Para ver os insights individuais de cada paciente, acesse a aba de análises dentro do perfil do paciente.
+          </div>
+        </div>
+      )}
+
       {/* Banner — nenhuma análise ainda */}
-      {!loading && analyzedCount === 0 && (
+      {!loading && !planGate && analyzedCount === 0 && (
         <div style={{
           background: 'var(--g50)', border: '1px solid var(--g100)', borderRadius: '12px',
           padding: '20px 24px', marginBottom: '24px',
