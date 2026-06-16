@@ -328,11 +328,11 @@ export default function RegisterFlow({ onLogin, onBack, initialEmail = '' }) {
                 />
                 <label htmlFor="terms-check" style={{ fontSize: '12px', color: '#6B7280', lineHeight: 1.5, cursor: 'pointer' }}>
                   Li e aceito os{' '}
-                  <a href="/terms" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--g700)', fontWeight: 500, textDecoration: 'underline' }} onClick={e => e.stopPropagation()}>
+                  <a href="/terms" style={{ color: 'var(--g700)', fontWeight: 500, textDecoration: 'underline' }} onClick={e => { e.preventDefault(); e.stopPropagation(); window.open('/terms', '_blank', 'noopener,noreferrer') }}>
                     Termos de Uso
                   </a>
                   {' '}e a{' '}
-                  <a href="/privacy" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--g700)', fontWeight: 500, textDecoration: 'underline' }} onClick={e => e.stopPropagation()}>
+                  <a href="/privacy" style={{ color: 'var(--g700)', fontWeight: 500, textDecoration: 'underline' }} onClick={e => { e.preventDefault(); e.stopPropagation(); window.open('/privacy', '_blank', 'noopener,noreferrer') }}>
                     Política de Privacidade
                   </a>
                 </label>

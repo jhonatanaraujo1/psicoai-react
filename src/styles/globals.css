@@ -272,9 +272,9 @@ body{font-family:'DM Sans',sans-serif;background:var(--ow);color:var(--d);displa
 .agenda-week{background:var(--w);border-radius:var(--r2);box-shadow:var(--sh);border:1px solid var(--gr2);overflow:hidden}
 .agenda-week-header{display:grid;grid-template-columns:64px repeat(5,1fr);border-bottom:1px solid var(--gr2)}
 .agenda-day-label{padding:12px 0;text-align:center;font-size:11px;font-weight:600;color:var(--gr5);letter-spacing:0.5px;text-transform:uppercase}
-.agenda-day-label.today{color:var(--g500)}
+.agenda-day-label.today{color:var(--g600)}
 .agenda-day-date{font-family:'Fraunces',serif;font-size:22px;font-weight:400;color:var(--d);display:block;line-height:1.1}
-.agenda-day-date.today-num{color:var(--g500)}
+.agenda-day-date.today-num{color:#fff;background:var(--g600);border-radius:50%;width:32px;height:32px;display:inline-flex;align-items:center;justify-content:center;font-size:18px;margin:0 auto}
 .agenda-time-col{border-right:1px solid var(--gr1)}
 .agenda-grid{display:grid;grid-template-columns:64px repeat(5,1fr);min-height:520px}
 .agenda-slot{border-bottom:1px solid var(--gr1);border-right:1px solid var(--gr1);min-height:56px;position:relative;transition:background 0.15s}

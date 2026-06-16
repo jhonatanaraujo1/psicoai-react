@@ -18,8 +18,8 @@ const BASE = import.meta.env.VITE_API_BASE_URL // e.g. https://api.psicnotes.com
 const getToken    = ()  => localStorage.getItem('psicoai_token')
 const getRefresh  = ()  => localStorage.getItem('psicoai_refresh')
 const setTokens   = (at, rt) => {
-  localStorage.setItem('psicoai_token', at)
-  if (rt) localStorage.setItem('psicoai_refresh', rt)
+  try { localStorage.setItem('psicoai_token', at) } catch { /* QuotaExceededError — token salvo em memória apenas */ }
+  if (rt) try { localStorage.setItem('psicoai_refresh', rt) } catch { /* silently ignore */ }
 }
 // Chaves que NÃO devem ser removidas no logout — persistem entre sessões no mesmo dispositivo
 const PERSIST_KEYS = new Set(['psicoai_lgpd_consent', 'psicoai_onboarding_seen'])
@@ -111,10 +111,9 @@ async function req(method, path, body, opts = {}) {
         throw new Error('Serviço temporariamente indisponível. Aguarde alguns segundos e tente novamente.')
       }
       if (origStatus === 401) {
-        // 401 inrecuperável = não autenticado → desloga
+        // 401 inrecuperável = não autenticado → desloga (sem hard reload — React trata gracefully)
         clearTokens()
         window.dispatchEvent(new CustomEvent('psicoai:session-expired'))
-        window.location.replace('/')
         return
       }
       // 403 inrecuperável = permissão negada mesmo após refresh → mantém sessão, propaga erro
@@ -279,7 +278,7 @@ export const auth = {
     return post('/api/v1/auth/reset-password', { token, newPassword })
   },
 
-  async register({ name, email, password, crp }) {
+  async register({ name, email, password, crp, lgpdConsentVersion, country }) {
     // Captura UTM params do localStorage (gravados pelo script de tracking da landing page)
     const tracking = {}
     try {
@@ -293,7 +292,7 @@ export const auth = {
       if (stored.referralCode) tracking.referralCode = stored.referralCode
     } catch { /* silently ignore */ }
 
-    const data = await post('/api/v1/auth/register', { name, email, password, crp, ...tracking })
+    const data = await post('/api/v1/auth/register', { name, email, password, crp, lgpdConsentVersion, country, ...tracking })
     setTokens(data.accessToken, data.refreshToken)
     const user = normalizeUser(data.user)
     localStorage.setItem('psicoai_user', JSON.stringify(user))
