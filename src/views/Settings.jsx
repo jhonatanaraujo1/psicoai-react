@@ -151,6 +151,11 @@ function TabPlano({ profile }) {
   const used = profile?.analysesUsedThisMonth || 0
   const remaining = profile?.analysesRemaining ?? 15
   const total = profile?.plan === 'especialista' ? 40 : 15  // 15 Consultório, 40 Especialista
+  const isEUR = profile?.currency === 'EUR'
+  const planPrice = profile?.plan === 'especialista'
+    ? (isEUR ? '€35' : 'R$97')
+    : (isEUR ? '€20' : 'R$49')
+  const extraPrice = isEUR ? '€1,90' : 'R$4,90'
   const [billingLoading, setBillingLoading] = useState(false)
   const [coupon, setCoupon] = useState('')
   const [couponState, setCouponState] = useState(null)
@@ -205,8 +210,8 @@ function TabPlano({ profile }) {
       <div style={{ background: 'var(--g700)', borderRadius: 'var(--r2)', padding: '24px', marginBottom: '16px', position: 'relative', overflow: 'hidden' }}>
         <div style={{ position: 'absolute', top: '-40px', right: '-40px', width: '140px', height: '140px', borderRadius: '50%', background: 'rgba(255,255,255,0.04)' }} />
         <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '1px', color: 'var(--g300)', textTransform: 'uppercase', marginBottom: '5px' }}>Plano ativo</div>
-        <div style={{ fontFamily: "'Fraunces', serif", fontSize: '26px', color: '#fff', fontWeight: 300, marginBottom: '3px' }}>PsicNotes — {profile?.plan === 'especialista' ? 'R$97' : 'R$49'}/mês</div>
-        <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.5)', marginBottom: '18px' }}>Tudo incluído · {total} análises IA/mês · extras por R$4,90</div>
+        <div style={{ fontFamily: "'Fraunces', serif", fontSize: '26px', color: '#fff', fontWeight: 300, marginBottom: '3px' }}>PsicNotes — {planPrice}/mês</div>
+        <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.5)', marginBottom: '18px' }}>Tudo incluído · {total} análises IA/mês · extras por {extraPrice}</div>
         <div style={{ display: 'flex', gap: '7px', flexWrap: 'wrap' }}>
           {['Prontuário ilimitado', 'Canvas de anotações', 'Agenda integrada', 'Linha do tempo', `${total} análises IA/mês`].map(f => (
             <span key={f} style={{ fontSize: '11px', background: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.75)', padding: '3px 10px', borderRadius: '20px' }}>✓ {f}</span>
@@ -294,6 +299,7 @@ function TabPlano({ profile }) {
 // ────────────────────────────────────────────────────────────────────────────
 function TabPreferencias({ profile, onSaved }) {
   const prefs = profile?.preferences || {}
+  const currencySymbol = profile?.currency === 'EUR' ? '€' : 'R$'
   const [form, setForm] = useState({
     defaultApproach: prefs.defaultApproach || 'TCC',
     defaultSessionDuration: prefs.defaultSessionDuration || 50,
@@ -336,7 +342,7 @@ function TabPreferencias({ profile, onSaved }) {
           <CustomSelect value={form.defaultApproach} onChange={v => set('defaultApproach', v)} options={ABORDAGENS.map(a => ({ label: a, value: a }))} placeholder="Selecione" />
         </Field>
         <Field label="Duração padrão da sessão (min)"><input style={st.input} type="number" min={20} max={120} value={form.defaultSessionDuration} onChange={e => set('defaultSessionDuration', e.target.value)} onFocus={onFocus} onBlur={onBlur} /></Field>
-        <Field label="Valor padrão da sessão (R$)"><input style={st.input} type="number" min={0} value={form.defaultSessionValue} onChange={e => set('defaultSessionValue', e.target.value)} onFocus={onFocus} onBlur={onBlur} /></Field>
+        <Field label={`Valor padrão da sessão (${currencySymbol})`}><input style={st.input} type="number" min={0} value={form.defaultSessionValue} onChange={e => set('defaultSessionValue', e.target.value)} onFocus={onFocus} onBlur={onBlur} /></Field>
       </div>
 
       <Divider title="Agenda" sub="Horário de trabalho exibido no calendário semanal" />

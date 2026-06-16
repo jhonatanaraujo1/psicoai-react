@@ -88,18 +88,27 @@ function Skeleton() {
   )
 }
 
-// Pacotes de compra avulsa de análises
-const PACKS = [
-  { qty: 1,  label: '1 análise',   price: 'R$4,90',  unitLabel: 'R$4,90/un' },
-  { qty: 5,  label: '5 análises',  price: 'R$19,90', unitLabel: 'R$3,98/un' },
-  { qty: 10, label: '10 análises', price: 'R$34,90', unitLabel: 'R$3,49/un' },
-]
+// Pacotes de compra avulsa de análises — preços por moeda
+const PACKS_BY_CURRENCY = {
+  BRL: [
+    { qty: 1,  label: '1 análise',   price: 'R$4,90',  unitLabel: 'R$4,90/un' },
+    { qty: 5,  label: '5 análises',  price: 'R$19,90', unitLabel: 'R$3,98/un' },
+    { qty: 10, label: '10 análises', price: 'R$34,90', unitLabel: 'R$3,49/un' },
+  ],
+  EUR: [
+    { qty: 1,  label: '1 análise',   price: '€1,90',  unitLabel: '€1,90/un' },
+    { qty: 5,  label: '5 análises',  price: '€7,90',  unitLabel: '€1,58/un' },
+    { qty: 10, label: '10 análises', price: '€13,90', unitLabel: '€1,39/un' },
+  ],
+}
 
 // ── Credit pips ───────────────────────────────────────────────────────────────
 
-function CreditBlock({ remaining, plan, onBuyPack, purchasing }) {
+function CreditBlock({ remaining, plan, currency, onBuyPack, purchasing }) {
   const isUnlimited = remaining >= UNLIMITED || !RESTRICTED_PLANS.includes(plan)
   if (isUnlimited) return null // Especialista — sem ruído visual
+
+  const PACKS = PACKS_BY_CURRENCY[currency] || PACKS_BY_CURRENCY.BRL
 
   const TOTAL = 5
   const used  = Math.max(0, TOTAL - Math.min(remaining, TOTAL))
@@ -169,7 +178,7 @@ function CreditBlock({ remaining, plan, onBuyPack, purchasing }) {
             ))}
           </div>
           <div style={{ marginTop: 8, fontSize: 10, color: 'rgba(255,255,255,0.2)', fontFamily: "'DM Sans', sans-serif" }}>
-            Ou continue — cobrado automaticamente R$4,90 por análise
+            Ou continue — cobrado automaticamente {PACKS[0].price} por análise
           </div>
         </div>
       )}
@@ -190,6 +199,7 @@ export default function AnalysisConfigModal({ patient, currentUser, onConfirm, o
 
   const plan      = currentUser?.plan ?? 'consultorio'
   const remaining = currentUser?.analysesRemaining ?? 0
+  const currency  = currentUser?.currency || 'BRL'
   const isRestricted = RESTRICTED_PLANS.includes(plan)
 
   const handleBuyPack = async (quantity) => {
@@ -503,7 +513,7 @@ export default function AnalysisConfigModal({ patient, currentUser, onConfirm, o
         </div>
 
         {/* ── Bloco de créditos (só Consultório) ── */}
-        <CreditBlock remaining={remaining} plan={plan} onBuyPack={handleBuyPack} purchasing={purchasing} />
+        <CreditBlock remaining={remaining} plan={plan} currency={currency} onBuyPack={handleBuyPack} purchasing={purchasing} />
 
         {/* ── Footer ── */}
         <div style={{

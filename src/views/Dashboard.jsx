@@ -13,8 +13,10 @@ const fmtDate = (iso) => {
   return d.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })
 }
 
-const fmtCurrency = (n) =>
-  new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(n || 0)
+const makeFmtCurrency = (currency) => {
+  const locale = currency === 'EUR' ? 'pt-PT' : 'pt-BR'
+  return (n) => new Intl.NumberFormat(locale, { style: 'currency', currency: currency || 'BRL' }).format(n || 0)
+}
 
 const EvolutionDot = ({ level }) => {
   const colors = { high: '#E74C3C', medium: '#F39C12', low: '#27AE60', critical: '#8E44AD' }
@@ -25,6 +27,8 @@ export default function Dashboard({ setCurrentView, currentUser }) {
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+
+  const fmtCurrency = makeFmtCurrency(currentUser?.currency || 'BRL')
 
   const hoje = new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'short', year: 'numeric' })
 
