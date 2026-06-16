@@ -146,27 +146,96 @@ function TabPerfil({ profile, onSaved }) {
 }
 
 // ────────────────────────────────────────────────────────────────────────────
+const PLAN_CHECK = () => (
+  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="20 6 9 17 4 12" />
+  </svg>
+)
+
 function TabPlano({ profile }) {
-  const isClinico = true // plano único — todos têm acesso completo
-  const used = profile?.analysesUsedThisMonth || 0
+  const isTrial  = profile?.subscriptionStatus === 'trialing'
+  const isEUR    = profile?.currency === 'EUR'
+  const used      = profile?.analysesUsedThisMonth || 0
   const remaining = profile?.analysesRemaining ?? 15
-  const total = profile?.plan === 'especialista' ? 40 : 15  // 15 Consultório, 40 Especialista
-  const isEUR = profile?.currency === 'EUR'
-  const planPrice = profile?.plan === 'especialista'
-    ? (isEUR ? '€35' : 'R$97')
-    : (isEUR ? '€20' : 'R$49')
+  const total     = profile?.plan === 'especialista' ? 40 : 15
+  const planPrice = profile?.plan === 'especialista' ? (isEUR ? '€35' : 'R$97') : (isEUR ? '€20' : 'R$49')
   const extraPrice = isEUR ? '€1,90' : 'R$4,90'
-  const [billingLoading, setBillingLoading] = useState(false)
-  const [coupon, setCoupon] = useState('')
+
+  const [checkoutLoading, setCheckoutLoading] = useState(null)
+  const [portalLoading,   setPortalLoading]   = useState(false)
+  const [coupon,      setCoupon]      = useState('')
   const [couponState, setCouponState] = useState(null)
   const [couponChecking, setCouponChecking] = useState(false)
+
+  const TRIAL_PLANS = [
+    {
+      id: 'consultorio',
+      name: 'Consultório',
+      price: isEUR ? '€20' : 'R$49',
+      tagline: 'Gestão completa · 15 análises IA/mês',
+      features: [
+        'Prontuário eletrônico ilimitado',
+        'Canvas de anotações',
+        'Agenda com lembretes automáticos',
+        'Controle financeiro + recibos',
+        'Formulários clínicos (PHQ-9, Beck, TCLE)',
+        '15 análises IA incluídas por mês',
+        `Análises extras: ${extraPrice}/análise`,
+      ],
+      highlight: false,
+    },
+    {
+      id: 'especialista',
+      name: 'Especialista',
+      price: isEUR ? '€35' : 'R$97',
+      tagline: 'IA clínica avançada · 40 análises IA/mês',
+      features: [
+        'Tudo do Consultório incluído',
+        '40 análises IA incluídas por mês',
+        'Hipóteses DSM-5/CID-11 com grau de evidência',
+        '5 templates de análise avançados',
+        'Alertas de padrão clínico',
+        'Re-análise com feedback até 3x',
+        'Insights agregados da carteira',
+      ],
+      badge: 'Recomendado',
+      highlight: true,
+    },
+  ]
+
+  const handleCheckout = async (planId) => {
+    setCheckoutLoading(planId)
+    try {
+      const successUrl = window.location.origin + '/?payment=success'
+      const cancelUrl  = window.location.href
+      const appliedCoupon = couponState?.valid ? coupon.trim() : null
+      const { url } = await api.createCheckoutSession({ planId, successUrl, cancelUrl, couponCode: appliedCoupon })
+      assertSafeRedirectUrl(url)
+      window.location.href = url
+    } catch {
+      showToast('Erro ao iniciar checkout. Tente novamente.', 'error')
+      setCheckoutLoading(null)
+    }
+  }
+
+  const handlePortal = async () => {
+    setPortalLoading(true)
+    try {
+      const { url } = await api.createBillingPortalSession({ returnUrl: window.location.href })
+      assertSafeRedirectUrl(url)
+      window.location.href = url
+    } catch {
+      showToast('Erro ao abrir portal de cobrança. Tente novamente.', 'error')
+      setPortalLoading(false)
+    }
+  }
 
   const checkCoupon = async () => {
     const code = coupon.trim()
     if (!code) return
     setCouponChecking(true)
     try {
-      const res = await api.validateCoupon(code, 'clinico')
+      const res = await api.validateCoupon(code, 'consultorio')
       setCouponState(res)
     } catch {
       setCouponState({ valid: false, message: 'Erro ao validar cupom.' })
@@ -175,34 +244,115 @@ function TabPlano({ profile }) {
     }
   }
 
-  const handleUpgrade = async () => {
-    setBillingLoading(true)
-    try {
-      const successUrl = window.location.origin + '/?payment=success'
-      const cancelUrl = window.location.href
-      const appliedCoupon = couponState?.valid ? coupon.trim() : null
-      const { url } = await api.createCheckoutSession({ planId: 'clinico', successUrl, cancelUrl, couponCode: appliedCoupon })
-      assertSafeRedirectUrl(url)  // FE-004 FIX
-      window.location.href = url
-    } catch (e) {
-      showToast('Erro ao iniciar checkout. Tente novamente.', 'error')
-      setBillingLoading(false)
-    }
+  // ── TRIAL: seleção de planos ───────────────────────────────────────────────
+  if (isTrial) {
+    const trialDays = profile?.trialDaysRemaining ?? 0
+    return (
+      <div>
+        <Divider title="Escolha seu plano" sub="Assine e continue sem interrupção após o trial" />
+
+        <div style={{
+          background: trialDays <= 3 ? '#fff5f5' : 'var(--g50)',
+          border: `1px solid ${trialDays <= 3 ? '#fecaca' : 'var(--g100)'}`,
+          borderRadius: 'var(--r)', padding: '12px 16px', marginBottom: '20px',
+          display: 'flex', gap: '10px', alignItems: 'center',
+        }}>
+          <span style={{ fontSize: '16px' }}>{trialDays <= 3 ? '⚠️' : '⏳'}</span>
+          <div style={{ fontSize: '13px', color: trialDays <= 3 ? '#b91c1c' : 'var(--g700)' }}>
+            {trialDays <= 0
+              ? 'Último dia de trial — assine agora para não perder o acesso.'
+              : `Seu trial encerra em ${trialDays} dia${trialDays !== 1 ? 's' : ''}. Assine e continue sem interrupção.`
+            }
+          </div>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginBottom: '16px' }} className="payment-modal-grid">
+          {TRIAL_PLANS.map(plan => (
+            <div key={plan.id} style={{
+              background: plan.highlight ? 'var(--g700)' : 'var(--w)',
+              border: plan.highlight ? '2px solid var(--g500)' : '1.5px solid var(--gr2)',
+              borderRadius: '14px', padding: '20px', position: 'relative',
+              boxShadow: plan.highlight ? '0 8px 32px rgba(74,124,89,0.25)' : 'var(--sh)',
+            }}>
+              {plan.badge && (
+                <div style={{
+                  position: 'absolute', top: '-12px', left: '50%', transform: 'translateX(-50%)',
+                  background: 'var(--g500)', color: '#fff', fontSize: '10px', fontWeight: 700,
+                  letterSpacing: '0.8px', textTransform: 'uppercase', padding: '3px 12px',
+                  borderRadius: '20px', whiteSpace: 'nowrap',
+                }}>{plan.badge}</div>
+              )}
+              <div style={{ marginBottom: '14px' }}>
+                <div style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.8px', textTransform: 'uppercase', color: plan.highlight ? 'var(--g300)' : 'var(--gr4)', marginBottom: '4px' }}>{plan.name}</div>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: '3px', marginBottom: '4px' }}>
+                  <span style={{ fontFamily: "'Fraunces', serif", fontSize: '30px', fontWeight: 300, color: plan.highlight ? '#fff' : 'var(--d)' }}>{plan.price}</span>
+                  <span style={{ fontSize: '13px', color: plan.highlight ? 'rgba(255,255,255,0.5)' : 'var(--gr4)' }}>/mês</span>
+                </div>
+                <div style={{ fontSize: '12px', lineHeight: 1.5, color: plan.highlight ? 'rgba(255,255,255,0.5)' : 'var(--gr5)' }}>{plan.tagline}</div>
+              </div>
+              <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 18px', display: 'flex', flexDirection: 'column', gap: '7px' }}>
+                {plan.features.map(f => (
+                  <li key={f} style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', fontSize: '12px', color: plan.highlight ? 'rgba(255,255,255,0.75)' : 'var(--gr5)' }}>
+                    <span style={{ color: plan.highlight ? 'var(--g300)' : 'var(--g600)', flexShrink: 0, marginTop: '1px' }}><PLAN_CHECK /></span>
+                    {f}
+                  </li>
+                ))}
+              </ul>
+              <button
+                onClick={() => handleCheckout(plan.id)}
+                disabled={!!checkoutLoading}
+                style={{
+                  width: '100%', padding: '10px',
+                  background: plan.highlight ? 'rgba(255,255,255,0.15)' : 'var(--g600)',
+                  color: '#fff',
+                  border: plan.highlight ? '1px solid rgba(255,255,255,0.2)' : 'none',
+                  borderRadius: '8px', fontSize: '13px', fontWeight: 600,
+                  cursor: checkoutLoading ? 'not-allowed' : 'pointer',
+                  opacity: checkoutLoading && checkoutLoading !== plan.id ? 0.5 : 1,
+                  fontFamily: "'DM Sans', sans-serif", transition: 'opacity 0.15s',
+                }}
+              >
+                {checkoutLoading === plan.id ? 'Redirecionando…' : `Assinar ${plan.name}`}
+              </button>
+            </div>
+          ))}
+        </div>
+
+        <div style={{ background: 'var(--ow)', border: '1px solid var(--gr2)', borderRadius: 'var(--r)', padding: '14px 16px', marginBottom: '10px' }}>
+          <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--gr5)', letterSpacing: '0.4px', textTransform: 'uppercase', marginBottom: '8px' }}>Cupom de desconto</div>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <input
+              value={coupon}
+              onChange={e => { setCoupon(e.target.value.toUpperCase()); setCouponState(null) }}
+              onKeyDown={e => e.key === 'Enter' && checkCoupon()}
+              placeholder="Ex: YOUTUBE30"
+              style={{
+                flex: 1, border: `1px solid ${couponState ? (couponState.valid ? '#27AE60' : '#E74C3C') : 'var(--gr2)'}`,
+                borderRadius: 'var(--r)', padding: '8px 12px', fontSize: '13px',
+                fontFamily: "'DM Sans', sans-serif", outline: 'none',
+                background: 'var(--w)', color: 'var(--d)',
+                letterSpacing: '0.5px', fontWeight: 600,
+              }}
+            />
+            <button onClick={checkCoupon} disabled={!coupon.trim() || couponChecking} style={{ padding: '8px 14px', background: 'var(--g600)', color: '#fff', border: 'none', borderRadius: 'var(--r)', fontSize: '12px', fontWeight: 600, cursor: (!coupon.trim() || couponChecking) ? 'not-allowed' : 'pointer', opacity: (!coupon.trim() || couponChecking) ? 0.5 : 1, fontFamily: "'DM Sans', sans-serif", whiteSpace: 'nowrap' }}>
+              {couponChecking ? 'Verificando…' : 'Aplicar'}
+            </button>
+          </div>
+          {couponState && (
+            <div style={{ marginTop: '6px', fontSize: '12px', fontWeight: 500, color: couponState.valid ? '#27AE60' : '#E74C3C' }}>
+              {couponState.valid ? '✓' : '✕'} {couponState.message}
+            </div>
+          )}
+        </div>
+
+        <div style={{ fontSize: '12px', color: 'var(--gr4)', textAlign: 'center', padding: '6px 0' }}>
+          Sem fidelidade · Cancele quando quiser · Proteção LGPD
+        </div>
+      </div>
+    )
   }
 
-  const handlePortal = async () => {
-    setBillingLoading(true)
-    try {
-      const returnUrl = window.location.href
-      const { url } = await api.createBillingPortalSession({ returnUrl })
-      assertSafeRedirectUrl(url)  // FE-004 FIX
-      window.location.href = url
-    } catch (e) {
-      showToast('Erro ao abrir portal de cobrança. Tente novamente.', 'error')
-      setBillingLoading(false)
-    }
-  }
-
+  // ── ATIVO / PAGO ──────────────────────────────────────────────────────────
   return (
     <div>
       <Divider title="Plano atual" sub="Veja seu plano, análises disponíveis e cobrança" />
@@ -219,78 +369,30 @@ function TabPlano({ profile }) {
         </div>
       </div>
 
-      {isClinico && (
-        <div style={{ background: 'var(--w)', border: '1px solid var(--gr2)', borderRadius: 'var(--r2)', padding: '18px', marginBottom: '16px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-            <div>
-              <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--d)' }}>Créditos de análise IA este mês</div>
-              <div style={{ fontSize: '11.5px', color: 'var(--gr5)', marginTop: '2px' }}>Incluídas no plano · extras por R$4,90/análise</div>
-            </div>
-            <div style={{ fontFamily: "'Fraunces', serif", fontSize: '24px', color: 'var(--g600)' }}>{remaining}<span style={{ fontSize: '13px', color: 'var(--gr4)', fontFamily: "'DM Sans', sans-serif" }}>/{total}</span></div>
+      <div style={{ background: 'var(--w)', border: '1px solid var(--gr2)', borderRadius: 'var(--r2)', padding: '18px', marginBottom: '16px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+          <div>
+            <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--d)' }}>Créditos de análise IA este mês</div>
+            <div style={{ fontSize: '11.5px', color: 'var(--gr5)', marginTop: '2px' }}>Incluídas no plano · extras por {extraPrice}/análise</div>
           </div>
-          <div style={{ height: '5px', background: 'var(--gr2)', borderRadius: '3px', overflow: 'hidden', marginBottom: '6px' }}>
-            <div style={{ width: `${total > 0 ? Math.min((used/total)*100, 100) : 0}%`, height: '100%', background: used >= total ? 'var(--danger)' : 'var(--g500)', borderRadius: '3px', transition: 'width 0.5s ease' }} />
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: 'var(--gr4)' }}><span>{used} usadas</span><span>{remaining} restantes</span></div>
+          <div style={{ fontFamily: "'Fraunces', serif", fontSize: '24px', color: 'var(--g600)' }}>{remaining}<span style={{ fontSize: '13px', color: 'var(--gr4)', fontFamily: "'DM Sans', sans-serif" }}>/{total}</span></div>
         </div>
-      )}
+        <div style={{ height: '5px', background: 'var(--gr2)', borderRadius: '3px', overflow: 'hidden', marginBottom: '6px' }}>
+          <div style={{ width: `${total > 0 ? Math.min((used/total)*100, 100) : 0}%`, height: '100%', background: used >= total ? 'var(--danger)' : 'var(--g500)', borderRadius: '3px', transition: 'width 0.5s ease' }} />
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: 'var(--gr4)' }}><span>{used} usadas</span><span>{remaining} restantes</span></div>
+      </div>
 
       <div style={{ background: 'var(--g50)', border: '1px solid var(--g100)', borderRadius: 'var(--r)', padding: '12px 16px', fontSize: '13px', color: 'var(--g700)', marginBottom: '16px', display: 'flex', gap: '10px', alignItems: 'center' }}>
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-        O raciocínio clínico é gerado quando você aciona — nunca de forma automática ou sem sua revisão. Consulte os planos disponíveis para ver os pacotes de análise.
+        O raciocínio clínico é gerado quando você aciona — nunca de forma automática ou sem sua revisão.
       </div>
-
-      {false && (
-        <div style={{ background: 'var(--ow)', border: '1px solid var(--gr2)', borderRadius: 'var(--r2)', padding: '20px', marginBottom: '16px' }}>
-          <div style={{ fontFamily: "'Fraunces', serif", fontSize: '17px', color: 'var(--d)', marginBottom: '5px' }}>Precisa de mais análises?</div>
-          <div style={{ fontSize: '13px', color: 'var(--gr5)', marginBottom: '14px', lineHeight: 1.6 }}>Análises extras disponíveis por R$4,90/análise, acionadas sob demanda.</div>
-
-          {/* Coupon */}
-          <div style={{ marginBottom: '14px' }}>
-            <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--gr5)', letterSpacing: '0.4px', textTransform: 'uppercase', marginBottom: '6px' }}>Tem um cupom de desconto?</div>
-            <div style={{ display: 'flex', gap: '8px' }}>
-              <input
-                value={coupon}
-                onChange={e => { setCoupon(e.target.value.toUpperCase()); setCouponState(null) }}
-                onKeyDown={e => e.key === 'Enter' && checkCoupon()}
-                placeholder="Ex: YOUTUBE30"
-                style={{
-                  flex: 1, border: `1px solid ${couponState ? (couponState.valid ? '#27AE60' : '#E74C3C') : 'var(--gr2)'}`,
-                  borderRadius: 'var(--r)', padding: '8px 12px', fontSize: '13px',
-                  fontFamily: "'DM Sans', sans-serif", outline: 'none',
-                  background: 'var(--w)', color: 'var(--d)',
-                  letterSpacing: '0.5px', fontWeight: 600, maxWidth: '200px',
-                }}
-              />
-              <button
-                onClick={checkCoupon}
-                disabled={!coupon.trim() || couponChecking}
-                style={{
-                  padding: '8px 12px', background: 'none',
-                  border: '1px solid var(--gr2)', borderRadius: 'var(--r)',
-                  fontSize: '12px', fontWeight: 600, color: 'var(--gr5)',
-                  cursor: (!coupon.trim() || couponChecking) ? 'not-allowed' : 'pointer',
-                  opacity: (!coupon.trim() || couponChecking) ? 0.5 : 1,
-                  fontFamily: "'DM Sans', sans-serif",
-                }}
-              >
-                {couponChecking ? 'Verificando…' : 'Aplicar'}
-              </button>
-            </div>
-            {couponState && (
-              <div style={{ marginTop: '6px', fontSize: '12px', fontWeight: 500, color: couponState.valid ? '#27AE60' : '#E74C3C' }}>
-                {couponState.valid ? '✓' : '✕'} {couponState.message}
-              </div>
-            )}
-          </div>
-
-          <button onClick={handleUpgrade} disabled={billingLoading} style={{ padding: '10px 20px', background: 'var(--g600)', color: '#fff', border: 'none', borderRadius: 'var(--r)', fontSize: '13px', fontWeight: 600, cursor: billingLoading ? 'default' : 'pointer', opacity: billingLoading ? 0.7 : 1, fontFamily: "'DM Sans', sans-serif" }}>{billingLoading ? 'Redirecionando…' : 'Comprar análises extras'}</button>
-        </div>
-      )}
 
       <div style={{ padding: '14px 16px', background: 'var(--w)', border: '1px solid var(--gr2)', borderRadius: 'var(--r)', fontSize: '13px', color: 'var(--gr5)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <span>Sem fidelidade · Cancele quando quiser · Acesso até o fim do período pago</span>
-        <button onClick={handlePortal} disabled={billingLoading} style={{ background: 'none', border: 'none', color: 'var(--danger)', fontSize: '12px', cursor: billingLoading ? 'default' : 'pointer', opacity: billingLoading ? 0.7 : 1, fontFamily: "'DM Sans', sans-serif", fontWeight: 500 }}>{billingLoading ? 'Abrindo portal…' : 'Cancelar assinatura'}</button>
+        <button onClick={handlePortal} disabled={portalLoading} style={{ background: 'none', border: 'none', color: 'var(--danger)', fontSize: '12px', cursor: portalLoading ? 'default' : 'pointer', opacity: portalLoading ? 0.7 : 1, fontFamily: "'DM Sans', sans-serif", fontWeight: 500 }}>
+          {portalLoading ? 'Abrindo portal…' : 'Cancelar assinatura'}
+        </button>
       </div>
     </div>
   )
@@ -863,8 +965,8 @@ const TABS = [
   { id: 'ajuda',        label: 'Ajuda & Guia',       icon: <><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></> },
 ]
 
-export default function Settings({ currentUser, onProfileUpdate, onOpenOnboarding, onOpenTermos }) {
-  const [tab, setTab] = useState('perfil')
+export default function Settings({ currentUser, onProfileUpdate, onOpenOnboarding, onOpenTermos, defaultTab = 'perfil' }) {
+  const [tab, setTab] = useState(defaultTab)
   const [profile, setProfile] = useState(null)
   const [loading, setLoading] = useState(true)
 
