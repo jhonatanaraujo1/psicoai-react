@@ -72,6 +72,8 @@ export default function Agenda({ currentUser }) {
   const [form, setForm] = useState({
     title: '', type: 'session', patientId: '', date: '', startTime: '', endTime: '', meetLink: '', description: ''
   })
+  const [googleConnected, setGoogleConnected] = useState(false)
+  const [generatingMeet, setGeneratingMeet] = useState(false)
 
   const today = new Date()
   today.setHours(0, 0, 0, 0)
@@ -100,6 +102,7 @@ export default function Agenda({ currentUser }) {
     loadEvents().finally(() => setLoading(false))
     // Load Google Calendar events if connected
     api.getGoogleStatus().then(s => {
+      setGoogleConnected(s.connected)
       if (s.connected && s.calendarSync) {
         const from = new Date(); from.setDate(from.getDate() - 7)
         const to   = new Date(); to.setDate(to.getDate() + 60)
@@ -781,16 +784,62 @@ export default function Agenda({ currentUser }) {
                 </div>
               </div>
 
-              {/* Link */}
+              {/* Link — campo inteligente com geração de Meet */}
               <div>
                 <label style={{ fontSize: '11px', fontWeight: 600, color: 'var(--gr5)', letterSpacing: '0.05em', display: 'block', marginBottom: '6px' }}>LINK DE VIDEOCHAMADA</label>
-                <input
-                  style={inSt}
-                  type="text"
-                  placeholder="https://meet.google.com/…"
-                  value={form.meetLink}
-                  onChange={e => setForm(f => ({ ...f, meetLink: e.target.value }))}
-                />
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <input
+                    style={{ ...inSt, flex: 1 }}
+                    type="text"
+                    placeholder="Cole um link ou gere um Google Meet →"
+                    value={form.meetLink}
+                    onChange={e => setForm(f => ({ ...f, meetLink: e.target.value }))}
+                  />
+                  {googleConnected && (
+                    <button
+                      type="button"
+                      disabled={generatingMeet}
+                      onClick={async () => {
+                        setGeneratingMeet(true)
+                        try {
+                          const patientName = allPatients.find(p => String(p.id) === form.patientId)?.name || 'Paciente'
+                          const { meetLink } = await api.createGoogleMeet(patientName)
+                          setForm(f => ({ ...f, meetLink }))
+                          showToast('Link do Google Meet gerado!', 'success')
+                        } catch (e) {
+                          showToast(e.message || 'Erro ao gerar link', 'error')
+                        } finally {
+                          setGeneratingMeet(false)
+                        }
+                      }}
+                      style={{
+                        padding: '9px 12px', border: '1px solid #4285F4', borderRadius: 'var(--r)',
+                        background: generatingMeet ? 'var(--gr1)' : '#E8F0FE', color: '#1A56C4',
+                        fontSize: '12px', fontWeight: 600, cursor: generatingMeet ? 'not-allowed' : 'pointer',
+                        whiteSpace: 'nowrap', fontFamily: "'DM Sans', sans-serif", flexShrink: 0,
+                        display: 'flex', alignItems: 'center', gap: '5px',
+                      }}
+                    >
+                      {generatingMeet ? (
+                        <>
+                          <div style={{ width: 12, height: 12, border: '2px solid #4285F4', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
+                          Gerando…
+                        </>
+                      ) : (
+                        <>
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="#1A56C4"><path d="M22 8l-6 4 6 4V8z"/><rect x="2" y="6" width="14" height="12" rx="2" fill="#1A56C4"/></svg>
+                          Google Meet
+                        </>
+                      )}
+                    </button>
+                  )}
+                </div>
+                {form.meetLink && (
+                  <div style={{ marginTop: '6px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <a href={form.meetLink} target="_blank" rel="noopener noreferrer" style={{ fontSize: '11px', color: 'var(--g600)', textDecoration: 'underline', wordBreak: 'break-all' }}>{form.meetLink}</a>
+                    <button type="button" onClick={() => setForm(f => ({ ...f, meetLink: '' }))} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--danger)', fontSize: '14px', lineHeight: 1, padding: '0 2px', flexShrink: 0 }}>×</button>
+                  </div>
+                )}
               </div>
 
               {/* Descrição */}

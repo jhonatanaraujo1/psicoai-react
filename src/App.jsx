@@ -124,8 +124,9 @@ export default function App() {
 
     if (google === 'connected') {
       window.history.replaceState({}, '', window.location.pathname)
-      showToast('✓ Google conectado com sucesso!', 'success')
-      setCurrentView('configuracoes')
+      showToast('✓ Google Meet conectado! Agora você pode gerar links de sessão.', 'success')
+      // Redireciona para teleatendimento — é de lá que o usuário veio
+      setCurrentView('teleatendimento')
     }
     if (google === 'error') {
       window.history.replaceState({}, '', window.location.pathname)
@@ -370,8 +371,13 @@ export default function App() {
       if (e.state?.psicoai_canvas && typeof e.state.page === 'number') {
         setAnnotationTargetPage(e.state.page)
       } else {
+        // Browser back: fecha canvas e limpa sessão ativa do localStorage
+        // para que o próximo refresh não reabra uma anotação vazia
         setCanvasOpen(false)
         setCanvasInitialPageType(null)
+        setSession(null)
+        setActiveSessionType(null)
+        safeStorage.remove('psicoai_active_session')
         const p = new URLSearchParams(window.location.search)
         if (p.get('view') === 'anotacao') {
           p.delete('view'); p.delete('paciente')
@@ -383,6 +389,20 @@ export default function App() {
     window.addEventListener('popstate', handler)
     return () => window.removeEventListener('popstate', handler)
   }, []) // eslint-disable-line
+
+  // ── Notifications panel ───────────────────────────────────────────────────
+  const [notifOpen, setNotifOpen] = useState(false)
+  const [notifItems, setNotifItems] = useState([])
+
+  useEffect(() => {
+    if (!currentUser) return
+    // Carrega eventos de agenda das próximas 48h para badge de notificações
+    const from = new Date().toISOString()
+    const to   = new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString()
+    api.getAgendaEvents({ from, to })
+      .then(evs => setNotifItems(evs || []))
+      .catch(() => {})
+  }, [currentUser])
 
   // ── AI Drawer ─────────────────────────────────────────────────────────────
   const [aiDrawerOpen, setAiDrawerOpen] = useState(false)
@@ -1109,10 +1129,49 @@ export default function App() {
           patientName={currentPatient?.name}
           onHamburger={() => setSidebarOpen(o => !o)}
           onAiOpen={() => setAiDrawerOpen(true)}
+          onNotifOpen={() => setNotifOpen(o => !o)}
+          notifCount={notifItems.length}
           currentUser={currentUser}
           openSessionsCount={totalOpenSessions}
           onSessionsBadgeClick={() => setSessionsPanelOpen(o => !o)}
         />
+        {/* Painel de notificações — eventos próximos 48h */}
+        {notifOpen && (
+          <div style={{ position: 'fixed', top: '64px', right: '16px', width: '320px', background: 'var(--ow)', border: '1px solid var(--gr2)', borderRadius: '12px', boxShadow: '0 8px 32px rgba(0,0,0,0.14)', zIndex: 4500, overflow: 'hidden' }}>
+            <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--gr2)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ fontWeight: 700, fontSize: '13px', color: 'var(--d)' }}>Próximos eventos (48h)</div>
+              <button style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '18px', color: 'var(--gr4)', lineHeight: 1 }} onClick={() => setNotifOpen(false)}>×</button>
+            </div>
+            <div style={{ maxHeight: '360px', overflowY: 'auto' }}>
+              {notifItems.length === 0 ? (
+                <div style={{ padding: '24px 16px', textAlign: 'center', color: 'var(--gr4)', fontSize: '13px' }}>Nenhum evento nas próximas 48h</div>
+              ) : notifItems.map(ev => {
+                const d = new Date(ev.startAt)
+                const isToday = d.toDateString() === new Date().toDateString()
+                const timeStr = d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+                const dayStr = isToday ? 'Hoje' : d.toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: 'short' })
+                return (
+                  <div key={ev.id} style={{ padding: '12px 16px', borderBottom: '1px solid var(--gr2)', display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
+                    <div style={{ width: '36px', height: '36px', borderRadius: '8px', background: isToday ? 'var(--g50)' : 'var(--ow)', border: `1.5px solid ${isToday ? 'var(--g300)' : 'var(--gr2)'}`, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      <div style={{ fontSize: '9px', color: isToday ? 'var(--g600)' : 'var(--gr4)', fontWeight: 700, lineHeight: 1 }}>{dayStr.split(' ')[0].toUpperCase()}</div>
+                      <div style={{ fontSize: '14px', fontWeight: 700, color: isToday ? 'var(--g600)' : 'var(--d)', lineHeight: 1 }}>{d.getDate()}</div>
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--d)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{ev.title || ev.patientName || 'Evento'}</div>
+                      <div style={{ fontSize: '11px', color: 'var(--gr4)', marginTop: '2px' }}>{timeStr} · {ev.patientName || ev.type || ''}</div>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+            <div style={{ padding: '10px 16px', borderTop: '1px solid var(--gr2)' }}>
+              <button style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '12px', color: 'var(--g600)', fontWeight: 600, fontFamily: "'DM Sans', sans-serif", padding: 0 }}
+                onClick={() => { setNotifOpen(false); handleSetView('agenda') }}>
+                Ver agenda completa →
+              </button>
+            </div>
+          </div>
+        )}
         <div className="content"><Suspense fallback={null}>{renderView()}</Suspense></div>
       </div>
 

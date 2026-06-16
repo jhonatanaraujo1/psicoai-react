@@ -84,20 +84,12 @@ export default function Reminders() {
   const [queue,    setQueue]    = useState([])
   const [past,     setPast]     = useState([])
 
-  const [templates, setTemplates] = useState({
-    confirm24: 'Olá, {{nome}}! Lembrando da sua sessão amanhã às {{hora}}. Para confirmar, responda este e-mail. Para reagendar, avise com antecedência.',
-    dayof2:    'Oi, {{nome}}! Sua sessão é hoje às {{hora}}. Te espero!',
-  })
-  const [tplSaving, setTplSaving] = useState(false)
-
   // ── Carrega configs do perfil do usuário ────────────────────────────────────
   useEffect(() => {
     api.getUserProfile()
       .then(profile => {
         const saved = profile?.preferences?.lembreteEnabled
         if (saved && typeof saved === 'object') setEnabled(e => ({ ...e, ...saved }))
-        const savedTpl = profile?.preferences?.lembreteTpl
-        if (savedTpl && typeof savedTpl === 'object') setTemplates(t => ({ ...t, ...savedTpl }))
       })
       .catch(() => {/* usa defaults */})
   }, [])
@@ -157,6 +149,7 @@ export default function Reminders() {
 
   // ── Toggle + salva no servidor ──────────────────────────────────────────────
   const toggle = async (id) => {
+    if (id === 'billing3days' || id === 'feedback1day') return  // not implemented
     const next = { ...enabled, [id]: !enabled[id] }
     setEnabled(next)
     setConfigSaving(true)
@@ -167,19 +160,6 @@ export default function Reminders() {
       setEnabled(enabled) // reverte
     } finally {
       setConfigSaving(false)
-    }
-  }
-
-  // ── Salva templates no servidor ─────────────────────────────────────────────
-  const saveTemplates = async () => {
-    setTplSaving(true)
-    try {
-      await api.updateProfile({ preferences: { lembreteTpl: templates } })
-      showToast('Templates salvos', 'success')
-    } catch {
-      showToast('Erro ao salvar templates', 'error')
-    } finally {
-      setTplSaving(false)
     }
   }
 
@@ -209,17 +189,29 @@ export default function Reminders() {
               )}
             </div>
             <div className="card-body" style={{ padding: 0 }}>
-              {CONFIG_DEFS.map((c, i) => (
+              {CONFIG_DEFS.map((c, i) => {
+                const isComingSoon = c.id === 'billing3days' || c.id === 'feedback1day'
+                return (
                 <div key={c.id} style={{
                   display: 'flex', alignItems: 'center', gap: '16px',
                   padding: '16px 20px',
                   borderBottom: i < CONFIG_DEFS.length - 1 ? '1px solid var(--gr1)' : 'none',
-                  opacity: enabled[c.id] ? 1 : 0.55,
+                  opacity: isComingSoon ? 0.55 : (enabled[c.id] ? 1 : 0.55),
                   transition: 'opacity 0.15s',
                 }}>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--d)', marginBottom: '3px' }}>
                       {c.title}
+                      {isComingSoon && (
+                        <span style={{
+                          fontSize: '9px', fontWeight: 700,
+                          color: 'var(--gr5)', background: 'var(--gr1)',
+                          border: '1px solid var(--gr2)',
+                          padding: '1px 6px', borderRadius: '8px',
+                          textTransform: 'uppercase', letterSpacing: '0.4px',
+                          marginLeft: '6px', verticalAlign: 'middle',
+                        }}>Em breve</span>
+                      )}
                     </div>
                     <div style={{ fontSize: '12px', color: 'var(--gr5)', lineHeight: 1.4 }}>
                       {c.desc}
@@ -235,56 +227,35 @@ export default function Reminders() {
                       </span>
                     </div>
                   </div>
-                  <label className="toggle-switch" style={{ flexShrink: 0 }}>
-                    <input type="checkbox" checked={enabled[c.id]} onChange={() => toggle(c.id)} disabled={configSaving} />
+                  <label className="toggle-switch" style={{ flexShrink: 0, ...(isComingSoon ? { opacity: 0.4, cursor: 'not-allowed' } : {}) }}>
+                    <input type="checkbox" checked={enabled[c.id]} onChange={() => toggle(c.id)} disabled={configSaving || isComingSoon} />
                     <span className="toggle-slider" />
                   </label>
                 </div>
-              ))}
+                )
+              })}
             </div>
           </div>
 
           {/* Templates */}
-          <div className="card">
+          <div className="card" style={{ opacity: 0.7 }}>
             <div className="card-header">
-              <div className="card-title">Templates de e-mail</div>
-              <div className="card-sub">Texto enviado automaticamente aos pacientes</div>
+              <div>
+                <div className="card-title">Templates de e-mail</div>
+                <div className="card-sub">Personalização de mensagens</div>
+              </div>
+              <div style={{
+                fontSize: '9px', fontWeight: 700, color: 'var(--gr5)',
+                background: 'var(--gr1)', border: '1px solid var(--gr2)',
+                padding: '2px 8px', borderRadius: '10px', textTransform: 'uppercase', letterSpacing: '0.4px',
+              }}>
+                Em breve
+              </div>
             </div>
             <div className="card-body">
-              {[
-                { key: 'confirm24', label: 'CONFIRMAÇÃO — 24H ANTES' },
-                { key: 'dayof2',    label: 'LEMBRETE NO DIA — 2H ANTES' },
-              ].map(({ key, label }) => (
-                <div key={key} style={{ marginBottom: '18px' }}>
-                  <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--gr5)', marginBottom: '6px', letterSpacing: '0.6px' }}>
-                    {label}
-                  </div>
-                  <textarea
-                    value={templates[key]}
-                    onChange={e => setTemplates(t => ({ ...t, [key]: e.target.value }))}
-                    style={{
-                      width: '100%', boxSizing: 'border-box',
-                      border: '1px solid var(--gr2)', borderRadius: 'var(--r)',
-                      padding: '10px 12px', fontSize: '13px',
-                      fontFamily: "'DM Sans', sans-serif", color: 'var(--d)',
-                      background: 'var(--ow)', resize: 'vertical', minHeight: '68px', outline: 'none',
-                    }}
-                    onFocus={e => e.target.style.borderColor = 'var(--g300)'}
-                    onBlur={e =>  e.target.style.borderColor = 'var(--gr2)'}
-                  />
-                </div>
-              ))}
-              <div style={{ fontSize: '11px', color: 'var(--gr4)', marginBottom: '14px', fontFamily: 'monospace', letterSpacing: '0.3px' }}>
-                {'{{nome}}'} · {'{{hora}}'} · {'{{dia}}'} · {'{{mes}}'}
+              <div style={{ fontSize: '13px', color: 'var(--gr5)', lineHeight: 1.6 }}>
+                A personalização do texto dos e-mails automáticos estará disponível em breve.
               </div>
-              <button
-                className="btn-primary"
-                style={{ fontSize: '12px', padding: '9px 18px' }}
-                onClick={saveTemplates}
-                disabled={tplSaving}
-              >
-                {tplSaving ? 'Salvando…' : 'Salvar templates'}
-              </button>
             </div>
           </div>
         </div>

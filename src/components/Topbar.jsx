@@ -30,6 +30,8 @@ export default function Topbar({
   patientName,
   onHamburger,
   onAiOpen,
+  onNotifOpen,    // () → abre painel de notificações/lembretes
+  notifCount,     // número de notificações pendentes (0 = sem badge)
   currentUser,
   // Multi-session badge
   openSessionsCount,   // número total de sessões abertas (fundo + foreground)
@@ -98,12 +100,28 @@ export default function Topbar({
               {openSessionsCount}
             </button>
           )}
-          <button className="tb-btn" onClick={onAiOpen} title="Assistente IA">
+          {/* Notificações — agenda, lembretes, formulários respondidos */}
+          <button className="tb-btn" onClick={onNotifOpen} title="Notificações" style={{ position: 'relative' }}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
               <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
               <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
             </svg>
-            <span className="notif-dot"></span>
+            {notifCount > 0 && (
+              <span style={{
+                position: 'absolute', top: '2px', right: '2px',
+                width: '8px', height: '8px', borderRadius: '50%',
+                background: 'var(--danger, #E74C3C)',
+                border: '1.5px solid var(--ow)',
+              }} />
+            )}
+          </button>
+          {/* Assistente IA — reflexão clínica */}
+          <button className="tb-btn" onClick={onAiOpen} title="Assistente IA">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+              <path d="M12 2a4 4 0 0 1 4 4c0 1.5-.6 2.8-1.5 3.8L17 21H7l2.5-11.2A5.5 5.5 0 0 1 8 6a4 4 0 0 1 4-4z"/>
+              <path d="M9 21h6"/>
+              <circle cx="12" cy="6" r="1.5" fill="currentColor" stroke="none"/>
+            </svg>
           </button>
           <div className="av-circle" style={{ width: '34px', height: '34px', fontSize: '12px' }}>{initials}</div>
         </div>

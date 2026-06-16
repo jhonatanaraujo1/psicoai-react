@@ -38,7 +38,7 @@ const PLANS = [
       'Hipóteses DSM-5/CID-11 com grau de evidência',
       '5 templates: reflexão, risco, longitudinal, supervisão, psicodinâmica',
       'Alertas de padrão (evitação, ruminação, hipervigilância)',
-      'Re-análise com feedback até 3x por sessão',
+      'Re-análise com feedback até 3x por análise',
       'Insights agregados da sua carteira',
       'Acesso antecipado a novas features',
     ],

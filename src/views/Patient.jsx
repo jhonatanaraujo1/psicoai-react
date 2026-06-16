@@ -681,6 +681,7 @@ export default function Patient({ patient: propPatient, setCurrentView, onSessao
           recurringDurationMin: form.recurringDurationMin,
           billingType: form.billingType,
           monthlyValue: form.monthlyValue,
+          billingDay: form.billingDay,
         })
         setEditOpen(false)
         api.getPatientSummary(patientId).then(setSummary)

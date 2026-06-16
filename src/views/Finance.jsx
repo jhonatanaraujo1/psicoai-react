@@ -47,12 +47,186 @@ function Skeleton({ style }) {
 
 const LANC_FORM_DEFAULT = { patientId: '', patientName: '', description: '', amount: '', direction: 'credit', status: 'pending', dueDate: '', paymentMethod: 'pix', rescheduledDueDate: '' }
 
+// ── ReciboModal ──────────────────────────────────────────────────────────────
+function ReciboModal({ events, form, setForm, onClose }) {
+  const receivedEvents = events.filter(e => e.status === 'received' && e.direction === 'credit' && e.patientName)
+
+  const selectedEvent = receivedEvents.find(e => String(e.id) === form.eventId)
+
+  const reciboNum = `${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2,'0')}${String(Math.floor(Math.random() * 900) + 100)}`
+
+  function handlePrint() {
+    if (!selectedEvent && !form.eventId) {
+      alert('Selecione um lançamento para emitir o recibo.')
+      return
+    }
+    const evt = selectedEvent
+    const patientName = evt?.patientName || '—'
+    const amount = form.customAmount
+      ? parseFloat(form.customAmount.replace(',', '.'))
+      : evt?.amount || 0
+    const amountFmt = fmtBRL(amount)
+    const sessionDate = form.sessionDate
+      ? new Date(form.sessionDate + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })
+      : '—'
+    const desc = form.serviceDesc || 'Consulta de Psicologia'
+    const method = evt?.paymentMethod ? METHOD_LABELS[evt.paymentMethod] || evt.paymentMethod : 'PIX'
+    const psicoName = form.psicoName || 'Psicólogo(a)'
+    const crp = form.crp ? `CRP: ${form.crp}` : ''
+
+    const w = window.open('', '_blank', 'width=700,height=900')
+    w.document.write(`<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Recibo — ${patientName}</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Georgia', serif; background: #fff; color: #1a1a1a; padding: 60px; }
+  .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 48px; padding-bottom: 24px; border-bottom: 2px solid #2D4A38; }
+  .brand { font-size: 22px; color: #2D4A38; letter-spacing: -0.5px; }
+  .brand-sub { font-size: 12px; color: #666; font-family: 'Arial', sans-serif; margin-top: 4px; }
+  .recibo-num { text-align: right; font-family: 'Arial', sans-serif; }
+  .recibo-num .label { font-size: 10px; color: #999; letter-spacing: 1px; text-transform: uppercase; }
+  .recibo-num .num { font-size: 20px; color: #2D4A38; font-weight: 700; }
+  h1 { font-size: 32px; font-weight: 400; color: #1a1a1a; margin-bottom: 6px; }
+  .amount-block { background: #F4F7F5; border-left: 4px solid #2D4A38; padding: 20px 28px; margin: 32px 0; border-radius: 0 8px 8px 0; }
+  .amount-label { font-size: 11px; font-family: 'Arial', sans-serif; letter-spacing: 1px; text-transform: uppercase; color: #666; margin-bottom: 6px; }
+  .amount-val { font-size: 36px; color: #2D4A38; }
+  .details { margin: 32px 0; }
+  .row { display: flex; padding: 12px 0; border-bottom: 1px solid #f0f0f0; font-family: 'Arial', sans-serif; }
+  .row .key { font-size: 11px; color: #999; text-transform: uppercase; letter-spacing: 0.5px; width: 160px; flex-shrink: 0; }
+  .row .val { font-size: 13px; color: #1a1a1a; font-weight: 500; }
+  .sig-block { margin-top: 64px; display: flex; justify-content: center; }
+  .sig-inner { text-align: center; border-top: 1px solid #1a1a1a; padding-top: 12px; min-width: 240px; }
+  .sig-name { font-size: 14px; font-weight: 600; }
+  .sig-sub { font-size: 12px; color: #666; font-family: 'Arial', sans-serif; margin-top: 3px; }
+  .footer { margin-top: 48px; padding-top: 16px; border-top: 1px solid #e0e0e0; font-size: 11px; color: #aaa; font-family: 'Arial', sans-serif; text-align: center; }
+  @media print { body { padding: 40px; } }
+</style>
+</head>
+<body>
+<div class="header">
+  <div>
+    <div class="brand">Ψ PsicoNotes</div>
+    <div class="brand-sub">Gestão clínica inteligente</div>
+  </div>
+  <div class="recibo-num">
+    <div class="label">Recibo nº</div>
+    <div class="num">${reciboNum}</div>
+  </div>
+</div>
+<h1>Recibo de Pagamento</h1>
+<div class="amount-block">
+  <div class="amount-label">Valor recebido</div>
+  <div class="amount-val">${amountFmt}</div>
+</div>
+<div class="details">
+  <div class="row"><span class="key">Paciente</span><span class="val">${patientName}</span></div>
+  <div class="row"><span class="key">Serviço</span><span class="val">${desc}</span></div>
+  <div class="row"><span class="key">Data da sessão</span><span class="val">${sessionDate}</span></div>
+  <div class="row"><span class="key">Forma de pagamento</span><span class="val">${method}</span></div>
+  <div class="row"><span class="key">Profissional</span><span class="val">${psicoName}${crp ? ' · ' + crp : ''}</span></div>
+  <div class="row"><span class="key">Data de emissão</span><span class="val">${new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}</span></div>
+</div>
+<div class="sig-block">
+  <div class="sig-inner">
+    <div class="sig-name">${psicoName}</div>
+    <div class="sig-sub">${crp || 'Psicólogo(a)'}</div>
+  </div>
+</div>
+<div class="footer">
+  Este recibo foi gerado pelo sistema PsicoNotes e comprova o pagamento descrito acima.<br>
+  Documento válido sem assinatura eletrônica — sujeito a declaração do profissional.
+</div>
+<script>window.onload = () => { window.print(); }<\/script>
+</body></html>`)
+    w.document.close()
+  }
+
+  const inputSt = { border: '1px solid var(--gr2)', borderRadius: 'var(--r)', padding: '9px 12px', fontSize: '13px', fontFamily: "'DM Sans', sans-serif", outline: 'none', background: 'var(--ow)', width: '100%', boxSizing: 'border-box', color: 'var(--d)' }
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 5000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}
+      onClick={e => e.target === e.currentTarget && onClose()}>
+      <div style={{ background: 'var(--ow)', borderRadius: '16px', padding: '28px', width: '100%', maxWidth: '480px', maxHeight: '90vh', overflowY: 'auto' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' }}>
+          <div style={{ fontFamily: "'Fraunces', serif", fontSize: '18px', fontWeight: 400, color: 'var(--d)' }}>Emitir recibo</div>
+          <button style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '22px', color: 'var(--gr4)', lineHeight: 1 }} onClick={onClose}>×</button>
+        </div>
+
+        {/* Lançamento */}
+        <div className="form-field" style={{ marginBottom: '16px' }}>
+          <label style={{ fontSize: '10px', fontWeight: 600, letterSpacing: '0.8px', textTransform: 'uppercase', color: 'var(--gr4)', display: 'block', marginBottom: '6px' }}>LANÇAMENTO (pagamento recebido)</label>
+          <select value={form.eventId} onChange={e => setForm(f => ({ ...f, eventId: e.target.value }))} style={inputSt}>
+            <option value="">Selecione um lançamento…</option>
+            {receivedEvents.map(e => (
+              <option key={e.id} value={String(e.id)}>
+                {e.patientName} — {e.description} ({fmtBRL(e.amount)})
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' }}>
+          <div>
+            <label style={{ fontSize: '10px', fontWeight: 600, letterSpacing: '0.8px', textTransform: 'uppercase', color: 'var(--gr4)', display: 'block', marginBottom: '6px' }}>DATA DA SESSÃO</label>
+            <input type="date" value={form.sessionDate} onChange={e => setForm(f => ({ ...f, sessionDate: e.target.value }))} style={inputSt} />
+          </div>
+          <div>
+            <label style={{ fontSize: '10px', fontWeight: 600, letterSpacing: '0.8px', textTransform: 'uppercase', color: 'var(--gr4)', display: 'block', marginBottom: '6px' }}>VALOR (deixe em branco para usar o lançamento)</label>
+            <input type="text" placeholder={selectedEvent ? fmtBRL(selectedEvent.amount) : 'R$ 0,00'} value={form.customAmount} onChange={e => setForm(f => ({ ...f, customAmount: e.target.value }))} style={inputSt} />
+          </div>
+        </div>
+
+        <div style={{ marginBottom: '16px' }}>
+          <label style={{ fontSize: '10px', fontWeight: 600, letterSpacing: '0.8px', textTransform: 'uppercase', color: 'var(--gr4)', display: 'block', marginBottom: '6px' }}>DESCRIÇÃO DO SERVIÇO</label>
+          <input type="text" value={form.serviceDesc} onChange={e => setForm(f => ({ ...f, serviceDesc: e.target.value }))} style={inputSt} />
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '24px' }}>
+          <div>
+            <label style={{ fontSize: '10px', fontWeight: 600, letterSpacing: '0.8px', textTransform: 'uppercase', color: 'var(--gr4)', display: 'block', marginBottom: '6px' }}>SEU NOME</label>
+            <input type="text" placeholder="Dra. Exemplo" value={form.psicoName} onChange={e => setForm(f => ({ ...f, psicoName: e.target.value }))} style={inputSt} />
+          </div>
+          <div>
+            <label style={{ fontSize: '10px', fontWeight: 600, letterSpacing: '0.8px', textTransform: 'uppercase', color: 'var(--gr4)', display: 'block', marginBottom: '6px' }}>CRP</label>
+            <input type="text" placeholder="06/123456" value={form.crp} onChange={e => setForm(f => ({ ...f, crp: e.target.value }))} style={inputSt} />
+          </div>
+        </div>
+
+        {/* Preview */}
+        {selectedEvent && (
+          <div style={{ background: 'var(--g50)', border: '1px solid var(--g100)', borderRadius: '10px', padding: '14px 16px', marginBottom: '20px', fontSize: '13px', color: 'var(--g700)' }}>
+            <div style={{ fontWeight: 600, marginBottom: '6px' }}>Pré-visualização do recibo</div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px 12px', fontSize: '12px', color: 'var(--gr5)' }}>
+              <span>Paciente: <strong style={{ color: 'var(--d)' }}>{selectedEvent.patientName}</strong></span>
+              <span>Valor: <strong style={{ color: 'var(--g600)' }}>{form.customAmount ? fmtBRL(parseFloat(form.customAmount.replace(',','.')) || 0) : fmtBRL(selectedEvent.amount)}</strong></span>
+              <span>Método: <strong style={{ color: 'var(--d)' }}>{METHOD_LABELS[selectedEvent.paymentMethod] || 'PIX'}</strong></span>
+              <span>Nº: <strong style={{ color: 'var(--d)' }}>{reciboNum}</strong></span>
+            </div>
+          </div>
+        )}
+
+        <div style={{ display: 'flex', gap: '10px' }}>
+          <button className="btn-outline" style={{ flex: 1 }} onClick={onClose}>Cancelar</button>
+          <button className="btn-primary" style={{ flex: 2, justifyContent: 'center' }} onClick={handlePrint}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+            Imprimir / Salvar PDF
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function Finance() {
   const [events, setEvents] = useState([])
   const [summary, setSummary] = useState(null)
   const [recurring, setRecurring] = useState([])
   const [loading, setLoading] = useState(true)
   const [reciboOpen, setReciboOpen] = useState(false)
+  const [reciboForm, setReciboForm] = useState({ eventId: '', psicoName: '', crp: '', sessionDate: new Date().toISOString().slice(0, 10), serviceDesc: 'Consulta de Psicologia — sessão individual', customAmount: '' })
   const [barData, setBarData] = useState(buildBarData)
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
@@ -187,9 +361,23 @@ export default function Finance() {
     return matchSearch && matchStatus
   })
 
-  const received = summary?.receivedThisMonth || 0
-  const pending  = summary?.pendingReceivables || 0
-  const overdueN = summary?.overdueCount || 0
+  // Receita: para eventos recebidos, usa paidAt (data real do pagamento).
+  // Fallback para dueDate/createdAt só se paidAt ausente (lançamentos legados pré-paidAt).
+  const now = new Date()
+  const received = events
+    .filter(e => {
+      if (e.direction !== 'credit' || e.status !== 'received') return false
+      // Prioriza paidAt — data real em que o dinheiro entrou
+      const ref = new Date(e.paidAt || e.dueDate || e.createdAt)
+      return ref.getMonth() === now.getMonth() && ref.getFullYear() === now.getFullYear()
+    })
+    .reduce((acc, e) => acc + (e.amount || 0), 0)
+
+  // Pendente e atrasado calculados localmente tb — não depende do summary backend
+  const pending = events
+    .filter(e => e.direction === 'credit' && (e.status === 'pending' || e.status === 'overdue'))
+    .reduce((acc, e) => acc + (e.amount || 0), 0)
+  const overdueN = events.filter(e => e.direction === 'credit' && e.status === 'overdue').length
 
   return (
     <div className="view">
@@ -374,9 +562,14 @@ export default function Finance() {
                                       paidAt: now,
                                     })
                                   }
-                                  const [evRes, recRes] = await Promise.all([api.getFinancialEvents(), api.getRecurringSummary()])
+                                  const [evRes, recRes, sumRes] = await Promise.all([
+                                    api.getFinancialEvents(),
+                                    api.getRecurringSummary(),
+                                    api.getFinancialSummary(),
+                                  ])
                                   setEvents(evRes.content || [])
                                   setRecurring(recRes || [])
+                                  setSummary(sumRes)
                                 } catch {
                                   showToast('Erro ao registrar pagamento.', 'error')
                                 } finally {
@@ -667,35 +860,12 @@ export default function Finance() {
       )}
 
       {/* Recibo modal */}
-      <div className={`recibo-modal${reciboOpen ? ' open' : ''}`} onClick={e => e.target === e.currentTarget && setReciboOpen(false)}>
-        <div className="recibo-box">
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
-            <div style={{ fontFamily: "'Fraunces', serif", fontSize: '18px', fontWeight: 400, color: 'var(--d)' }}>Emitir recibo</div>
-            <button style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '20px', color: 'var(--gr5)' }} onClick={() => setReciboOpen(false)}>×</button>
-          </div>
-          <div className="form-field">
-            <label>PACIENTE</label>
-            <CustomSelect
-              value=""
-              onChange={() => {}}
-              options={events.filter(e => e.patientName).map(e => ({ label: `${e.patientName} — ${e.description}`, value: String(e.id) }))}
-              placeholder="Selecione um evento…"
-            />
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-            <div className="form-field"><label>DATA DA SESSÃO</label><DatePicker value={new Date().toISOString().slice(0, 10)} onChange={() => {}} /></div>
-            <div className="form-field"><label>VALOR</label><input type="text" defaultValue="R$ 200,00" /></div>
-          </div>
-          <div className="form-field"><label>DESCRIÇÃO</label><input type="text" defaultValue="Consulta de Psicologia — sessão individual" /></div>
-          <div style={{ display: 'flex', gap: '10px', marginTop: '8px' }}>
-            <button className="btn-outline" style={{ flex: 1 }} onClick={() => setReciboOpen(false)}>Cancelar</button>
-            <button className="btn-primary" style={{ flex: 1, justifyContent: 'center', opacity: 0.6, cursor: 'not-allowed' }} disabled title="Em breve">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-              Em breve
-            </button>
-          </div>
-        </div>
-      </div>
+      {reciboOpen && <ReciboModal
+        events={events}
+        form={reciboForm}
+        setForm={setReciboForm}
+        onClose={() => setReciboOpen(false)}
+      />}
     </div>
   )
 }
