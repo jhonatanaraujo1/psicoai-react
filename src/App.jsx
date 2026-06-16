@@ -936,6 +936,7 @@ export default function App() {
       case 'insights':    return <Insights
         onGoToPatient={(patient) => handleSetView('paciente', patient)}
         onOpenAnalysisHub={handleOpenAnalysisHub}
+        currentUser={currentUser}
       />
       case 'analise-paciente': return <PatientAnalysisHub
         patient={currentPatient}

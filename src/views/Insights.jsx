@@ -437,21 +437,20 @@ function PatientInsightsView({ patient, onBack, onGoToPatient, onOpenAnalysisHub
 
 // ── InsightsPortfolio — carteira action-oriented ──────────────────────────────
 
-function InsightsPortfolio({ onSelectPatient, onOpenAnalysisHub }) {
-  const [data, setData]         = useState(null)
-  const [loading, setLoading]   = useState(true)
-  const [planGate, setPlanGate] = useState(false)
+function InsightsPortfolio({ onSelectPatient, onOpenAnalysisHub, currentUser }) {
+  const [data, setData]       = useState(null)
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    api.getInsights()
-      .then(setData)
-      .catch(e => {
-        if (e?.message?.toLowerCase().includes('especialista') || e?.message?.includes('upgrade')) {
-          setPlanGate(true)
-        }
-      })
-      .finally(() => setLoading(false))
+    api.getInsights().then(setData).finally(() => setLoading(false))
   }, [])
+
+  const isTrial      = currentUser?.subscriptionStatus === 'trialing'
+  const isPastDue    = currentUser?.subscriptionStatus === 'past_due'
+  const trialDays    = currentUser?.trialDaysRemaining ?? 0
+  const analyses     = currentUser?.analysesRemaining ?? 0
+  const planLabel    = currentUser?.plan === 'especialista' ? 'Especialista' : 'Consultório'
+  const planLimit    = currentUser?.plan === 'especialista' ? 40 : 15
 
   const totalCount      = data?.totalPatients    ?? 0
   const analyzedCount   = data?.analyzedPatients ?? 0
@@ -509,34 +508,76 @@ function InsightsPortfolio({ onSelectPatient, onOpenAnalysisHub }) {
         </div>
       </div>
 
-      {/* Banner — gate de plano Especialista */}
-      {!loading && planGate && (
+      {/* Banner — trial ativo */}
+      {!loading && isTrial && (
         <div style={{
-          background: 'linear-gradient(135deg, #1a2e1a 0%, #0f1f0f 100%)',
-          border: '1px solid var(--primary)', borderRadius: '12px',
-          padding: '24px', marginBottom: '24px',
+          background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '12px',
+          padding: '16px 20px', marginBottom: '24px',
+          display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap',
         }}>
-          <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-start', marginBottom: '16px' }}>
-            <div style={{ width: 40, height: 40, borderRadius: '10px', background: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.8"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1 }}>
+            <div style={{ width: 36, height: 36, borderRadius: '8px', background: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
             </div>
             <div>
-              <div style={{ fontSize: '15px', fontWeight: 600, color: '#fff', marginBottom: '4px' }}>
-                Insights da Carteira — plano Especialista
+              <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--d)' }}>
+                Período de teste —{' '}
+                <span style={{ color: trialDays <= 3 ? '#ef4444' : 'var(--primary)' }}>
+                  {trialDays <= 0 ? 'último dia' : `${trialDays} dia${trialDays !== 1 ? 's' : ''} restante${trialDays !== 1 ? 's' : ''}`}
+                </span>
               </div>
-              <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.7)', lineHeight: 1.6 }}>
-                Suas análises estão sendo geradas normalmente. O painel de carteira completa — padrões, alertas e hipóteses agregadas — é exclusivo do plano Especialista.
+              <div style={{ fontSize: '12px', color: 'var(--gr5)', marginTop: '2px' }}>
+                {analyses} análise{analyses !== 1 ? 's' : ''} disponível{analyses !== 1 ? 'is' : ''} · Assine para continuar após o trial
               </div>
             </div>
           </div>
-          <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.6)', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '12px' }}>
-            Para ver os insights individuais de cada paciente, acesse a aba de análises dentro do perfil do paciente.
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            <div style={{ textAlign: 'center', padding: '6px 14px', background: 'var(--g50)', borderRadius: '8px', border: '1px solid var(--g100)' }}>
+              <div style={{ fontSize: '18px', fontWeight: 700, color: 'var(--d)', lineHeight: 1 }}>{analyses}</div>
+              <div style={{ fontSize: '10px', color: 'var(--gr5)', marginTop: '2px' }}>análises</div>
+            </div>
+            <div style={{ textAlign: 'center', padding: '6px 14px', background: 'var(--g50)', borderRadius: '8px', border: '1px solid var(--g100)' }}>
+              <div style={{ fontSize: '18px', fontWeight: 700, color: trialDays <= 3 ? '#ef4444' : 'var(--d)', lineHeight: 1 }}>{Math.max(0, trialDays)}</div>
+              <div style={{ fontSize: '10px', color: 'var(--gr5)', marginTop: '2px' }}>dias</div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Banner — inadimplente (past_due) */}
+      {!loading && isPastDue && (
+        <div style={{
+          background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '12px',
+          padding: '16px 20px', marginBottom: '24px',
+          display: 'flex', gap: '12px', alignItems: 'center',
+        }}>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2" style={{ flexShrink: 0 }}><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          <div>
+            <div style={{ fontSize: '13px', fontWeight: 600, color: '#991b1b' }}>Pagamento pendente — geração de análises bloqueada</div>
+            <div style={{ fontSize: '12px', color: '#b91c1c', marginTop: '2px' }}>Você ainda pode ver os insights existentes. Regularize o pagamento para gerar novas análises.</div>
+          </div>
+        </div>
+      )}
+
+      {/* Banner — plano pago ativo: exibe análises restantes */}
+      {!loading && !isTrial && !isPastDue && (
+        <div style={{
+          background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '10px',
+          padding: '12px 16px', marginBottom: '20px',
+          display: 'flex', alignItems: 'center', gap: '12px',
+        }}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" strokeWidth="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+          <div style={{ fontSize: '13px', color: 'var(--gr5)' }}>
+            <span style={{ fontWeight: 600, color: 'var(--d)' }}>{planLabel}</span>
+            {' · '}
+            <span style={{ color: analyses === 0 ? '#ef4444' : 'var(--d)', fontWeight: 600 }}>{analyses}</span>
+            {` de ${planLimit} análise${planLimit !== 1 ? 's' : ''} disponível${analyses !== 1 ? 'is' : ''} este mês`}
           </div>
         </div>
       )}
 
       {/* Banner — nenhuma análise ainda */}
-      {!loading && !planGate && analyzedCount === 0 && (
+      {!loading && analyzedCount === 0 && (
         <div style={{
           background: 'var(--g50)', border: '1px solid var(--g100)', borderRadius: '12px',
           padding: '20px 24px', marginBottom: '24px',
@@ -834,7 +875,7 @@ function InsightsPortfolio({ onSelectPatient, onOpenAnalysisHub }) {
 
 // ── Root export ───────────────────────────────────────────────────────────────
 
-export default function Insights({ onGoToPatient, onOpenAnalysisHub }) {
+export default function Insights({ onGoToPatient, onOpenAnalysisHub, currentUser }) {
   const [selectedPatient, setSelectedPatient] = useState(null)
 
   const handleSelectPatient = useCallback((patient) => {
@@ -862,6 +903,7 @@ export default function Insights({ onGoToPatient, onOpenAnalysisHub }) {
     <InsightsPortfolio
       onSelectPatient={handleSelectPatient}
       onOpenAnalysisHub={onOpenAnalysisHub}
+      currentUser={currentUser}
     />
   )
 }
