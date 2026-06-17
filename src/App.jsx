@@ -1148,7 +1148,7 @@ export default function App() {
         />
         {/* Painel de notificações — eventos próximos 48h */}
         {notifOpen && (
-          <div style={{ position: 'fixed', top: '64px', right: '16px', width: '320px', background: 'var(--ow)', border: '1px solid var(--gr2)', borderRadius: '12px', boxShadow: '0 8px 32px rgba(0,0,0,0.14)', zIndex: 4500, overflow: 'hidden' }}>
+          <div style={{ position: 'fixed', top: '64px', right: '16px', width: 'min(320px, calc(100vw - 32px))', background: 'var(--ow)', border: '1px solid var(--gr2)', borderRadius: '12px', boxShadow: '0 8px 32px rgba(0,0,0,0.14)', zIndex: 4500, overflow: 'hidden' }}>
             <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--gr2)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div style={{ fontWeight: 700, fontSize: '13px', color: 'var(--d)' }}>Próximos eventos (48h)</div>
               <button style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '18px', color: 'var(--gr4)', lineHeight: 1 }} onClick={() => setNotifOpen(false)}>×</button>
@@ -1320,7 +1320,7 @@ export default function App() {
         title="Feedback, sugestão ou problema?"
         style={{
           position: 'fixed',
-          bottom: '76px',   /* acima do BottomNav em mobile */
+          bottom: 'calc(76px + env(safe-area-inset-bottom, 0px))',
           right: '16px',
           zIndex: 8500,
           background: 'var(--w)',

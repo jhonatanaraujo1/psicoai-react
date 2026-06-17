@@ -419,7 +419,7 @@ fbq('track', 'PageView');
       <a href="#funcionalidades" class="nav-link">Funcionalidades</a>
       <a href="#depoimentos" class="nav-link">Depoimentos</a>
       <a href="#precos" class="nav-link">Precos</a>
-      <a href="/app" class="nav-link nav-link-enter" style="color:var(--g600);font-weight:500">Entrar</a>
+      <a href="/" class="nav-link nav-link-enter" style="color:var(--g600);font-weight:500">Entrar</a>
       <a href="#cta-final" class="nav-cta">Testar 14 dias gratis</a>
     </div>
     <div class="nav-links" id="nav-links-user" style="display:none">
@@ -692,7 +692,7 @@ fbq('track', 'PageView');
       <div class="plan-card">
         <div class="plan-name">Consultorio</div>
         <p class="plan-desc">Para o psicologo que quer digitalizar o consultorio e experimentar a IA clinica sem compromisso.</p>
-        <div class="plan-price"><span class="plan-curr">R$</span><span class="plan-num">79</span><span class="plan-period">/mes</span></div>
+        <div class="plan-price"><span class="plan-curr">R$</span><span class="plan-num">49</span><span class="plan-period">/mes</span></div>
         <div class="plan-divider"></div>
         <div style="font-size:10px;font-weight:700;color:var(--gr4);letter-spacing:0.8px;text-transform:uppercase;margin-bottom:10px">Gestao completa do consultorio</div>
         <ul class="plan-features">
@@ -1070,9 +1070,9 @@ function submitCta(e) {
   }
 
   try {
-    const t = JSON.parse(localStorage.getItem('PsicNotes_tracking') || '{}');
+    const t = JSON.parse(localStorage.getItem('psicoai_tracking') || '{}');
     t.leadEmail = email;
-    localStorage.setItem('PsicNotes_tracking', JSON.stringify(t));
+    localStorage.setItem('psicoai_tracking', JSON.stringify(t));
   } catch {}
 
   document.querySelector('.cta-form').style.display = 'none';
@@ -1088,7 +1088,7 @@ function submitCta(e) {
 (function captureTrackingParams() {
   try {
     const p = new URLSearchParams(window.location.search);
-    const existing = JSON.parse(localStorage.getItem('PsicNotes_tracking') || '{}');
+    const existing = JSON.parse(localStorage.getItem('psicoai_tracking') || '{}');
     if (p.get('utm_source'))   existing.utmSource   = p.get('utm_source');
     if (p.get('utm_medium'))   existing.utmMedium   = p.get('utm_medium');
     if (p.get('utm_campaign')) existing.utmCampaign = p.get('utm_campaign');
@@ -1097,7 +1097,7 @@ function submitCta(e) {
     if (p.get('fbclid'))       existing.fbclid      = p.get('fbclid');
     const ref = p.get('ref') || p.get('coupon') || p.get('promo');
     if (ref) existing.referralCode = ref.toUpperCase();
-    localStorage.setItem('PsicNotes_tracking', JSON.stringify(existing));
+    localStorage.setItem('psicoai_tracking', JSON.stringify(existing));
   } catch {}
 })();
 

@@ -61,15 +61,12 @@ export default function LgpdBanner({ onShowTermos }) {
         style={{
           position: 'fixed',
           bottom: 0, left: 0, right: 0,
-          zIndex: 798,
+          zIndex: 10001,
           background: 'rgba(14, 22, 14, 0.98)',
           backdropFilter: 'blur(12px)',
           WebkitBackdropFilter: 'blur(12px)',
           borderTop: '1px solid rgba(255,255,255,0.08)',
-          // +56px apenas em mobile (BottomNav oculto em ≥641px via CSS)
-          paddingBottom: typeof window !== 'undefined' && window.innerWidth <= 640
-            ? 'calc(env(safe-area-inset-bottom, 0px) + 56px)'
-            : 'env(safe-area-inset-bottom, 0px)',
+          paddingBottom: 'env(safe-area-inset-bottom, 0px)',
           animation: 'lgpd-up 0.28s cubic-bezier(0.4,0,0.2,1)',
         }}
       >

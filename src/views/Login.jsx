@@ -4,30 +4,27 @@ import RegisterFlow from '../components/RegisterFlow'
 import TermsOfUse from './TermsOfUse'
 
 export default function Login({ onLogin }) {
-  // Email capturado da landing via ?email=xxx
-  const [prefillEmail] = useState(() => {
+  // Captura TODOS os params de URL em uma única leitura antes de qualquer replaceState
+  const [urlState] = useState(() => {
     try {
       const params = new URLSearchParams(window.location.search)
-      const e = params.get('email') || ''
-      // Limpa o parâmetro da URL para não reaparecer ao navegar
-      if (e) window.history.replaceState({}, '', window.location.pathname)
-      return e
-    } catch { return '' }
+      const email    = params.get('email')    || ''
+      const register = params.has('register')
+      const reset    = params.get('reset')    || ''
+      if (email || reset) window.history.replaceState({}, '', window.location.pathname)
+      return { email, register, reset }
+    } catch { return { email: '', register: false, reset: '' } }
   })
+
+  const [prefillEmail] = useState(urlState.email)
 
   // 'login' | 'register' | 'termos' | 'forgot' | 'reset'
   const [mode, setMode] = useState(() => {
-    const params = new URLSearchParams(window.location.search)
-    if (params.has('reset')) return 'reset'
-    // Se veio com email ou ?register=1 da landing, abre direto no cadastro
-    if (params.get('email') || params.get('register')) return 'register'
+    if (urlState.reset)                      return 'reset'
+    if (urlState.email || urlState.register) return 'register'
     return 'login'
   })
-  const [email, setEmail] = useState(() => {
-    try {
-      return new URLSearchParams(window.location.search).get('email') || ''
-    } catch { return '' }
-  })
+  const [email, setEmail] = useState(urlState.email)
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -36,7 +33,7 @@ export default function Login({ onLogin }) {
   const [forgotEmail, setForgotEmail] = useState('')
   const [forgotSent, setForgotSent] = useState(false)
   // Reset password
-  const [resetToken] = useState(() => new URLSearchParams(window.location.search).get('reset') || '')
+  const [resetToken] = useState(urlState.reset)
   const [newPassword, setNewPassword] = useState('')
   const [newPasswordConfirm, setNewPasswordConfirm] = useState('')
   const [resetDone, setResetDone] = useState(false)

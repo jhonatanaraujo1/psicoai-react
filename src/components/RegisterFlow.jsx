@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { auth } from '../services/index.js'
+import { auth, api } from '../services/index.js'
 import { CustomSelect } from './DateTimePickers'
 
 const ESPECIALIDADES = [
@@ -116,6 +116,23 @@ export default function RegisterFlow({ onLogin, onBack, initialEmail = '' }) {
           lgpdConsentVersion: 'v1',
           country: form.country,
         })
+
+        // Salva specialty/clinicName/approach coletados no Step 2 (best-effort)
+        const profilePatch = {}
+        if (form.specialty) profilePatch.specialty = form.specialty
+        if (form.clinicName.trim()) profilePatch.clinicName = form.clinicName.trim()
+        if (form.approach) profilePatch.preferences = { defaultApproach: form.approach }
+        if (Object.keys(profilePatch).length > 0) {
+          api.updateProfile(profilePatch).catch(() => { /* best-effort */ })
+        }
+
+        // Consent já capturado no Step 1 — marca no localStorage para suprimir LgpdBanner
+        try {
+          localStorage.setItem('psicoai_lgpd_consent', JSON.stringify({
+            accepted: true, timestamp: new Date().toISOString(), version: '1.0',
+          }))
+        } catch { /* localStorage bloqueado */ }
+
         setRegisteredUser(result.user)
         setStep(3)
       } catch (err) {
@@ -133,7 +150,6 @@ export default function RegisterFlow({ onLogin, onBack, initialEmail = '' }) {
   }
 
   const handleEnter = () => {
-    localStorage.removeItem('psicoai_onboarding_seen')
     onLogin(registeredUser)
   }
 

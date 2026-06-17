@@ -98,6 +98,12 @@ export default function OnboardingTour({ isOpen, onClose }) {
       const el = document.querySelector(step.selector)
       if (!el) { setRect(null); return }
       const r = el.getBoundingClientRect()
+      const cvw = window.innerWidth
+      const cvh = window.innerHeight
+      // Sidebar items ficam off-screen em mobile (translateX(-100%)) — usa fallback centralizado
+      if (r.left < 0 || r.right > cvw || r.top < 0 || r.bottom > cvh) {
+        setRect(null); return
+      }
       setRect({ x: r.left, y: r.top, w: r.width, h: r.height })
     }
 
@@ -154,13 +160,17 @@ export default function OnboardingTour({ isOpen, onClose }) {
 
   if (rect) {
     if (isMobile) {
-      const cx = rect.x + rect.w / 2
+      const CARD_H_ESTIMATE = 180
+      const cx   = rect.x + rect.w / 2
       const left = Math.max(12, Math.min(cx - CARD_W / 2, vw - CARD_W - 12))
-      cardStyle = {
-        position: 'fixed',
-        bottom: vh - rect.y + CARD_GAP + 8,
-        left,
-        width: CARD_W,
+      const spaceAbove = rect.y - CARD_H_ESTIMATE - CARD_GAP - 8
+      const spaceBelow = vh - (rect.y + rect.h) - CARD_H_ESTIMATE - CARD_GAP
+      if (spaceAbove >= 16) {
+        cardStyle = { position: 'fixed', bottom: vh - rect.y + CARD_GAP + 8, left, width: CARD_W }
+      } else if (spaceBelow >= 16) {
+        cardStyle = { position: 'fixed', top: rect.y + rect.h + CARD_GAP, left, width: CARD_W }
+      } else {
+        cardStyle = { position: 'fixed', bottom: '90px', left, width: CARD_W }
       }
     } else {
       const itemMidY = rect.y + rect.h / 2
@@ -276,7 +286,7 @@ export default function OnboardingTour({ isOpen, onClose }) {
 
           {/* Descrição */}
           <p style={{
-            fontSize: 12, color: 'rgba(255,255,255,0.48)',
+            fontSize: 12, color: 'rgba(255,255,255,0.65)',
             lineHeight: 1.55, margin: '0 0 11px',
           }}>
             {step.desc}
@@ -298,10 +308,11 @@ export default function OnboardingTour({ isOpen, onClose }) {
               onClick={skip}
               onTouchStart={() => { isTouchingBtn.current = true }}
               style={{
-                fontSize: 11, color: 'rgba(255,255,255,0.22)',
+                fontSize: 11, color: 'rgba(255,255,255,0.55)',
                 background: 'none', border: 'none', cursor: 'pointer',
-                padding: '0 2px', fontFamily: "'DM Sans', sans-serif",
-                flexShrink: 0, minHeight: 32,
+                padding: '6px 10px', fontFamily: "'DM Sans', sans-serif",
+                flexShrink: 0, minHeight: 44, minWidth: 44,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
               }}
             >
               Pular
