@@ -358,20 +358,11 @@ export default function ReportModal({ isOpen, onClose, patient }) {
                 ))}
               </div>
 
-              {/* Send */}
-              <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '1px', textTransform: 'uppercase', color: 'var(--gr4)', marginBottom: '10px' }}>Enviar ao paciente (opcional)</div>
-              <SendRow
-                icon={<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>}
-                label="E-mail" placeholder="E-mail do paciente (ou deixe em branco)"
-                value={sendEmail} onChange={setSendEmail}
-                sent={sent.email} sending={sending === 'email'}
-              />
-              <SendRow
-                icon={<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>}
-                label="WhatsApp" placeholder="(11) 99999-9999"
-                value={sendPhone} onChange={setSendPhone}
-                sent={sent.whatsapp} sending={sending === 'whatsapp'}
-              />
+              {/* Send — em breve */}
+              <div style={{ padding: '10px 12px', background: 'var(--gr1)', borderRadius: 'var(--r)', border: '1px solid var(--gr2)' }}>
+                <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--gr5)', marginBottom: '3px' }}>Envio por e-mail e WhatsApp</div>
+                <div style={{ fontSize: '11px', color: 'var(--gr4)', lineHeight: 1.5 }}>Em breve. Por enquanto, use o PDF ou a impressão para compartilhar com o paciente.</div>
+              </div>
 
             </div>
 
@@ -423,31 +414,6 @@ export default function ReportModal({ isOpen, onClose, patient }) {
                     : <><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Baixar PDF</>
                   }
                 </button>
-                {sendEmail && (
-                  <button onClick={() => sendVia('email')} disabled={!!sending || sent.email}
-                    style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '6px 12px', border: 'none', borderRadius: 'var(--r)', background: sent.email ? 'var(--g700)' : 'var(--g600)', color: '#fff', fontSize: '12px', fontWeight: 600, cursor: (sending || sent.email) ? 'default' : 'pointer', fontFamily: "'DM Sans', sans-serif", transition: 'background 0.15s', opacity: sending && sending !== 'email' ? 0.7 : 1 }}
-                    onMouseOver={e => !sending && !sent.email && (e.currentTarget.style.background = 'var(--g700)')}
-                    onMouseOut={e => !sending && !sent.email && (e.currentTarget.style.background = 'var(--g600)')}>
-                    {sending === 'email'
-                      ? <><span style={{ width: '11px', height: '11px', border: '2px solid rgba(255,255,255,0.3)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.8s linear infinite', display: 'inline-block' }} />Enviando…</>
-                      : sent.email ? '✓ E-mail enviado' : <>
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
-                        Enviar por e-mail
-                      </>
-                    }
-                  </button>
-                )}
-                {sendPhone && (
-                  <button onClick={() => sendVia('whatsapp')} disabled={!!sending || sent.whatsapp}
-                    style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '6px 12px', border: 'none', borderRadius: 'var(--r)', background: sent.whatsapp ? '#1a7a3f' : '#25D366', color: '#fff', fontSize: '12px', fontWeight: 600, cursor: (sending || sent.whatsapp) ? 'default' : 'pointer', fontFamily: "'DM Sans', sans-serif", transition: 'background 0.15s', opacity: sending && sending !== 'whatsapp' ? 0.7 : 1 }}
-                    onMouseOver={e => !sending && !sent.whatsapp && (e.currentTarget.style.background = '#1da851')}
-                    onMouseOut={e => !sending && !sent.whatsapp && (e.currentTarget.style.background = sent.whatsapp ? '#1a7a3f' : '#25D366')}>
-                    {sending === 'whatsapp'
-                      ? <><span style={{ width: '11px', height: '11px', border: '2px solid rgba(255,255,255,0.3)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.8s linear infinite', display: 'inline-block' }} />Enviando…</>
-                      : sent.whatsapp ? '✓ WhatsApp enviado' : 'WhatsApp →'
-                    }
-                  </button>
-                )}
               </div>
             )}
 

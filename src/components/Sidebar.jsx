@@ -95,6 +95,21 @@ export default function Sidebar({ currentView, setCurrentView, isOpen, onClose, 
     </button>
   )
 
+  const navItemSoon = (id, label) => (
+    <button
+      key={id}
+      className="nav-item"
+      disabled
+      title={`${label} — em breve`}
+      aria-label={`${label} (em breve)`}
+      style={{ opacity: 0.4, cursor: 'not-allowed' }}
+    >
+      {ICONS[id]}
+      <span className="nav-label">{label}</span>
+      <span style={{ fontSize: '9px', background: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.45)', padding: '1px 5px', borderRadius: '4px', marginLeft: 'auto', flexShrink: 0, letterSpacing: '0.3px' }}>breve</span>
+    </button>
+  )
+
   const initials = currentUser?.name
     ? currentUser.name.split(' ').filter(Boolean).slice(0, 2).map(w => w[0]).join('').toUpperCase()
     : 'DR'
@@ -119,7 +134,7 @@ export default function Sidebar({ currentView, setCurrentView, isOpen, onClose, 
         {navItem('financeiro',  'Financeiro')}
         {navItem('lembretes',   'Lembretes')}
         {navItem('formularios', 'Formulários')}
-        {navItem('teleatendimento', 'Videoatendimento')}
+        {navItemSoon('teleatendimento', 'Videoatendimento')}
 
         <div className="nav-section">Sistema</div>
         {navItem('configuracoes', 'Configurações')}
