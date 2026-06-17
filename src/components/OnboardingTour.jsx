@@ -95,15 +95,19 @@ export default function OnboardingTour({ isOpen, onClose }) {
     if (!step.selector) { setRect(null); return }
 
     const measure = () => {
-      const el = document.querySelector(step.selector)
-      if (!el) { setRect(null); return }
-      const r = el.getBoundingClientRect()
       const cvw = window.innerWidth
       const cvh = window.innerHeight
-      // Sidebar items ficam off-screen em mobile (translateX(-100%)) — usa fallback centralizado
-      if (r.left < 0 || r.right > cvw || r.top < 0 || r.bottom > cvh) {
-        setRect(null); return
-      }
+      // Pega TODOS os elementos com o seletor e usa o que está visível no viewport.
+      // Sidebar e BottomNav têm os mesmos data-tour; em mobile a sidebar fica off-screen.
+      const els = Array.from(document.querySelectorAll(step.selector))
+      const el = els.find(e => {
+        const r = e.getBoundingClientRect()
+        return r.width > 0 && r.height > 0
+          && r.left >= 0 && r.right <= cvw
+          && r.top >= 0 && r.bottom <= cvh
+      })
+      if (!el) { setRect(null); return }
+      const r = el.getBoundingClientRect()
       setRect({ x: r.left, y: r.top, w: r.width, h: r.height })
     }
 
