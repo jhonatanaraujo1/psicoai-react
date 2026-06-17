@@ -419,12 +419,12 @@ fbq('track', 'PageView');
       <a href="#funcionalidades" class="nav-link">Funcionalidades</a>
       <a href="#depoimentos" class="nav-link">Depoimentos</a>
       <a href="#precos" class="nav-link">Precos</a>
-      <a href="/" class="nav-link nav-link-enter" style="color:var(--g600);font-weight:500">Entrar</a>
+      <a href="/app" class="nav-link nav-link-enter" style="color:var(--g600);font-weight:500">Entrar</a>
       <a href="#cta-final" class="nav-cta">Testar 14 dias gratis</a>
     </div>
     <div class="nav-links" id="nav-links-user" style="display:none">
       <span id="nav-user-name" style="font-size:13px;color:var(--gr5);padding:6px 12px"></span>
-      <a href="/" class="nav-link" style="color:var(--g600);font-weight:500">Voltar ao app</a>
+      <a href="/app" class="nav-link" style="color:var(--g600);font-weight:500">Voltar ao app</a>
     </div>
   </div>
 </nav>
@@ -809,8 +809,8 @@ fbq('track', 'PageView');
 /* LOGGED-IN DETECTION */
 (function() {
   try {
-    const token = localStorage.getItem('PsicNotes_token');
-    const userRaw = localStorage.getItem('PsicNotes_user');
+    const token = localStorage.getItem('psicoai_token');
+    const userRaw = localStorage.getItem('psicoai_user');
     if (token && userRaw) {
       const user = JSON.parse(userRaw);
       const guestLinks = document.getElementById('nav-links-guest');
@@ -1080,7 +1080,7 @@ function submitCta(e) {
 
   // Redireciona para o app após 2s com email pré-preenchido
   setTimeout(function() {
-    window.location.href = '/?email=' + encodeURIComponent(email);
+    window.location.href = '/app?email=' + encodeURIComponent(email);
   }, 2000);
 }
 
