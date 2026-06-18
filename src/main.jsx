@@ -1,5 +1,6 @@
 import { createRoot } from 'react-dom/client'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { Analytics } from '@vercel/analytics/react'
 import './styles/globals.css'
 import App from './App.jsx'
 import Landing from './views/Landing.jsx'
@@ -27,5 +28,6 @@ createRoot(document.getElementById('root')).render(
         <Route path="/*"  element={<App />} />
       </Routes>
     </BrowserRouter>
+    <Analytics />
   </AppErrorBoundary>
 )
