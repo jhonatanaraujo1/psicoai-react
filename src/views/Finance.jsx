@@ -111,7 +111,7 @@ function ReciboModal({ events, form, setForm, onClose, fmt = fmtBRL }) {
 <body>
 <div class="header">
   <div>
-    <div class="brand">Ψ PsicoNotes</div>
+    <div class="brand">Ψ Psic Notes</div>
     <div class="brand-sub">Gestão clínica inteligente</div>
   </div>
   <div class="recibo-num">
@@ -139,7 +139,7 @@ function ReciboModal({ events, form, setForm, onClose, fmt = fmtBRL }) {
   </div>
 </div>
 <div class="footer">
-  Este recibo foi gerado pelo sistema PsicoNotes e comprova o pagamento descrito acima.<br>
+  Este recibo foi gerado pelo sistema Psic Notes e comprova o pagamento descrito acima.<br>
   Documento válido sem assinatura eletrônica — sujeito a declaração do profissional.
 </div>
 <script>window.onload = () => { window.print(); }<\/script>

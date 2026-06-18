@@ -43,7 +43,7 @@ function LoadingState() {
   return (
     <div className="ai-loading-wrap">
       <div className="ai-spinner" />
-      <div className="ai-loading-text">PsicNotes está analisando as anotações…</div>
+      <div className="ai-loading-text">Psic Notes está analisando as anotações…</div>
       <div className="ai-loading-steps">
         {STEP_LABELS.map((s, i) => (
           <div key={i} className="ai-step" style={{ opacity: i <= step ? 1 : 0.35, transition: 'opacity 0.4s' }}>
@@ -53,7 +53,7 @@ function LoadingState() {
         ))}
       </div>
       <div style={{ marginTop: '24px', fontSize: '11px', color: 'var(--gr4)', textAlign: 'center', lineHeight: 1.6 }}>
-        O PsicNotes organiza o que você já observou — não substitui seu julgamento clínico.<br/>
+        O Psic Notes organiza o que você já observou — não substitui seu julgamento clínico.<br/>
         <span style={{ color: 'var(--g500)', fontWeight: 600 }}>Baseado nas suas anotações · ~30 segundos</span>
       </div>
     </div>
@@ -459,7 +459,7 @@ export default function AiDrawer({ isOpen, onClose, onSave, patient, result, loa
           lineHeight: 1.5,
           flexShrink: 0,
         }}>
-          PsicNotes não realiza diagnósticos. Esta análise é um instrumento de apoio ao raciocínio clínico do psicólogo e não substitui avaliação profissional presencial. Conforme Resolução CFP 09/2024.
+          Psic Notes não realiza diagnósticos. Esta análise é um instrumento de apoio ao raciocínio clínico do psicólogo e não substitui avaliação profissional presencial. Conforme Resolução CFP 09/2024.
         </div>
       </div>
     </>

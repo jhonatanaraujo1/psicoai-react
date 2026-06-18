@@ -163,7 +163,7 @@ export default function FeedbackModal({ isOpen, onClose, preset, currentView, ap
               Obrigado pelo feedback!
             </div>
             <div style={{ fontSize: '13px', color: 'var(--gr5)', lineHeight: 1.6, marginBottom: '24px' }}>
-              Sua mensagem foi recebida.<br/>Ela nos ajuda a melhorar o PsicNotes para todos os psicólogos.
+              Sua mensagem foi recebida.<br/>Ela nos ajuda a melhorar o Psic Notes para todos os psicólogos.
             </div>
             <button
               onClick={onClose}

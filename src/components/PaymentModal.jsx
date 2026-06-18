@@ -165,7 +165,7 @@ export default function PaymentModal({ onLogout, currentUser }) {
               </div>
               <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.55)', lineHeight: 1.5 }}>
                 {isTrialExpired
-                  ? 'Seus dados estão seguros. Assine um plano para continuar usando o PsicNotes.'
+                  ? 'Seus dados estão seguros. Assine um plano para continuar usando o Psic Notes.'
                   : 'Seus prontuários e anotações estão intactos — renove abaixo para retomar o acesso completo em segundos.'
                 }
               </div>

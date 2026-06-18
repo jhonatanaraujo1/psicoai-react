@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 
 export default function PrivacyPolicy({ onClose }) {
-  useEffect(() => { document.title = 'Política de Privacidade — PsicNotes' }, [])
+  useEffect(() => { document.title = 'Política de Privacidade — Psic Notes' }, [])
   return (
     <div style={{ background: 'var(--bg)', minHeight: '100vh' }}>
       {onClose && (
