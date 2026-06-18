@@ -38,14 +38,22 @@ const clearTokens = () => {
 // ── Token refresh (singleton) ─────────────────────────────────────────────────
 
 let _refreshPromise = null
+let _sessionDead    = false   // true depois que refresh falha definitivamente — para todas as requests
+
+function killSession() {
+  if (_sessionDead) return
+  _sessionDead = true
+  clearTokens()
+  window.dispatchEvent(new CustomEvent('psicoai:session-expired'))
+}
 
 async function doRefresh() {
   const rt = getRefresh()
-  if (!rt) throw new Error('no_refresh_token')
+  if (!rt) throw new Error('refresh_failed')
 
   // Retry 1× após 3s — Railway reinicia em ~2s durante deploys.
   // Sem retry, o usuário seria deslogado por um 503 transitório.
-  // 401/403 no refresh = token genuinamente inválido → não retentar, deslogar.
+  // 4xx no refresh = token inválido/expirado → deslogar sem retentar.
   for (let attempt = 0; attempt < 2; attempt++) {
     if (attempt > 0) await new Promise(r => setTimeout(r, 3000))
 
@@ -61,8 +69,8 @@ async function doRefresh() {
       throw new Error('network_error')     // segunda falha → propaga sem deslogar
     }
 
-    // 401/403 = refresh token inválido ou expirado → deslogar (não retentar)
-    if (res.status === 401 || res.status === 403) throw new Error('refresh_failed')
+    // Qualquer 4xx = refresh token inválido, expirado ou rejeitado → deslogar (não retentar)
+    if (res.status >= 400 && res.status < 500) throw new Error('refresh_failed')
     // 5xx = servidor temporariamente indisponível → tenta de novo na 1ª vez
     if (!res.ok) {
       if (attempt === 0) continue
@@ -74,7 +82,6 @@ async function doRefresh() {
     if (data.user) localStorage.setItem('psicoai_user', JSON.stringify(normalizeUser(data.user)))
     return data.accessToken
   }
-  // Nunca alcançado normalmente, mas satisfaz o tipo de retorno do TS
   throw new Error('server_error')
 }
 
@@ -88,6 +95,9 @@ async function refreshOnce() {
 // ── Core fetch wrapper ─────────────────────────────────────────────────────────
 
 async function req(method, path, body, opts = {}) {
+  // Sessão encerrada definitivamente — não dispara mais requests
+  if (_sessionDead) throw new Error('Sessão encerrada. Faça login novamente.')
+
   const url = `${BASE}${path}`
   const headers = { 'Content-Type': 'application/json' }
   const token = getToken()
@@ -95,10 +105,9 @@ async function req(method, path, body, opts = {}) {
 
   let res = await fetch(url, { method, headers, body: body ? JSON.stringify(body) : undefined, ...opts })
 
-  // Auto-refresh on 401 e 403.
-  // O Spring Boot retorna 403 (não 401) para tokens expirados — tratamos igual ao 401.
-  // Endpoints de auth (/api/v1/auth/*) são excluídos: retornam 401/403 por credenciais erradas,
-  // não por token expirado.
+  // Auto-refresh em 401/403.
+  // Spring Boot retorna 403 (não 401) para access tokens expirados — tratamos igual.
+  // Endpoints de auth são excluídos: retornam 401/403 por credenciais erradas, não por token.
   const origStatus = res.status
   if ((origStatus === 401 || origStatus === 403) && !opts._retry && !path.startsWith('/api/v1/auth/')) {
     try {
@@ -107,17 +116,12 @@ async function req(method, path, body, opts = {}) {
       res = await fetch(url, { method, headers, body: body ? JSON.stringify(body) : undefined, _retry: true })
     } catch (e) {
       if (e.message === 'network_error' || e.message === 'server_error') {
-        // Servidor temporariamente down (deploy Railway, restart) — mantém sessão, propaga erro
+        // Servidor temporariamente down (deploy Railway) — mantém sessão, propaga erro
         throw new Error('Serviço temporariamente indisponível. Aguarde alguns segundos e tente novamente.')
       }
-      if (origStatus === 401) {
-        // 401 inrecuperável = não autenticado → desloga (sem hard reload — React trata gracefully)
-        clearTokens()
-        window.dispatchEvent(new CustomEvent('psicoai:session-expired'))
-        return
-      }
-      // 403 inrecuperável = permissão negada mesmo após refresh → mantém sessão, propaga erro
-      throw new Error('Acesso negado.')
+      // refresh_failed (qualquer 4xx no /auth/refresh) = sessão definitivamente morta → desloga
+      killSession()
+      return
     }
   }
   // Se chegou até aqui com res.status >= 400, cai no handler de erro abaixo (não desloga).
@@ -247,6 +251,7 @@ function normalizeUser(u) {
 
 export const auth = {
   async login({ email, password }) {
+    _sessionDead = false   // garante que nova sessão pode fazer requests
     const data = await post('/api/v1/auth/login', { email, password })
     setTokens(data.accessToken, data.refreshToken)
     const user = normalizeUser(data.user)
@@ -255,6 +260,7 @@ export const auth = {
   },
 
   async logout() {
+    _sessionDead = false   // permite novo login na mesma aba
     try { await post('/api/v1/auth/logout') } catch { /* ignore */ }
     clearTokens()
   },
