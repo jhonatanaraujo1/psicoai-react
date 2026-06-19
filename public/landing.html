@@ -1120,7 +1120,7 @@ document.querySelectorAll('[data-plan]').forEach(btn => {
 /* GEO PRICING */
 (function() {
   var GEO_KEY = 'psicoai_geo';
-  var GEO_TTL = 86400000; // 24h
+  var GEO_TTL = 0; // sessionStorage — sempre fresh por sessao
 
   var PRICING = {
     BRL: { curr: 'R$', basic: '49', pro: '97', badge: '🇧🇷 Preços em Real Brasileiro' },
@@ -1154,8 +1154,8 @@ document.querySelectorAll('[data-plan]').forEach(btn => {
   function detect() {
     // Cache hit
     try {
-      var cached = JSON.parse(localStorage.getItem(GEO_KEY) || 'null');
-      if (cached && (Date.now() - cached.ts) < GEO_TTL) { applyPricing(cached.currency); return; }
+      var cached = JSON.parse(sessionStorage.getItem(GEO_KEY) || 'null');
+      if (cached) { applyPricing(cached.currency); return; }
     } catch(e) {}
 
     showSkeleton();
@@ -1175,7 +1175,7 @@ document.querySelectorAll('[data-plan]').forEach(btn => {
         clearTimeout(tid);
         var country  = (d && (d.country || d.country_code)) || 'BR';
         var currency = EUR_COUNTRIES.indexOf(country) !== -1 ? 'EUR' : 'BRL';
-        try { localStorage.setItem(GEO_KEY, JSON.stringify({ currency: currency, country: country, ts: Date.now() })); } catch(e) {}
+        try { sessionStorage.setItem(GEO_KEY, JSON.stringify({ currency: currency, country: country })); } catch(e) {}
         applyPricing(currency);
       })
       .catch(function() {

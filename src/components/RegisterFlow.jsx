@@ -294,10 +294,10 @@ export default function RegisterFlow({ onLogin, onBack, initialEmail = '' }) {
                 <Err msg={errors.name} />
               </div>
               <div>
-                <Lbl opt>Número do CRP</Lbl>
+                <Lbl opt>{form.country === 'PT' ? 'Número OPP' : 'Número do CRP'}</Lbl>
                 <input style={inputSt(false)} value={form.crp}
                   onChange={e => set('crp', e.target.value)} onFocus={onFo} onBlur={onBl}
-                  placeholder="Ex: 06/89234" />
+                  placeholder={form.country === 'PT' ? 'Ex: 15234' : 'Ex: 06/89234'} />
               </div>
               <div>
                 <Lbl>E-mail profissional</Lbl>
@@ -413,7 +413,7 @@ export default function RegisterFlow({ onLogin, onBack, initialEmail = '' }) {
           </p>
 
           <div className="login-footer-note">
-            Sem cartão de crédito · 14 dias grátis · LGPD compliant
+            Sem cartão de crédito · 14 dias grátis · {form.country === 'PT' ? 'RGPD compliant' : 'LGPD compliant'}
           </div>
         </div>
       </div>

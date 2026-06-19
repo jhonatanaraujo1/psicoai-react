@@ -154,12 +154,13 @@ const PLAN_CHECK = () => (
 
 function TabPlano({ profile }) {
   const isTrial  = profile?.subscriptionStatus === 'trialing'
-  const isEUR    = profile?.currency === 'EUR'
+  const EUR_COUNTRIES = ['PT','ES','FR','DE','IT','NL','BE','AT','IE','FI','GR','LU','MT','CY','SI','SK','EE','LV','LT','HR']
+  const isEUR    = EUR_COUNTRIES.includes(profile?.country)
   const used      = profile?.analysesUsedThisMonth || 0
   const remaining = profile?.analysesRemaining ?? 15
   const total     = profile?.plan === 'especialista' ? 40 : 15
-  const planPrice = profile?.plan === 'especialista' ? (isEUR ? '€35' : 'R$97') : (isEUR ? '€20' : 'R$49')
-  const extraPrice = isEUR ? '€1,90' : 'R$4,90'
+  const planPrice = profile?.plan === 'especialista' ? (isEUR ? '€19,90' : 'R$97') : (isEUR ? '€9,90' : 'R$49')
+  const extraPrice = isEUR ? '€0,90' : 'R$4,90'
 
   const [checkoutLoading, setCheckoutLoading] = useState(null)
   const [portalLoading,   setPortalLoading]   = useState(false)
@@ -171,7 +172,7 @@ function TabPlano({ profile }) {
     {
       id: 'consultorio',
       name: 'Consultório',
-      price: isEUR ? '€20' : 'R$49',
+      price: isEUR ? '€9,90' : 'R$49',
       tagline: 'Gestão completa · 15 análises IA/mês',
       features: [
         'Prontuário eletrônico ilimitado',
@@ -187,7 +188,7 @@ function TabPlano({ profile }) {
     {
       id: 'especialista',
       name: 'Especialista',
-      price: isEUR ? '€35' : 'R$97',
+      price: isEUR ? '€19,90' : 'R$97',
       tagline: 'IA clínica avançada · 40 análises IA/mês',
       features: [
         'Tudo do Consultório incluído',

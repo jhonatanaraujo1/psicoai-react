@@ -7,7 +7,7 @@
 import { useState } from 'react'
 import { api, assertSafeRedirectUrl } from '../services'
 
-const PLANS = [
+const PLANS_BRL = [
   {
     id: 'base',
     name: 'Consultório',
@@ -47,6 +47,48 @@ const PLANS = [
   },
 ]
 
+const PLANS_EUR = [
+  {
+    id: 'base',
+    name: 'Consultório',
+    price: '€9,90',
+    period: '/mês',
+    tagline: 'Gestão completa · 15 análises IA/mês',
+    features: [
+      'Prontuário eletrónico ilimitado',
+      'Canvas de anotações (único no segmento)',
+      'Agenda com lembretes automáticos',
+      'Controlo financeiro + recibos',
+      'Formulários clínicos (PHQ-9, Beck, TCLE)',
+      '15 análises IA incluídas por mês',
+      'Conformidade OPP / RGPD',
+      'Análises extras: €0,90/análise',
+    ],
+    highlight: false,
+  },
+  {
+    id: 'clinico',
+    name: 'Especialista',
+    price: '€19,90',
+    period: '/mês',
+    tagline: 'IA clínica avançada · 40 análises IA/mês',
+    features: [
+      'Tudo do Consultório incluído',
+      '40 análises IA incluídas por mês',
+      'Hipóteses DSM-5/CID-11 com grau de evidência',
+      '5 templates: reflexão, risco, longitudinal, supervisão, psicodinâmica',
+      'Alertas de padrão (evitação, ruminação, hipervigilância)',
+      'Re-análise com feedback até 3x por análise',
+      'Insights agregados da sua carteira',
+      'Acesso antecipado a novas features',
+    ],
+    badge: 'Recomendado',
+    highlight: true,
+  },
+]
+
+const EUR_COUNTRIES = ['PT', 'ES', 'FR', 'DE', 'IT', 'NL', 'BE', 'AT', 'IE', 'FI', 'GR', 'LU', 'MT', 'CY', 'SI', 'SK', 'EE', 'LV', 'LT', 'HR']
+
 const CHECK = () => (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
     <polyline points="20 6 9 17 4 12" />
@@ -54,6 +96,8 @@ const CHECK = () => (
 )
 
 export default function PaymentModal({ onLogout, currentUser }) {
+  const isEUR = EUR_COUNTRIES.includes(currentUser?.country)
+  const PLANS = isEUR ? PLANS_EUR : PLANS_BRL
   const [loading, setLoading] = useState(null) // 'base' | 'clinico' | 'portal'
   const [coupon, setCoupon] = useState('')
   const [couponState, setCouponState] = useState(null) // null | { valid, message, discountType, discountValue }

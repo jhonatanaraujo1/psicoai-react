@@ -875,7 +875,10 @@ function InsightsPortfolio({ onSelectPatient, onOpenAnalysisHub, currentUser }) 
 
 // ── Upgrade Wall — plano Consultório tentando acessar Insights ───────────────
 
-function InsightsUpgradeWall() {
+function InsightsUpgradeWall({ currentUser }) {
+  const EUR_COUNTRIES = ['PT','ES','FR','DE','IT','NL','BE','AT','IE','FI','GR','LU','MT','CY','SI','SK','EE','LV','LT','HR']
+  const isEUR = EUR_COUNTRIES.includes(currentUser?.country)
+  const upgradePrice = isEUR ? '€19,90' : 'R$97'
   const FEATURES = [
     { icon: '🧠', title: 'Insights da carteira', desc: 'Padrões clínicos detectados em toda a sua carteira de pacientes — em um único painel.' },
     { icon: '📈', title: 'Evolução longitudinal', desc: 'Gráfico de progresso de cada paciente ao longo das sessões analisadas.' },
@@ -955,7 +958,7 @@ function InsightsUpgradeWall() {
         background: 'var(--ow)', border: '2px solid var(--g200)',
       }}>
         <div style={{ display: 'flex', alignItems: 'flex-end', gap: '6px', marginBottom: '6px' }}>
-          <span style={{ fontFamily: "'Fraunces', serif", fontSize: '36px', fontWeight: 400, color: 'var(--d)', lineHeight: 1 }}>R$97</span>
+          <span style={{ fontFamily: "'Fraunces', serif", fontSize: '36px', fontWeight: 400, color: 'var(--d)', lineHeight: 1 }}>{upgradePrice}</span>
           <span style={{ fontSize: '13px', color: 'var(--gr5)', marginBottom: '6px' }}>/mês</span>
         </div>
         <div style={{ fontSize: '12px', color: 'var(--gr4)', marginBottom: '20px' }}>
@@ -988,7 +991,7 @@ export default function Insights({ onGoToPatient, onOpenAnalysisHub, currentUser
 
   // Gate: Insights requer Especialista. Trial libera para incentivar upgrade.
   const hasAccess = currentUser?.plan === 'especialista' || currentUser?.subscriptionStatus === 'trialing'
-  if (!hasAccess) return <InsightsUpgradeWall />
+  if (!hasAccess) return <InsightsUpgradeWall currentUser={currentUser} />
 
   const handleSelectPatient = useCallback((patient) => {
     setSelectedPatient({ id: patient.id, name: patient.name })
