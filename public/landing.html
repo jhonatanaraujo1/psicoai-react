@@ -1167,13 +1167,13 @@ document.querySelectorAll('[data-plan]').forEach(btn => {
       applyPricing('BRL');
     }, 2000);
 
-    fetch('https://ipapi.co/json/')
+    fetch('https://api.country.is/')
       .then(function(r) { return r.json(); })
       .then(function(d) {
         if (done) return;
         done = true;
         clearTimeout(tid);
-        var country  = (d && d.country_code) || 'BR';
+        var country  = (d && (d.country || d.country_code)) || 'BR';
         var currency = EUR_COUNTRIES.indexOf(country) !== -1 ? 'EUR' : 'BRL';
         try { localStorage.setItem(GEO_KEY, JSON.stringify({ currency: currency, country: country, ts: Date.now() })); } catch(e) {}
         applyPricing(currency);
