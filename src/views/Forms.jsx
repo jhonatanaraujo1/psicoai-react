@@ -4,17 +4,85 @@ import { showToast } from '../components/Toast'
 import FormBuilder, { loadCustomForms, saveCustomForms } from '../components/FormBuilder'
 import { DatePicker, CustomSelect } from '../components/DateTimePickers'
 
-const formTemplates = [
-  { id: 'anamnese', name: 'Anamnese inicial', desc: 'Coleta dados demográficos, queixa principal e histórico de saúde', meta: '12 campos', type: 'anamnese', icon: '📋', badge: 'Padrão CFP', badgeClass: 'badge-green' },
-  { id: 'tcle', name: 'TCLE — Consentimento', desc: 'Termo de consentimento livre e esclarecido conforme Res. CFP 09/2024', meta: '6 campos', type: 'tcle', icon: '✍️', badge: 'Obrigatório', badgeClass: 'badge-green' },
-  { id: 'beck', name: 'BDI-II — Beck', desc: 'Inventário de depressão de Beck, validado para população brasileira', meta: '21 itens', type: 'beck', icon: '🧠', badge: 'Clínico', badgeClass: 'badge-gray' },
-  { id: 'phq', name: 'PHQ-9 — Depressão', desc: 'Patient Health Questionnaire, rastreio de depressão maior', meta: '9 itens', type: 'phq', icon: '📊', badge: 'Clínico', badgeClass: 'badge-gray' },
-  { id: 'srs', name: 'SRS — Aliança terapêutica', desc: 'Session Rating Scale — feedback do paciente após sessão', meta: '4 escalas', type: 'srs', icon: '🤝', badge: 'Sessão', badgeClass: 'badge-green' },
-  { id: 'gad7', name: 'GAD-7 — Ansiedade', desc: 'Generalized Anxiety Disorder scale, rastreio de ansiedade', meta: '7 itens', type: 'gad7', icon: '⚡', badge: 'Clínico', badgeClass: 'badge-gray' },
-  { id: 'dass21', name: 'DASS-21', desc: 'Escala de Depressão, Ansiedade e Estresse — triagem rápida e validada', meta: '21 itens', type: 'dass21', icon: '🎯', badge: 'Clínico', badgeClass: 'badge-gray' },
-  { id: 'ors', name: 'ORS — Resultado', desc: 'Outcome Rating Scale — avaliação de bem-estar pelo paciente a cada sessão', meta: '4 escalas', type: 'ors', icon: '📈', badge: 'Sessão', badgeClass: 'badge-green' },
-  { id: 'contrato', name: 'Contrato Terapêutico', desc: 'Define regras, frequência, honorários e cláusulas éticas do vínculo terapêutico', meta: '8 campos', type: 'contrato', icon: '📝', badge: 'Ético', badgeClass: 'badge-green' },
-]
+// ── Ícones SVG para templates (substituem emojis) ─────────────────────────────
+const TEMPLATE_ICONS = {
+  anamnese: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+      <polyline points="14 2 14 8 20 8"/>
+      <line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>
+      <polyline points="10 9 9 9 8 9"/>
+    </svg>
+  ),
+  tcle: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+    </svg>
+  ),
+  beck: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
+    </svg>
+  ),
+  phq: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/>
+      <line x1="6" y1="20" x2="6" y2="14"/>
+    </svg>
+  ),
+  srs: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+      <circle cx="9" cy="7" r="4"/>
+      <path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+    </svg>
+  ),
+  gad7: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <circle cx="12" cy="12" r="10"/>
+      <line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+    </svg>
+  ),
+  dass21: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+    </svg>
+  ),
+  ors: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/>
+      <polyline points="17 6 23 6 23 12"/>
+    </svg>
+  ),
+  contrato: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+      <polyline points="14 2 14 8 20 8"/>
+      <line x1="16" y1="13" x2="8" y2="13"/><line x1="13" y1="17" x2="8" y2="17"/>
+    </svg>
+  ),
+}
+
+// ── Metadados de templates (country-aware gerado em runtime) ──────────────────
+function getFormTemplates(country) {
+  const isPT = country === 'PT'
+  const docRef = isPT ? 'OPP' : 'CFP'
+  const consentRef = isPT ? 'RGPD (Reg. UE 2016/679)' : 'LGPD (Lei 13.709/2018)'
+  const beckDesc = isPT
+    ? 'Inventário de depressão de Beck, validado para população portuguesa'
+    : 'Inventário de depressão de Beck, validado para população brasileira'
+  return [
+    { id: 'anamnese', name: 'Anamnese inicial', desc: 'Coleta dados demográficos, queixa principal e histórico de saúde', meta: '12 campos', type: 'anamnese', badge: `Padrão ${docRef}`, badgeClass: 'badge-green' },
+    { id: 'tcle', name: isPT ? 'Consentimento Informado' : 'TCLE — Consentimento', desc: `Termo de consentimento livre e esclarecido conforme ${consentRef}`, meta: '6 campos', type: 'tcle', badge: 'Obrigatório', badgeClass: 'badge-green' },
+    { id: 'beck', name: 'BDI-II — Beck', desc: beckDesc, meta: '21 itens', type: 'beck', badge: 'Clínico', badgeClass: 'badge-gray' },
+    { id: 'phq', name: 'PHQ-9 — Depressão', desc: 'Patient Health Questionnaire, rastreio de depressão maior', meta: '9 itens', type: 'phq', badge: 'Clínico', badgeClass: 'badge-gray' },
+    { id: 'srs', name: 'SRS — Aliança terapêutica', desc: 'Session Rating Scale — feedback do paciente após sessão', meta: '4 escalas', type: 'srs', badge: 'Sessão', badgeClass: 'badge-green' },
+    { id: 'gad7', name: 'GAD-7 — Ansiedade', desc: 'Generalized Anxiety Disorder scale, rastreio de ansiedade', meta: '7 itens', type: 'gad7', badge: 'Clínico', badgeClass: 'badge-gray' },
+    { id: 'dass21', name: 'DASS-21', desc: 'Escala de Depressão, Ansiedade e Estresse — triagem rápida e validada', meta: '21 itens', type: 'dass21', badge: 'Clínico', badgeClass: 'badge-gray' },
+    { id: 'ors', name: 'ORS — Resultado', desc: 'Outcome Rating Scale — avaliação de bem-estar pelo paciente a cada sessão', meta: '4 escalas', type: 'ors', badge: 'Sessão', badgeClass: 'badge-green' },
+    { id: 'contrato', name: 'Contrato Terapêutico', desc: 'Define regras, frequência, honorários e cláusulas éticas do vínculo terapêutico', meta: '8 campos', type: 'contrato', badge: 'Ético', badgeClass: 'badge-green' },
+  ]
+}
 
 const formPreviews = {
   anamnese: {
@@ -50,7 +118,7 @@ const formPreviews = {
     body: (
       <div>
         <div style={{ background: '#EBF3FD', borderRadius: 'var(--r)', padding: '14px', marginBottom: '20px', fontSize: '13px', color: '#1a5276', lineHeight: 1.6 }}>
-          Este documento está em conformidade com a Resolução CFP 09/2024 e a LGPD (Lei 13.709/2018).
+          Este documento está em conformidade com a legislação de proteção de dados pessoais e o código de ética profissional aplicável.
         </div>
         <div className="form-section-title">Termos do atendimento</div>
         <div style={{ fontSize: '13px', color: 'var(--d2)', lineHeight: 1.7, marginBottom: '16px', background: 'var(--ow)', padding: '14px', borderRadius: 'var(--r)' }}>
@@ -212,7 +280,7 @@ const formPreviews_extra = {
     body: (
       <div>
         <div style={{ background: 'var(--g50)', borderRadius: 'var(--r)', padding: '14px', marginBottom: '20px', fontSize: '13px', color: 'var(--g600)', lineHeight: 1.6 }}>
-          Este contrato estabelece os termos do vínculo terapêutico e está em conformidade com o Código de Ética dos Psicólogos e a Resolução CFP 09/2024.
+          Este contrato estabelece os termos do vínculo terapêutico em conformidade com o Código de Ética Profissional e normas regulatórias aplicáveis.
         </div>
         <div className="form-section-title">Partes</div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '8px' }}>
@@ -314,7 +382,15 @@ function calcScoreForForm(type, response) {
   return null
 }
 
-const TEMPLATE_FIELDS = {
+function getTemplateFields(country) {
+  const isPT = country === 'PT'
+  const docId = isPT ? 'NIF' : 'CPF'
+  const docPlaceholder = isPT ? '123456789' : '000.000.000-00'
+  const currency = isPT ? '€' : 'R$'
+  const paymentOptions = isPT
+    ? ['MB Way', 'Transferência bancária', 'Multibanco', 'Dinheiro']
+    : ['PIX', 'Cartão de crédito', 'Transferência bancária', 'Dinheiro']
+  return {
   anamnese: [
     { id: 'nome', label: 'Nome completo', type: 'text', required: true },
     { id: 'nascimento', label: 'Data de nascimento', type: 'text', required: true },
@@ -330,10 +406,10 @@ const TEMPLATE_FIELDS = {
     { id: 'como_conheceu', label: 'Como nos encontrou?', type: 'text', required: false },
   ],
   tcle: [
-    { id: 'autoriza_prontuario', label: 'Autorizo o registro em prontuário eletrônico', type: 'radio', required: true, options: ['Sim, autorizo', 'Não autorizo'] },
+    { id: 'autoriza_prontuario', label: 'Autorizo o registo em prontuário eletrónico', type: 'radio', required: true, options: ['Sim, autorizo', 'Não autorizo'] },
     { id: 'autoriza_ia', label: 'Autorizo análise de IA como suporte clínico', type: 'radio', required: true, options: ['Sim, autorizo', 'Não autorizo'] },
     { id: 'assinatura', label: 'Assinatura digital (nome completo)', type: 'text', required: true },
-    { id: 'cpf', label: 'CPF', type: 'text', required: true },
+    { id: 'doc_id', label: docId, type: 'text', required: true, placeholder: docPlaceholder },
     { id: 'ciencia', label: 'Declaro que li e compreendi os termos do atendimento', type: 'radio', required: true, options: ['Sim, declaro'] },
   ],
   beck: [
@@ -416,18 +492,23 @@ const TEMPLATE_FIELDS = {
   ],
   contrato: [
     { id: 'nome_paciente', label: 'Nome completo do paciente', type: 'text', required: true },
-    { id: 'cpf', label: 'CPF', type: 'text', required: true },
+    { id: 'doc_id', label: docId, type: 'text', required: true, placeholder: docPlaceholder },
     { id: 'frequencia', label: 'Frequência das sessões', type: 'select', required: true, options: ['Semanal', 'Quinzenal', 'Mensal'] },
     { id: 'duracao', label: 'Duração da sessão', type: 'select', required: true, options: ['45 min', '50 min', '60 min'] },
-    { id: 'honorarios', label: 'Honorários (R$)', type: 'text', required: true },
-    { id: 'pagamento', label: 'Forma de pagamento', type: 'select', required: true, options: ['PIX', 'Cartão de crédito', 'Transferência bancária', 'Dinheiro'] },
+    { id: 'honorarios', label: `Honorários (${currency})`, type: 'text', required: true },
+    { id: 'pagamento', label: 'Forma de pagamento', type: 'select', required: true, options: paymentOptions },
     { id: 'cancelamento', label: 'Prazo mínimo de aviso para cancelamento', type: 'select', required: true, options: ['12 horas', '24 horas', '48 horas', '72 horas'] },
     { id: 'cobranca_falta', label: 'Cobrança em caso de falta sem aviso', type: 'radio', required: true, options: ['Sim, cobro 100% do valor', 'Sim, cobro 50% do valor', 'Não cobro'] },
     { id: 'assinatura', label: 'Assinatura digital (nome completo)', type: 'text', required: true },
   ],
 }
+}
 
-export default function Forms() {
+export default function Forms({ currentUser }) {
+  const country = currentUser?.country || 'BR'
+  const isPT = country === 'PT'
+  const formTemplates = getFormTemplates(country)
+  const templateFields = getTemplateFields(country)
   const [preview, setPreview] = useState(null)
   const [allForms, setAllForms] = useState([])
   const [sendModal, setSendModal] = useState(false)
@@ -531,8 +612,8 @@ export default function Forms() {
               style={{ cursor: 'pointer', position: 'relative' }}
               onClick={() => { setSendFormType(t.id); setSendPatient(''); setSendModal(true) }}
             >
-              <div className="form-template-icon" style={t.type === 'anamnese' ? { background: 'var(--g50)' } : t.type === 'tcle' ? { background: '#EBF3FD' } : t.type === 'beck' ? { background: 'var(--warn-l)' } : t.type === 'phq' ? { background: '#F5EEF8' } : t.type === 'srs' ? { background: 'var(--g50)' } : { background: 'var(--danger-l)' }}>
-                {t.icon}
+              <div className="form-template-icon" style={t.type === 'anamnese' ? { background: 'var(--g50)', color: 'var(--g600)' } : t.type === 'tcle' ? { background: '#EBF3FD', color: '#2980B9' } : t.type === 'beck' ? { background: 'var(--warn-l)', color: '#B7791F' } : t.type === 'phq' ? { background: '#F5EEF8', color: '#7D3C98' } : t.type === 'srs' ? { background: 'var(--g50)', color: 'var(--g600)' } : { background: 'var(--danger-l)', color: 'var(--danger)' }}>
+                {TEMPLATE_ICONS[t.type] || TEMPLATE_ICONS.anamnese}
               </div>
               <div className="form-template-name">{t.name}</div>
               <div className="form-template-desc">{t.desc}</div>
@@ -696,7 +777,7 @@ export default function Forms() {
           try {
             const tpl = allTemplates.find(t => t.id === sendFormType)
             const title = tpl?.name || sendFormType
-            const fields = TEMPLATE_FIELDS[sendFormType] || tpl?.fields
+            const fields = templateFields[sendFormType] || tpl?.fields
               || [{ id: 'resposta', label: 'Resposta', type: 'textarea', required: true }]
             const created = await api.createForm({ patientId: sendPatient, type: sendFormType, title, fields })
             if (created) setAllForms(prev => [created, ...prev])
@@ -720,8 +801,11 @@ export default function Forms() {
                 <div>
                   <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.5)', letterSpacing: '0.8px', fontWeight: 600, marginBottom: '4px' }}>ENVIAR FORMULÁRIO</div>
                   {selectedTpl ? (
-                    <div style={{ fontFamily: "'Fraunces', serif", fontSize: '17px', color: '#fff', fontWeight: 400 }}>
-                      {selectedTpl.icon && <span style={{ marginRight: '8px' }}>{selectedTpl.icon}</span>}{selectedTpl.name}
+                    <div style={{ fontFamily: "'Fraunces', serif", fontSize: '17px', color: '#fff', fontWeight: 400, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      {TEMPLATE_ICONS[selectedTpl.type] && (
+                        <span style={{ opacity: 0.85 }}>{TEMPLATE_ICONS[selectedTpl.type]}</span>
+                      )}
+                      {selectedTpl.name}
                     </div>
                   ) : (
                     <div style={{ fontFamily: "'Fraunces', serif", fontSize: '17px', color: '#fff', fontWeight: 400 }}>Escolha o formulário</div>
@@ -741,7 +825,7 @@ export default function Forms() {
                       onChange={v => setSendFormType(v)}
                       options={[
                         { label: 'Selecione um formulário…', value: '' },
-                        ...formTemplates.map(t => ({ label: `${t.icon} ${t.name}`, value: t.id })),
+                        ...formTemplates.map(t => ({ label: t.name, value: t.id })),
                         ...customForms.map(f => ({ label: f.name, value: f.id })),
                       ]}
                       placeholder="Selecione um formulário…"

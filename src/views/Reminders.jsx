@@ -3,9 +3,10 @@
  *
  * ESTADO ATUAL DO SISTEMA:
  *   - Configs persistem em user.preferences via PATCH /api/v1/me
- *   - Fila/enviados são ESTIMATIVAS derivadas da agenda (scheduler backend pendente)
- *   - Templates editáveis localmente (integração com email backend pendente)
+ *   - confirm24 e dayof2: ReminderScheduler.kt ativo — emails reais via Resend
+ *   - billing3days e feedback1day: UI visível, scheduler pendente no backend
  *   - Canal ativo: e-mail (Resend). WhatsApp/SMS: backlog.
+ *   - Fila exibida é estimativa derivada da agenda (dados de sent_at não expostos na UI)
  */
 
 import { useState, useEffect, useCallback } from 'react'
@@ -238,7 +239,7 @@ export default function Reminders() {
           </div>
 
           {/* Templates */}
-          <div className="card" style={{ opacity: 0.7 }}>
+          <div className="card">
             <div className="card-header">
               <div>
                 <div className="card-title">Templates de e-mail</div>

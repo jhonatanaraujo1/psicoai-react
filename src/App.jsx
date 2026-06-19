@@ -968,7 +968,7 @@ export default function App() {
       />
       case 'financeiro':  return <Finance currentUser={currentUser} />
       case 'lembretes':   return <Reminders />
-      case 'formularios': return <Forms />
+      case 'formularios': return <Forms currentUser={currentUser} />
       // Cadernos: cada paciente é um caderno. Clicar abre o canvas diretamente.
       // Paciente com páginas → recovery mode. Sem páginas → nova página de texto.
       case 'cadernos':    return <Notebooks

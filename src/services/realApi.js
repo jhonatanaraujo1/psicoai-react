@@ -688,18 +688,19 @@ export const api = {
   },
 
   async getTeleSessions() {
-    return []
+    return get('/api/v1/tele-sessions')
   },
 
   async createTeleSession(data) {
-    return { id: 'ts-' + Date.now(), ...data, status: 'scheduled', createdAt: new Date().toISOString() }
+    return post('/api/v1/tele-sessions', data)
   },
 
   async updateTeleSession(id, data) {
-    return { id, ...data }
+    return patch(`/api/v1/tele-sessions/${id}`, data)
   },
 
-  async deleteTeleSession(id) { // eslint-disable-line no-unused-vars
+  async deleteTeleSession(id) {
+    return del(`/api/v1/tele-sessions/${id}`)
   },
 
   async generateReport({ patientId, type, sections }) {

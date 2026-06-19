@@ -134,7 +134,7 @@ export default function Sidebar({ currentView, setCurrentView, isOpen, onClose, 
         {navItem('financeiro',  'Financeiro')}
         {navItem('lembretes',   'Lembretes')}
         {navItem('formularios', 'Formulários')}
-        {navItemSoon('teleatendimento', 'Videoatendimento')}
+        {navItem('teleatendimento', 'Videoatendimento')}
 
         <div className="nav-section">Sistema</div>
         {navItem('configuracoes', 'Configurações')}
