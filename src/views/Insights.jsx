@@ -873,10 +873,122 @@ function InsightsPortfolio({ onSelectPatient, onOpenAnalysisHub, currentUser }) 
   )
 }
 
+// ── Upgrade Wall — plano Consultório tentando acessar Insights ───────────────
+
+function InsightsUpgradeWall() {
+  const FEATURES = [
+    { icon: '🧠', title: 'Insights da carteira', desc: 'Padrões clínicos detectados em toda a sua carteira de pacientes — em um único painel.' },
+    { icon: '📈', title: 'Evolução longitudinal', desc: 'Gráfico de progresso de cada paciente ao longo das sessões analisadas.' },
+    { icon: '⚠️', title: 'Alertas de padrão', desc: 'Risco, evitação e ruminação recorrentes detectados antes de virarem crise.' },
+    { icon: '🔬', title: 'Top hipóteses DSM-5/CID-11', desc: 'Hipóteses mais frequentes em toda a carteira — com probabilidade ponderada.' },
+    { icon: '40', title: '40 análises/mês', desc: 'Mais que o dobro do plano Consultório, para atender uma carteira completa.' },
+  ]
+
+  return (
+    <div className="view" style={{ maxWidth: 600, margin: '0 auto' }}>
+      {/* Header */}
+      <div style={{
+        background: 'linear-gradient(135deg, var(--g900, #1a2e20) 0%, var(--g700, #2d4a38) 100%)',
+        borderRadius: '16px', padding: '32px 28px 28px', marginBottom: '24px',
+        border: '1px solid var(--g600, #4a7c59)',
+        position: 'relative', overflow: 'hidden',
+      }}>
+        <div style={{
+          position: 'absolute', top: -40, right: -40,
+          width: 160, height: 160, borderRadius: '50%',
+          background: 'rgba(92,143,106,0.12)',
+        }} />
+        <div style={{
+          display: 'inline-flex', alignItems: 'center', gap: '6px',
+          background: 'rgba(92,143,106,0.25)', border: '1px solid rgba(92,143,106,0.4)',
+          borderRadius: '20px', padding: '4px 12px', marginBottom: '16px',
+        }}>
+          <span style={{ fontSize: '10px', fontWeight: 700, color: '#7fb897', letterSpacing: '0.8px', textTransform: 'uppercase' }}>
+            Plano Especialista
+          </span>
+        </div>
+        <div style={{ fontFamily: "'Fraunces', serif", fontSize: '24px', fontWeight: 400, color: '#fff', marginBottom: '10px', lineHeight: 1.3 }}>
+          Insights da Carteira
+        </div>
+        <p style={{ fontSize: '14px', color: 'rgba(255,255,255,0.65)', lineHeight: 1.65, margin: 0 }}>
+          Seu plano Consultório inclui análises IA individuais por sessão.
+          Para ver padrões em toda a carteira, alertas longitudinais e hipóteses agregadas,
+          ative o plano Especialista.
+        </p>
+      </div>
+
+      {/* Features */}
+      <div style={{ marginBottom: '24px' }}>
+        <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--gr4)', letterSpacing: '0.8px', textTransform: 'uppercase', marginBottom: '12px' }}>
+          O que você desbloqueia
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          {FEATURES.map(({ icon, title, desc }) => (
+            <div key={title} style={{
+              display: 'flex', alignItems: 'flex-start', gap: '14px',
+              padding: '14px 16px', borderRadius: '10px',
+              background: 'var(--ow)', border: '1px solid var(--gr2)',
+            }}>
+              <div style={{
+                width: 36, height: 36, borderRadius: '8px',
+                background: 'var(--g50)', color: 'var(--g700)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: '16px', flexShrink: 0, fontWeight: 700,
+              }}>
+                {icon}
+              </div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--d)', marginBottom: '3px' }}>{title}</div>
+                <div style={{ fontSize: '12px', color: 'var(--gr5)', lineHeight: 1.5 }}>{desc}</div>
+              </div>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--g500)" strokeWidth="2.5" strokeLinecap="round" style={{ flexShrink: 0, marginTop: 2 }}>
+                <polyline points="20 6 9 17 4 12"/>
+              </svg>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Pricing + CTA */}
+      <div style={{
+        padding: '20px 24px', borderRadius: '12px',
+        background: 'var(--ow)', border: '2px solid var(--g200)',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'flex-end', gap: '6px', marginBottom: '6px' }}>
+          <span style={{ fontFamily: "'Fraunces', serif", fontSize: '36px', fontWeight: 400, color: 'var(--d)', lineHeight: 1 }}>R$97</span>
+          <span style={{ fontSize: '13px', color: 'var(--gr5)', marginBottom: '6px' }}>/mês</span>
+        </div>
+        <div style={{ fontSize: '12px', color: 'var(--gr4)', marginBottom: '20px' }}>
+          40 análises/mês · Insights da carteira · Todos os recursos do Consultório
+        </div>
+        <button
+          onClick={() => window.dispatchEvent(new CustomEvent('psicoai:payment-required'))}
+          style={{
+            width: '100%', padding: '14px', borderRadius: '10px',
+            background: 'linear-gradient(135deg, var(--g600, #4a7c59), var(--g700, #2d4a38))',
+            color: '#fff', border: 'none', cursor: 'pointer',
+            fontSize: '14px', fontWeight: 700, fontFamily: "'DM Sans', sans-serif",
+            letterSpacing: '0.2px',
+          }}
+        >
+          Fazer upgrade para Especialista →
+        </button>
+        <div style={{ fontSize: '11px', color: 'var(--gr4)', textAlign: 'center', marginTop: '10px' }}>
+          Cancele quando quiser · Dados preservados
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ── Root export ───────────────────────────────────────────────────────────────
 
 export default function Insights({ onGoToPatient, onOpenAnalysisHub, currentUser }) {
   const [selectedPatient, setSelectedPatient] = useState(null)
+
+  // Gate: Insights requer Especialista. Trial libera para incentivar upgrade.
+  const hasAccess = currentUser?.plan === 'especialista' || currentUser?.subscriptionStatus === 'trialing'
+  if (!hasAccess) return <InsightsUpgradeWall />
 
   const handleSelectPatient = useCallback((patient) => {
     setSelectedPatient({ id: patient.id, name: patient.name })

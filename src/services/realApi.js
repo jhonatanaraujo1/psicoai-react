@@ -129,6 +129,10 @@ async function req(method, path, body, opts = {}) {
   if (res.status === 204) return null
 
   if (res.status === 402) {
+    const body402 = await res.json().catch(() => ({}))
+    if (body402?.error === 'plan_upgrade_required') {
+      throw new Error('plan_upgrade_required')
+    }
     window.dispatchEvent(new CustomEvent('psicoai:payment-required'))
     throw new Error('Sua conta está bloqueada. Regularize o pagamento para continuar.')
   }
