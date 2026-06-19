@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+﻿import { useState, useEffect } from 'react'
 
 const BASE = import.meta.env.VITE_API_BASE_URL
 
@@ -151,7 +151,7 @@ export default function PublicFormPage() {
 
       {/* Brand header */}
       <div style={{ marginBottom: '32px', textAlign: 'center' }}>
-        <div style={{ fontFamily: 'Georgia, serif', fontSize: '22px', color: '#2D4A38', letterSpacing: '-0.3px' }}>Ψ PsicoNotes</div>
+        <div style={{ fontFamily: 'Georgia, serif', fontSize: '22px', color: '#2D4A38', letterSpacing: '-0.3px' }}>Ψ Psic Notes</div>
       </div>
 
       <div>

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+﻿import { useState, useEffect, useRef, useCallback } from 'react'
 import { api } from '../services'
 import { DatePicker, TimePicker, CustomSelect } from '../components/DateTimePickers'
 import { showToast } from '../components/Toast'
@@ -219,7 +219,7 @@ export default function Agenda({ currentUser }) {
     }
   }
 
-  // Merge PsicNotes + Google events into unified list
+  // Merge Psic Notes + Google events into unified list
   const allEvents = [
     ...events,
     ...googleEvents.map(g => ({

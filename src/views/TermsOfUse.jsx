@@ -1,5 +1,5 @@
-/**
- * TermosDeUso.jsx — Termos de Uso e Contrato de Serviço do PsicNotes
+﻿/**
+ * TermosDeUso.jsx — Termos de Uso e Contrato de Serviço do Psic Notes
  *
  * Versão: 1.0 — vigente a partir de 01/06/2026
  * Redigido em conformidade com:
@@ -109,7 +109,7 @@ export default function TermsOfUse({ onClose }) {
             </svg>
             Voltar
           </button>
-          <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--d)' }}>Termos de Uso — PsicNotes v{VERSAO}</span>
+          <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--d)' }}>Termos de Uso — Psic Notes v{VERSAO}</span>
         </div>
       )}
 
@@ -117,16 +117,16 @@ export default function TermsOfUse({ onClose }) {
 
         {/* Cabeçalho */}
         <div style={s.header}>
-          <div style={s.logo}>Ψ PsicNotes</div>
+          <div style={s.logo}>Ψ Psic Notes</div>
           <div style={s.meta}>
             <strong>Termos de Uso e Contrato de Prestação de Serviço</strong><br />
             Versão {VERSAO} — vigente a partir de {VIGENCIA}<br />
-            PsicNotes Tecnologia Ltda. (CNPJ a ser inserido) — {CONTATO}
+            Psic Notes Tecnologia Ltda. (CNPJ a ser inserido) — {CONTATO}
           </div>
         </div>
 
         <div style={s.alert}>
-          <strong>⚠️ Leia com atenção antes de usar.</strong> Ao criar uma conta ou utilizar o PsicNotes,
+          <strong>⚠️ Leia com atenção antes de usar.</strong> Ao criar uma conta ou utilizar o Psic Notes,
           você concorda integralmente com estes Termos. Se não concordar, não utilize o serviço.
         </div>
 
@@ -134,7 +134,7 @@ export default function TermsOfUse({ onClose }) {
         <div style={s.h2}>1. Definições</div>
         <p style={s.p}>Para fins destes Termos, aplicam-se as seguintes definições:</p>
         <ul style={s.ul}>
-          <li><strong>PsicNotes</strong>: plataforma SaaS de suporte ao raciocínio clínico destinada a profissionais de saúde mental.</li>
+          <li><strong>Psic Notes</strong>: plataforma SaaS de suporte ao raciocínio clínico destinada a profissionais de saúde mental.</li>
           <li><strong>Usuário</strong>: psicólogo(a) ou profissional de saúde mental devidamente habilitado que contrata o serviço.</li>
           <li><strong>Dados Clínicos</strong>: prontuários, anotações, análises, formulários e arquivos associados aos pacientes do Usuário.</li>
           <li><strong>Dados Pessoais</strong>: conforme definido pelo art. 5º, I da LGPD (Lei 13.709/2018).</li>
@@ -144,11 +144,11 @@ export default function TermsOfUse({ onClose }) {
         {/* 2 */}
         <div style={s.h2}>2. Objeto do contrato</div>
         <p style={s.p}>
-          O PsicNotes disponibiliza ao Usuário, mediante assinatura mensal ou acesso trial, ferramentas de
+          O Psic Notes disponibiliza ao Usuário, mediante assinatura mensal ou acesso trial, ferramentas de
           suporte ao registro clínico, análise assistida por inteligência artificial, gestão de agenda e financeiro.
         </p>
         <p style={s.p}>
-          <strong>O PsicNotes é uma ferramenta de apoio.</strong> Nenhuma análise, sugestão ou output gerado pela plataforma
+          <strong>O Psic Notes é uma ferramenta de apoio.</strong> Nenhuma análise, sugestão ou output gerado pela plataforma
           substitui o julgamento clínico do profissional. O Usuário é integralmente responsável por todas as
           decisões terapêuticas, diagnósticos e condutas clínicas.
         </p>
@@ -191,7 +191,7 @@ export default function TermsOfUse({ onClose }) {
         {/* 5 */}
         <div style={s.h2}>5. Dados clínicos e responsabilidade do Usuário</div>
         <p style={s.p}>
-          O Usuário é o <strong>controlador dos dados clínicos</strong> (nos termos do art. 5º, VI da LGPD) e o PsicNotes
+          O Usuário é o <strong>controlador dos dados clínicos</strong> (nos termos do art. 5º, VI da LGPD) e o Psic Notes
           atua como <strong>operador</strong> (art. 5º, VII). O Usuário é responsável por:
         </p>
         <ul style={s.ul}>
@@ -225,20 +225,20 @@ export default function TermsOfUse({ onClose }) {
         </div>
         <div style={s.h3}>7.1 Direito de encerramento</div>
         <p style={s.p}>
-          O PsicNotes reserva-se o direito de encerrar integralmente a plataforma, de forma definitiva, a qualquer
+          O Psic Notes reserva-se o direito de encerrar integralmente a plataforma, de forma definitiva, a qualquer
           momento, por qualquer motivo, incluindo mas não se limitando a: descontinuação do modelo de negócio,
           insolvência, decisão estratégica ou determinação judicial. O exercício deste direito não constitui
           inadimplemento contratual desde que observado o prazo de aviso abaixo.
         </p>
         <div style={s.h3}>7.2 Prazo de aviso prévio obrigatório</div>
         <p style={s.p}>
-          Em caso de encerramento definitivo da plataforma, o PsicNotes notificará <strong>todos os Usuários ativos e
+          Em caso de encerramento definitivo da plataforma, o Psic Notes notificará <strong>todos os Usuários ativos e
           inativos com dados armazenados</strong> com antecedência mínima de <strong>{AVISO_ENCERRAMENTO}</strong>, por email cadastrado,
           antes da data de desligamento dos servidores.
         </p>
         <div style={s.h3}>7.3 Exportação de dados no período de aviso</div>
         <p style={s.p}>
-          Durante os {AVISO_ENCERRAMENTO} de aviso prévio, o PsicNotes garantirá:
+          Durante os {AVISO_ENCERRAMENTO} de aviso prévio, o Psic Notes garantirá:
         </p>
         <ol style={s.ol}>
           <li>Manutenção do acesso à plataforma para exportação de dados mesmo para contas inadimplentes.</li>
@@ -249,32 +249,32 @@ export default function TermsOfUse({ onClose }) {
         <div style={s.h3}>7.4 Após o desligamento</div>
         <p style={s.p}>
           Decorridos os {AVISO_ENCERRAMENTO} de aviso e após a data de desligamento, todos os dados armazenados
-          nos servidores do PsicNotes serão permanentemente excluídos. O PsicNotes não manterá nenhuma cópia dos
+          nos servidores do Psic Notes serão permanentemente excluídos. O Psic Notes não manterá nenhuma cópia dos
           dados após o encerramento definitivo da plataforma.
         </p>
         <div style={s.h3}>7.5 Limitação de responsabilidade no encerramento</div>
         <p style={s.p}>
           Respeitado o aviso prévio de {AVISO_ENCERRAMENTO} e a disponibilização das ferramentas de exportação,
-          o PsicNotes não será responsável por danos decorrentes do encerramento da plataforma, incluindo perda
+          o Psic Notes não será responsável por danos decorrentes do encerramento da plataforma, incluindo perda
           de dados não exportados dentro do prazo pelo próprio Usuário.
         </p>
 
         {/* 8 */}
         <div style={s.h2}>8. Propriedade intelectual e uso da IA</div>
         <p style={s.p}>
-          Os modelos de linguagem, algoritmos, interfaces e código-fonte do PsicNotes são propriedade exclusiva
+          Os modelos de linguagem, algoritmos, interfaces e código-fonte do Psic Notes são propriedade exclusiva
           da empresa e estão protegidos por direitos autorais. O Usuário recebe licença limitada, não exclusiva
           e intransferível para uso da plataforma durante a vigência da assinatura.
         </p>
         <p style={s.p}>
           Os dados clínicos inseridos pelo Usuário <strong>nunca são utilizados para treinar modelos de IA</strong> próprios
-          ou de terceiros, sem consentimento expresso e específico do Usuário. As análises clínicas são processadas pelo motor de IA do PsicNotes, desenvolvido e operado com infraestrutura dedicada à saúde mental, sob contratos de confidencialidade e em conformidade com a LGPD e as diretrizes do CFP.
+          ou de terceiros, sem consentimento expresso e específico do Usuário. As análises clínicas são processadas pelo motor de IA do Psic Notes, desenvolvido e operado com infraestrutura dedicada à saúde mental, sob contratos de confidencialidade e em conformidade com a LGPD e as diretrizes do CFP.
         </p>
 
         {/* 9 */}
         <div style={s.h2}>9. Privacidade e LGPD</div>
         <p style={s.p}>
-          O tratamento de dados pessoais pelo PsicNotes observa integralmente a LGPD (Lei 13.709/2018). As bases
+          O tratamento de dados pessoais pelo Psic Notes observa integralmente a LGPD (Lei 13.709/2018). As bases
           legais utilizadas são: execução de contrato (art. 7º, V), legítimo interesse (art. 7º, IX) e
           cumprimento de obrigação legal (art. 7º, II).
         </p>
@@ -289,23 +289,23 @@ export default function TermsOfUse({ onClose }) {
           <li>Revogação do consentimento</li>
         </ul>
         <p style={s.p}>
-          Para exercer qualquer desses direitos: {CONTATO}. O PsicNotes responderá em até 15 dias úteis.
+          Para exercer qualquer desses direitos: {CONTATO}. O Psic Notes responderá em até 15 dias úteis.
         </p>
 
         {/* 10 */}
         <div style={s.h2}>10. Segurança dos dados</div>
         <p style={s.p}>
-          O PsicNotes adota medidas técnicas e organizacionais compatíveis com o estado da arte para proteção
+          O Psic Notes adota medidas técnicas e organizacionais compatíveis com o estado da arte para proteção
           dos dados, incluindo: criptografia em trânsito (TLS 1.3), autenticação por JWT com expiração curta,
           isolamento de dados por conta, e logs de auditoria. Em caso de incidente de segurança com potencial
-          de risco aos titulares, o PsicNotes notificará a ANPD e os Usuários afetados em até <strong>72 horas</strong> do
+          de risco aos titulares, o Psic Notes notificará a ANPD e os Usuários afetados em até <strong>72 horas</strong> do
           conhecimento do incidente, conforme art. 48 da LGPD.
         </p>
 
         {/* 11 */}
         <div style={s.h2}>11. Limitação de responsabilidade</div>
         <p style={s.p}>
-          O PsicNotes não se responsabiliza por:
+          O Psic Notes não se responsabiliza por:
         </p>
         <ul style={s.ul}>
           <li>Decisões clínicas tomadas com base nos outputs da plataforma.</li>
@@ -314,14 +314,14 @@ export default function TermsOfUse({ onClose }) {
           <li>Perda de dados não exportados após o encerramento da plataforma, desde que respeitado o prazo de aviso.</li>
         </ul>
         <p style={s.p}>
-          A responsabilidade total do PsicNotes por qualquer reclamação fica limitada ao valor pago pelo Usuário
+          A responsabilidade total do Psic Notes por qualquer reclamação fica limitada ao valor pago pelo Usuário
           nos últimos 3 (três) meses de assinatura, salvo disposição legal em contrário.
         </p>
 
         {/* 12 */}
         <div style={s.h2}>12. Alterações nestes Termos</div>
         <p style={s.p}>
-          O PsicNotes pode alterar estes Termos a qualquer momento. Alterações materiais serão comunicadas por
+          O Psic Notes pode alterar estes Termos a qualquer momento. Alterações materiais serão comunicadas por
           email com antecedência mínima de <strong>30 (trinta) dias</strong>. O uso continuado da plataforma após o prazo
           implica aceitação dos novos Termos. Caso o Usuário não concorde, poderá cancelar a conta sem ônus
           durante o período de aviso.
@@ -348,7 +348,7 @@ export default function TermsOfUse({ onClose }) {
 
         {/* Rodapé */}
         <div style={{ marginTop: 48, padding: '20px 24px', background: 'var(--g50)', borderRadius: 10, fontSize: 12, color: 'var(--gr4)', lineHeight: 1.7 }}>
-          <strong>PsicNotes Tecnologia Ltda.</strong><br />
+          <strong>Psic Notes Tecnologia Ltda.</strong><br />
           Versão {VERSAO} — vigente a partir de {VIGENCIA}<br />
           Contato DPO: {CONTATO}<br />
           Última atualização: maio de 2026<br /><br />

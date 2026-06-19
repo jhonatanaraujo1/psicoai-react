@@ -1,4 +1,4 @@
-/**
+﻿/**
  * services/index.js — Aponta sempre para o backend real (Railway/Kotlin).
  * Mock removido — app roda 100% contra realApi.
  *
@@ -21,9 +21,9 @@ export const API_MODE = 'railway'
 if (import.meta.env.DEV) {
   const base = import.meta.env.VITE_API_BASE_URL
   if (!base) {
-    console.warn('[PsicNotes] ⚠ VITE_API_BASE_URL não definida — todas as chamadas API vão falhar. Configure .env.local.')
+    console.warn('[Psic Notes] ⚠ VITE_API_BASE_URL não definida — todas as chamadas API vão falhar. Configure .env.local.')
   } else {
-    console.info(`[PsicNotes] API → ${base}`)
+    console.info(`[Psic Notes] API → ${base}`)
   }
 }
 

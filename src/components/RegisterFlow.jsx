@@ -1,4 +1,4 @@
-import { useState } from 'react'
+﻿import { useState } from 'react'
 import { auth, api } from '../services/index.js'
 import { CustomSelect } from './DateTimePickers'
 
@@ -159,7 +159,7 @@ export default function RegisterFlow({ onLogin, onBack, initialEmail = '' }) {
       <div className="login-left-inner">
         <div className="login-brand">
           <div className="login-psi-icon">Ψ</div>
-          <span className="login-brand-name">PsicNotes</span>
+          <span className="login-brand-name">Psic Notes</span>
         </div>
         <div className="login-hero-text">
           <h1>O raciocínio clínico que faltava na sua prática.</h1>

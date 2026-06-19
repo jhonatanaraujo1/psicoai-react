@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+﻿import { useEffect } from 'react'
 
 export default function PrivacyPolicy({ onClose }) {
   useEffect(() => { document.title = 'Política de Privacidade — Psic Notes' }, [])
@@ -19,7 +19,7 @@ export default function PrivacyPolicy({ onClose }) {
             </svg>
             Voltar
           </button>
-          <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--d)' }}>Política de Privacidade — PsicNotes</span>
+          <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--d)' }}>Política de Privacidade — Psic Notes</span>
         </div>
       )}
       <div style={{maxWidth:720,margin:'0 auto',padding:'48px 24px',color:'var(--text-primary, #1a1a1a)',fontFamily:'var(--font-sans)',lineHeight:1.7}}>
@@ -27,7 +27,7 @@ export default function PrivacyPolicy({ onClose }) {
         <p style={{color:'#888',fontSize:13,marginBottom:32}}>Versão 1.0 — Vigência a partir de junho de 2026</p>
 
         <p style={{marginBottom:24}}>
-          Esta Política descreve como o PsicNotes coleta, usa e protege os dados dos usuários,
+          Esta Política descreve como o Psic Notes coleta, usa e protege os dados dos usuários,
           em conformidade com a LGPD (Lei nº 13.709/2018) e o RGPD (Regulamento UE 2016/679).
         </p>
 
@@ -45,13 +45,13 @@ export default function PrivacyPolicy({ onClose }) {
           <li style={{marginBottom:6}}>Prestação do serviço de prontuário e análise clínica</li>
           <li style={{marginBottom:6}}>Processamento de pagamentos via Stripe</li>
           <li style={{marginBottom:6}}>Envio de notificações transacionais por email (Resend)</li>
-          <li style={{marginBottom:6}}>Geração de análises clínicas pelo assistente clínico do PsicNotes (processamento em tempo real durante a sessão, sem retenção posterior do conteúdo clínico)</li>
+          <li style={{marginBottom:6}}>Geração de análises clínicas pelo assistente clínico do Psic Notes (processamento em tempo real durante a sessão, sem retenção posterior do conteúdo clínico)</li>
         </ul>
 
         <h2 style={{fontSize:18,fontWeight:500,margin:'32px 0 12px'}}>3. Compartilhamento de dados</h2>
         <p style={{marginBottom:8}}>Dados são compartilhados apenas com subprocessadores necessários:</p>
         <ul style={{paddingLeft:20,marginBottom:16}}>
-          <li style={{marginBottom:6}}><strong>Assistente clínico PsicNotes</strong> — processamento das anotações de sessão para geração de raciocínio clínico (sem retenção do conteúdo após a análise)</li>
+          <li style={{marginBottom:6}}><strong>Assistente clínico Psic Notes</strong> — processamento das anotações de sessão para geração de raciocínio clínico (sem retenção do conteúdo após a análise)</li>
           <li style={{marginBottom:6}}><strong>Stripe</strong> — processamento de pagamentos</li>
           <li style={{marginBottom:6}}><strong>Resend</strong> — envio de emails transacionais</li>
           <li style={{marginBottom:6}}><strong>Railway</strong> — hospedagem do servidor e banco de dados (PostgreSQL criptografado em repouso)</li>

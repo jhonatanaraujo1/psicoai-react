@@ -1,5 +1,5 @@
-/**
- * realApi.js — Cliente HTTP para o backend PsicNotes.
+﻿/**
+ * realApi.js — Cliente HTTP para o backend Psic Notes.
  * Interface idêntica à mockApi.js — troca transparente via services/index.js.
  *
  * Token lifecycle:
@@ -778,7 +778,7 @@ export const api = {
       id: 'signature',
       label: null,
       isSignature: true,
-      text: `Gerado em ${today} via PsicNotes\n\nPsicólogo(a) responsável`,
+      text: `Gerado em ${today} via Psic Notes\n\nPsicólogo(a) responsável`,
     })
 
     // Fallback se não construiu nenhuma seção

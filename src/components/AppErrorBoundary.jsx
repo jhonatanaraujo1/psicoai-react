@@ -1,4 +1,4 @@
-import { Component } from 'react'
+﻿import { Component } from 'react'
 
 // Anti-loop: máx 2 reloads automáticos em 15s — depois para e mostra erro estático
 const LOOP_KEY = 'psicoai_err_recovery'
@@ -46,11 +46,11 @@ export default class AppErrorBoundary extends Component {
   }
 
   componentDidCatch(error) {
-    console.error('[PsicNotes] App crash:', error?.message)
+    console.error('[Psic Notes] App crash:', error?.message)
 
     if (this.looped) {
       // Já tentou LOOP_MAX vezes — para o loop, não recarrega mais
-      console.warn('[PsicNotes] Loop de recovery detectado — parando auto-reload.')
+      console.warn('[Psic Notes] Loop de recovery detectado — parando auto-reload.')
       return
     }
 
@@ -87,7 +87,7 @@ export default class AppErrorBoundary extends Component {
 
         <div style={{ textAlign: 'center', maxWidth: 300 }}>
           <div style={{ fontSize: 16, fontWeight: 600, color: '#1C1C1C', marginBottom: 6 }}>
-            {stuck ? 'Algo deu errado' : 'Atualizando o PsicNotes…'}
+            {stuck ? 'Algo deu errado' : 'Atualizando o Psic Notes…'}
           </div>
           <div style={{ fontSize: 13, color: '#8B8B8B', lineHeight: 1.6 }}>
             {stuck

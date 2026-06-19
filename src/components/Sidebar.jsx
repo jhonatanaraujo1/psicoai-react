@@ -1,4 +1,4 @@
-// ── Icon map — JSX SVGs, no dangerouslySetInnerHTML ──────────────────────────
+﻿// ── Icon map — JSX SVGs, no dangerouslySetInnerHTML ──────────────────────────
 const ICONS = {
   dashboard: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
@@ -118,7 +118,7 @@ export default function Sidebar({ currentView, setCurrentView, isOpen, onClose, 
     <aside className={`sidebar${isOpen ? ' open' : ''}`}>
       <div className="sb-logo">
         <div className="sb-psi">Ψ</div>
-        <div className="sb-brand">Psico<span>Notes</span></div>
+        <div className="sb-brand">Psic <span>Notes</span></div>
       </div>
 
       <nav className="sb-nav">
