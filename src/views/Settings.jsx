@@ -164,6 +164,9 @@ function TabPlano({ profile }) {
 
   const [checkoutLoading, setCheckoutLoading] = useState(null)
   const [portalLoading,   setPortalLoading]   = useState(false)
+  const [cancelConfirm,   setCancelConfirm]   = useState(false)
+  const [cancelLoading,   setCancelLoading]   = useState(false)
+  const [cancelDone,      setCancelDone]       = useState(null)
   const [coupon,      setCoupon]      = useState('')
   const [couponState, setCouponState] = useState(null)
   const [couponChecking, setCouponChecking] = useState(false)
@@ -228,6 +231,23 @@ function TabPlano({ profile }) {
     } catch {
       showToast('Erro ao abrir portal de cobrança. Tente novamente.', 'error')
       setPortalLoading(false)
+    }
+  }
+
+  const handleCancelSubscription = async () => {
+    setCancelLoading(true)
+    try {
+      const result = await api.cancelSubscription()
+      setCancelDone(result)
+      setCancelConfirm(false)
+      showToast(result.refunded
+        ? 'Assinatura cancelada — reembolso iniciado'
+        : 'Assinatura cancelada — acesso mantido até o fim do período',
+        'success', { duration: 8000 })
+    } catch (e) {
+      showToast(e?.message || 'Erro ao cancelar. Tente novamente.', 'error')
+    } finally {
+      setCancelLoading(false)
     }
   }
 
@@ -389,12 +409,48 @@ function TabPlano({ profile }) {
         O raciocínio clínico é gerado quando você aciona — nunca de forma automática ou sem sua revisão.
       </div>
 
-      <div style={{ padding: '14px 16px', background: 'var(--w)', border: '1px solid var(--gr2)', borderRadius: 'var(--r)', fontSize: '13px', color: 'var(--gr5)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <span>Sem fidelidade · Cancele quando quiser · Acesso até o fim do período pago</span>
-        <button onClick={handlePortal} disabled={portalLoading} style={{ background: 'none', border: 'none', color: 'var(--danger)', fontSize: '12px', cursor: portalLoading ? 'default' : 'pointer', opacity: portalLoading ? 0.7 : 1, fontFamily: "'DM Sans', sans-serif", fontWeight: 500 }}>
-          {portalLoading ? 'Abrindo portal…' : 'Cancelar assinatura'}
-        </button>
-      </div>
+      {cancelDone ? (
+        <div style={{ padding: '14px 16px', background: cancelDone.refunded ? 'var(--g50)' : 'var(--ow)', border: `1px solid ${cancelDone.refunded ? 'var(--g200)' : 'var(--gr2)'}`, borderRadius: 'var(--r)', fontSize: '13px' }}>
+          {cancelDone.refunded ? (
+            <><span style={{ color: 'var(--g700)', fontWeight: 600 }}>Reembolso iniciado.</span>{' '}<span style={{ color: 'var(--gr5)' }}>O valor retorna ao cartão em até 5 dias úteis. Sua conta foi encerrada.</span></>
+          ) : (
+            <><span style={{ color: 'var(--d)', fontWeight: 600 }}>Assinatura cancelada.</span>{' '}<span style={{ color: 'var(--gr5)' }}>Você mantém acesso até {cancelDone.accessUntil ? new Date(cancelDone.accessUntil).toLocaleDateString('pt-BR') : 'o fim do período pago'}.</span></>
+          )}
+        </div>
+      ) : cancelConfirm ? (
+        <div style={{ padding: '14px 16px', background: 'var(--danger-l)', border: '1px solid var(--danger)', borderRadius: 'var(--r)', fontSize: '13px' }}>
+          <div style={{ fontWeight: 600, color: 'var(--danger)', marginBottom: '6px' }}>Confirmar cancelamento</div>
+          <div style={{ color: 'var(--gr5)', marginBottom: '12px', lineHeight: 1.5 }}>
+            {isEUR
+              ? 'Dentro dos primeiros 14 dias: reembolso integral. Após: acesso mantido até o fim do período pago.'
+              : 'Dentro dos primeiros 7 dias (CDC): reembolso integral. Após: acesso mantido até o fim do período pago.'}
+          </div>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <button onClick={handleCancelSubscription} disabled={cancelLoading}
+              style={{ padding: '8px 16px', border: 'none', borderRadius: 'var(--r)', background: 'var(--danger)', color: '#fff', fontSize: '12px', fontWeight: 600, cursor: cancelLoading ? 'default' : 'pointer', fontFamily: "'DM Sans', sans-serif", opacity: cancelLoading ? 0.7 : 1 }}>
+              {cancelLoading ? 'Cancelando…' : 'Confirmar cancelamento'}
+            </button>
+            <button onClick={() => setCancelConfirm(false)} disabled={cancelLoading}
+              style={{ padding: '8px 14px', border: '1px solid var(--gr2)', borderRadius: 'var(--r)', background: 'var(--w)', color: 'var(--gr5)', fontSize: '12px', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif" }}>
+              Voltar
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div style={{ padding: '14px 16px', background: 'var(--w)', border: '1px solid var(--gr2)', borderRadius: 'var(--r)', fontSize: '13px', color: 'var(--gr5)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+          <span>Sem fidelidade · Cancele quando quiser · Acesso até o fim do período pago</span>
+          <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+            <button onClick={handlePortal} disabled={portalLoading}
+              style={{ background: 'none', border: 'none', color: 'var(--gr4)', fontSize: '12px', cursor: portalLoading ? 'default' : 'pointer', opacity: portalLoading ? 0.7 : 1, fontFamily: "'DM Sans', sans-serif" }}>
+              {portalLoading ? 'Abrindo…' : 'Histórico de cobranças'}
+            </button>
+            <button onClick={() => setCancelConfirm(true)}
+              style={{ background: 'none', border: 'none', color: 'var(--danger)', fontSize: '12px', cursor: 'pointer', fontFamily: "'DM Sans', sans-serif", fontWeight: 500 }}>
+              Cancelar assinatura
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

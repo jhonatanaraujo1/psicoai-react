@@ -264,6 +264,56 @@ function fmtDate(iso) {
 
 const allPreviews = { ...formPreviews, ...formPreviews_extra }
 
+// ── Score automático de escalas clínicas ─────────────────────────────────────
+
+function scoreFromOption(val) {
+  const n = parseInt(String(val ?? '')[0])
+  return isNaN(n) ? null : n
+}
+
+function calcScoreForForm(type, response) {
+  if (type === 'phq') {
+    const keys = ['q1','q2','q3','q4','q5','q6','q7','q8','q9']
+    const scores = keys.map(k => scoreFromOption(response[k]))
+    if (scores.some(s => s === null)) return null
+    const total = scores.reduce((a,b) => a + b, 0)
+    const riskAlert = (scores[8] ?? 0) > 0
+    let severity, color
+    if (total <= 4)       { severity = 'Mínima';               color = 'var(--g600)' }
+    else if (total <= 9)  { severity = 'Leve';                  color = '#CA8A04' }
+    else if (total <= 14) { severity = 'Moderada';              color = '#D97706' }
+    else if (total <= 19) { severity = 'Moderadamente grave';   color = '#EA580C' }
+    else                  { severity = 'Grave';                 color = 'var(--danger)' }
+    return { label: 'PHQ-9', total, max: 27, severity, color, riskAlert }
+  }
+  if (type === 'gad7') {
+    const keys = ['q1','q2','q3','q4','q5','q6','q7']
+    const scores = keys.map(k => scoreFromOption(response[k]))
+    if (scores.some(s => s === null)) return null
+    const total = scores.reduce((a,b) => a + b, 0)
+    let severity, color
+    if (total <= 4)       { severity = 'Mínima';  color = 'var(--g600)' }
+    else if (total <= 9)  { severity = 'Leve';     color = '#CA8A04' }
+    else if (total <= 14) { severity = 'Moderada'; color = '#D97706' }
+    else                  { severity = 'Grave';    color = 'var(--danger)' }
+    return { label: 'GAD-7', total, max: 21, severity, color, riskAlert: false }
+  }
+  if (type === 'beck') {
+    const keys = ['tristeza','pessimismo','fracasso','perda_prazer','culpa','punicao','autoavaliacao','autocritica','suicidio','choro','agitacao','perda_interesse','indecisao','desvalorizacao','perda_energia','sono','irritabilidade','apetite','concentracao','cansaco','interesse_sexo']
+    const scores = keys.map(k => scoreFromOption(response[k])).filter(s => s !== null)
+    if (scores.length < 10) return null
+    const total = scores.reduce((a,b) => a + b, 0)
+    const riskAlert = (scoreFromOption(response['suicidio']) ?? 0) > 0
+    let severity, color
+    if (total <= 13)      { severity = 'Mínima';  color = 'var(--g600)' }
+    else if (total <= 19) { severity = 'Leve';     color = '#CA8A04' }
+    else if (total <= 28) { severity = 'Moderada'; color = '#D97706' }
+    else                  { severity = 'Grave';    color = 'var(--danger)' }
+    return { label: 'BDI-II', total, max: 63, severity, color, riskAlert }
+  }
+  return null
+}
+
 const TEMPLATE_FIELDS = {
   anamnese: [
     { id: 'nome', label: 'Nome completo', type: 'text', required: true },
@@ -607,7 +657,7 @@ export default function Forms() {
                               let response = {}
                               try { fields = JSON.parse(full.fields) } catch (_) {}
                               try { response = JSON.parse(full.response || '{}') } catch (_) {}
-                              setViewForm({ id: full.id, title: full.title, patientName: full.patientName, fields, response })
+                              setViewForm({ id: full.id, title: full.title, patientName: full.patientName, fields, response, type: full.type })
                             } catch (_) {
                               showToast('Erro ao carregar resposta.', 'error')
                             }
@@ -825,6 +875,28 @@ export default function Forms() {
               <button style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '22px', color: 'var(--gr5)', lineHeight: 1, marginLeft: '12px', flexShrink: 0 }} onClick={() => setViewForm(null)}>×</button>
             </div>
             <div style={{ overflowY: 'auto', padding: '20px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              {(() => {
+                const sc = calcScoreForForm(viewForm.type, viewForm.response)
+                if (!sc) return null
+                return (
+                  <div style={{ background: 'var(--ow)', border: '1px solid var(--gr2)', borderRadius: 'var(--r)', padding: '14px 16px', display: 'flex', alignItems: 'flex-start', gap: '16px' }}>
+                    <div style={{ textAlign: 'center', minWidth: '60px' }}>
+                      <div style={{ fontSize: '30px', fontWeight: 700, color: sc.color, lineHeight: 1 }}>{sc.total}</div>
+                      <div style={{ fontSize: '10px', color: 'var(--gr4)', marginTop: '1px' }}>de {sc.max}</div>
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--gr4)', letterSpacing: '0.5px', marginBottom: '3px' }}>{sc.label} — PONTUAÇÃO TOTAL</div>
+                      <div style={{ fontSize: '14px', fontWeight: 600, color: sc.color }}>{sc.severity}</div>
+                      {sc.riskAlert && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginTop: '8px', padding: '6px 10px', background: '#FEE2E2', borderRadius: '6px', fontSize: '11px', color: 'var(--danger)', fontWeight: 600 }}>
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                          Item de risco identificado — avaliar ideação na próxima sessão
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )
+              })()}
               {viewForm.fields.length === 0 ? (
                 <div style={{ textAlign: 'center', color: 'var(--gr4)', padding: '24px' }}>Sem campos definidos para este formulário.</div>
               ) : viewForm.fields.map(field => {
