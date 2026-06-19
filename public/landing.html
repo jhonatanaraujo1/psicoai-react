@@ -256,6 +256,12 @@ section{padding:96px 40px}
 .btn-plan.outline:hover{border-color:var(--g300);color:var(--g600);background:var(--g50)}
 .pricing-avulso{text-align:center;margin-top:12px;font-size:11.5px;color:var(--gr4);max-width:780px;margin-left:auto;margin-right:auto}
 .pricing-footer{text-align:center;margin-top:16px;font-size:12.5px;color:var(--gr4)}
+/* GEO PRICING */
+.price-loading{background:linear-gradient(90deg,var(--gr1) 25%,var(--gr2) 50%,var(--gr1) 75%);background-size:200% 100%;animation:priceShimmer 1.2s ease-in-out infinite;border-radius:6px;color:transparent!important;display:inline-block}
+.plan-num.price-loading{min-width:72px;height:48px}
+.plan-curr.price-loading{min-width:22px;height:34px;vertical-align:bottom}
+@keyframes priceShimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+#price-locale-badge{display:none;align-items:center;gap:5px;font-size:11px;font-weight:600;color:var(--gr4);margin-top:10px;justify-content:center}
 
 /* CTA FINAL */
 #cta-final{
@@ -686,6 +692,7 @@ fbq('track', 'PageView');
         ⏳ Preco beta — congelado para quem entrar agora
       </div>
     </div>
+    <div id="price-locale-badge"></div>
     <div class="pricing-grid reveal">
 
       <!-- PLANO 1: Consultorio -->
@@ -1110,6 +1117,81 @@ document.querySelectorAll('[data-plan]').forEach(btn => {
     }
   });
 });
+/* GEO PRICING */
+(function() {
+  var GEO_KEY = 'psicoai_geo';
+  var GEO_TTL = 86400000; // 24h
+
+  var PRICING = {
+    BRL: { curr: 'R$', basic: '49', pro: '97', badge: '🇧🇷 Preços em Real Brasileiro' },
+    EUR: { curr: '€',  basic: '9,90', pro: '19,90', badge: '🇪🇺 Preços em Euro' }
+  };
+
+  var EUR_COUNTRIES = ['PT','ES','FR','DE','IT','NL','BE','AT','IE','FI','GR','LU','MT','CY','SI','SK','EE','LV','LT','HR'];
+
+  function applyPricing(currency) {
+    var p = PRICING[currency] || PRICING.BRL;
+    var currs = document.querySelectorAll('.plan-curr');
+    var nums  = document.querySelectorAll('.plan-num');
+    currs.forEach(function(el) { el.textContent = p.curr; el.classList.remove('price-loading'); });
+    nums.forEach(function(el, i) { el.textContent = i === 0 ? p.basic : p.pro; el.classList.remove('price-loading'); });
+    // Locale badge
+    var badge = document.getElementById('price-locale-badge');
+    if (badge) { badge.textContent = p.badge; badge.style.display = 'flex'; }
+    // Email placeholder hint
+    if (currency === 'EUR') {
+      var inp = document.getElementById('cta-email');
+      if (inp) inp.placeholder = 'seu@email.pt';
+    }
+  }
+
+  function showSkeleton() {
+    document.querySelectorAll('.plan-curr,.plan-num').forEach(function(el) {
+      el.classList.add('price-loading');
+    });
+  }
+
+  function detect() {
+    // Cache hit
+    try {
+      var cached = JSON.parse(localStorage.getItem(GEO_KEY) || 'null');
+      if (cached && (Date.now() - cached.ts) < GEO_TTL) { applyPricing(cached.currency); return; }
+    } catch(e) {}
+
+    showSkeleton();
+
+    var done = false;
+    var tid = setTimeout(function() {
+      if (done) return;
+      done = true;
+      applyPricing('BRL');
+    }, 2000);
+
+    fetch('https://ipapi.co/json/')
+      .then(function(r) { return r.json(); })
+      .then(function(d) {
+        if (done) return;
+        done = true;
+        clearTimeout(tid);
+        var country  = (d && d.country_code) || 'BR';
+        var currency = EUR_COUNTRIES.indexOf(country) !== -1 ? 'EUR' : 'BRL';
+        try { localStorage.setItem(GEO_KEY, JSON.stringify({ currency: currency, country: country, ts: Date.now() })); } catch(e) {}
+        applyPricing(currency);
+      })
+      .catch(function() {
+        if (done) return;
+        done = true;
+        clearTimeout(tid);
+        applyPricing('BRL');
+      });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', detect);
+  } else {
+    detect();
+  }
+})();
 </script>
 </body>
 </html>
