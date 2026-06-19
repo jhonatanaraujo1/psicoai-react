@@ -193,7 +193,7 @@ export function ToastContainer() {
     <>
       <style>{`
         @media (max-width: 600px) {
-          .toast-container { left: 12px !important; right: 12px !important; bottom: 80px !important; width: auto !important; max-width: none !important; }
+          .toast-container { left: 12px !important; right: 12px !important; bottom: calc(56px + env(safe-area-inset-bottom, 16px) + 8px) !important; width: auto !important; max-width: none !important; }
         }
       `}</style>
       <div

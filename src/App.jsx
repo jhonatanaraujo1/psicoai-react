@@ -873,6 +873,10 @@ export default function App() {
       setAnalysisResult({ error: backendMsg })
       failProgress()
       dismissToast(loadingId)
+      // Re-sync contador do backend — falha pode ter consumido crédito parcialmente
+      api.getUserProfile().then(profile => {
+        setCurrentUser(u => u ? { ...u, analysesRemaining: profile.analysesRemaining ?? u.analysesRemaining } : u)
+      }).catch(() => {})
       showToast('Falha na análise', 'error', {
         description: backendMsg,
         ...(isRetryable && {
