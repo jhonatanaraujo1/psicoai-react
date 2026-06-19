@@ -2397,7 +2397,7 @@ export default function AnnotationSession({
         background: '#1A1A1A',
         borderTop: '1px solid rgba(255,255,255,0.08)',
         display: 'flex', alignItems: 'flex-start',
-        justifyContent: 'center', gap: 4,
+        justifyContent: 'flex-start', gap: 4,
         padding: '0 12px', paddingTop: 0,
         paddingBottom: 'env(safe-area-inset-bottom, 0px)',
         overflowX: 'auto',
