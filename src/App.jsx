@@ -96,7 +96,14 @@ export default function App() {
   useEffect(() => {
     if (!currentUser) return
     api.getUserProfile()
-      .then(updated => { if (updated) setCurrentUser(prev => ({ ...prev, ...updated })) })
+      .then(updated => {
+        if (updated) {
+          setCurrentUser(prev => ({ ...prev, ...updated }))
+          if (updated.subscriptionStatus === 'blocked' || updated.subscriptionStatus === 'canceled') {
+            setPaymentRequired(true)
+          }
+        }
+      })
       .catch(() => {})
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -1119,7 +1126,7 @@ export default function App() {
         <ProgressBar />
         <ConfirmDialog />
         <ToastContainer />
-        {paymentRequired && <PaymentModal onLogout={handleLogout} currentUser={currentUser} />}
+        {paymentRequired && <PaymentModal onLogout={handleLogout} onClose={() => setPaymentRequired(false)} currentUser={currentUser} />}
       </>
     )
   }
@@ -1370,7 +1377,7 @@ export default function App() {
       <ToastContainer />
 
       {/* Bloqueio por inadimplência — modal de planos com promoção de retomada */}
-      {paymentRequired && <PaymentModal onLogout={handleLogout} currentUser={currentUser} />}
+      {paymentRequired && <PaymentModal onLogout={handleLogout} onClose={() => setPaymentRequired(false)} currentUser={currentUser} />}
 
       {/* Banner LGPD — aparece uma vez, salvo em localStorage */}
       <LgpdBanner onShowTermos={() => setCurrentView('privacidade')} />

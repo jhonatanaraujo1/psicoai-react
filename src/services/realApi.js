@@ -128,13 +128,16 @@ async function req(method, path, body, opts = {}) {
 
   if (res.status === 204) return null
 
+  // Header X-Account-Status: backend sinaliza inadimplência sem bloquear a requisição.
+  // O app mostra o popup de upgrade mas a resposta ainda é processada normalmente.
+  if (res.headers.get('X-Account-Status') === 'blocked') {
+    window.dispatchEvent(new CustomEvent('psicoai:payment-required'))
+  }
+
   if (res.status === 402) {
     const body402 = await res.json().catch(() => ({}))
-    if (body402?.error === 'plan_upgrade_required') {
-      throw new Error('plan_upgrade_required')
-    }
-    window.dispatchEvent(new CustomEvent('psicoai:payment-required'))
-    throw new Error('Sua conta está bloqueada. Regularize o pagamento para continuar.')
+    // 402 agora só chega por créditos insuficientes (InsufficientCreditsException)
+    throw new Error(body402?.message || 'plan_upgrade_required')
   }
 
   const json = await res.json().catch(() => ({}))

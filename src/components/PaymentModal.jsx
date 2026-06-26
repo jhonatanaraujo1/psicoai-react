@@ -95,7 +95,7 @@ const CHECK = () => (
   </svg>
 )
 
-export default function PaymentModal({ onLogout, currentUser }) {
+export default function PaymentModal({ onLogout, onClose, currentUser }) {
   const isEUR = EUR_COUNTRIES.includes(currentUser?.country)
   const PLANS = isEUR ? PLANS_EUR : PLANS_BRL
   const [loading, setLoading] = useState(null) // 'base' | 'clinico' | 'portal'
@@ -200,7 +200,7 @@ export default function PaymentModal({ onLogout, currentUser }) {
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               fontSize: '20px', flexShrink: 0,
             }}>🔒</div>
-            <div>
+            <div style={{ flex: 1 }}>
               <div style={{
                 fontFamily: "'Fraunces', serif", fontSize: '22px',
                 color: '#fff', fontWeight: 300, marginBottom: '5px',
@@ -214,6 +214,18 @@ export default function PaymentModal({ onLogout, currentUser }) {
                 }
               </div>
             </div>
+            {onClose && (
+              <button onClick={onClose} style={{
+                background: 'none', border: 'none', cursor: 'pointer',
+                color: 'rgba(255,255,255,0.4)', fontSize: '20px', lineHeight: 1,
+                padding: '4px', flexShrink: 0, marginTop: '-4px',
+                transition: 'color 0.15s',
+              }}
+                onMouseEnter={e => e.currentTarget.style.color = 'rgba(255,255,255,0.8)'}
+                onMouseLeave={e => e.currentTarget.style.color = 'rgba(255,255,255,0.4)'}
+                aria-label="Fechar"
+              >✕</button>
+            )}
           </div>
 
           {/* Promo banner — só para inadimplentes, não para trial expirado */}
